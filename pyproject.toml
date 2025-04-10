@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=64",
+            "wheel",
+            "setuptools_scm>=8.1",
+            "numpy",
+            "cython>=3.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "OpenReservoirComputing"
+authors = [
+    {name = "Dima Tretiak", email = "dtretiak@uw.edu"},
+    {name = "Jan P. Williams", email = "jmpw1@uw.edu"},
+]
+
+maintainers = [
+    {name = "Dima Tretiak", email = "dtretiak@uw.edu"},
+    {name = "Jan P. Williams", email = "jmpw1@uw.edu"},
+]
+
+description = "GPU accelerated implementations of common RC architectures"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = [
+    "equinox",
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "setuptools_scm>=8.1",
+]
+
+requires-python = ">=3.10"
+keywords = ["reservoir computing", ""]
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Data Science",
+]
+
+
+[project.urls]
+Repository = "https://github.com/dtretiak/OpenReservoirComputing"
+
+[tool.setuptools_scm]
+
+[tool.pytest.ini_options]
+testpaths = "tests"
+addopts = "--ignore=scripts --ignore=docs"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "D",
+    "UP",
+    "B",
+    "A",
+    "C4",
+    "N",
+    "SIM",
+    "I",
+    # "C90",
+]
+
+ignore = [
+    "N806",
+    "N802",
+    "N803"
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+"docs/*.py" = ["D", "A"]
+"setup.py" = ["D"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 88
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
