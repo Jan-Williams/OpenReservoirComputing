@@ -8,7 +8,7 @@ import orc
 @pytest.fixture
 def linearembedding():
     return orc.embeddings.LinearEmbedding(
-        in_dim=3, res_dim=982, scaling=0.2745, dtype=jnp.float64, key=jax.random.key(0)
+        in_dim=3, res_dim=982, scaling=0.2745, dtype=jnp.float64, seed=0
     )
 
 
@@ -56,5 +56,5 @@ def test_param_types_linearembedding(in_dim, res_dim, scaling, dtype):
             res_dim=res_dim,
             scaling=scaling,
             dtype=dtype,
-            key=jax.random.key(111),
+            seed=111,
         )

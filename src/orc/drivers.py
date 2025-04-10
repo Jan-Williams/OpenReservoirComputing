@@ -6,7 +6,7 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 from jax.experimental import sparse
-from jaxtyping import Array, Float, PRNGKeyArray
+from jaxtyping import Array, Float
 
 jax.config.update("jax_enable_x64", True)
 
@@ -40,7 +40,7 @@ class DriverBase(eqx.Module, ABC):
             raise TypeError("Reservoir dimension res_dim must be an integer.")
         self.dtype = dtype
         if not (dtype == jnp.float64 or dtype == jnp.float32):
-            raise TypeError("dtype must be jnp.float64 of jnp.float32.")
+            raise TypeError("dtype must be jnp.float64 or jnp.float32.")
 
     @abstractmethod
     def advance(self, proj_vars: Array, res_state: Array) -> Array:
@@ -121,7 +121,7 @@ class ESNDriver(DriverBase):
         bias: float = 1.6,
         dtype: Float = jnp.float64,
         *,
-        key: PRNGKeyArray,
+        seed: int,
     ) -> None:
         """Initialize weight matrices.
 
@@ -139,8 +139,8 @@ class ESNDriver(DriverBase):
             Additive bias in tanh nonlinearity.
         dtype : Float
             Dtype, default jnp.float64.
-        key : PRNGKeyArray
-            JAX random key.
+        seed : int
+            Random seed for generating the PRNG key for the reservoir computer.
         """
         super().__init__(res_dim=res_dim, dtype=dtype)
         self.res_dim = res_dim
@@ -149,7 +149,7 @@ class ESNDriver(DriverBase):
         self.density = density
         self.bias = bias
         self.dtype = dtype
-
+        key = jax.random.key(seed)
         if spec_rad <= 0:
             raise ValueError("Spectral radius must be positve.")
         if leak < 0 or leak > 1:

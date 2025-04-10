@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 import equinox as eqx
 import jax.numpy as jnp
-from jaxtyping import Array, Float, PRNGKeyArray
+from jaxtyping import Array, Float
 
 
 class ReadoutBase(eqx.Module, ABC):
@@ -114,7 +114,7 @@ class LinearReadout(ReadoutBase):
         res_dim: int,
         dtype: Float = jnp.float64,
         *,
-        key: PRNGKeyArray,
+        seed: int,
     ) -> None:
         """Initialize readout layer to zeros.
 
@@ -126,8 +126,8 @@ class LinearReadout(ReadoutBase):
             Reservoir dimension.
         dtype : Float
             Dtype, default jnp.float64.
-        key : PRNGKeyArray
-            JAX random key.
+        seed : int
+            Not used for LinearReadout, present to maintain consistent interface.
         """
         super().__init__(out_dim=out_dim, res_dim=res_dim, dtype=dtype)
         self.out_dim = out_dim

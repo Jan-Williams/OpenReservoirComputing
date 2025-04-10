@@ -25,6 +25,7 @@ dependencies = [
     "equinox",
     "numpy",
     "scipy",
+    "matplotlib",
     "setuptools_scm>=8.1",
 ]
 
@@ -43,7 +44,6 @@ classifiers = [
 
 [project.urls]
 Repository = "https://github.com/dtretiak/OpenReservoirComputing"
-Documentation = ""
 
 [tool.setuptools_scm]
 
@@ -69,6 +69,8 @@ select = [
 
 ignore = [
     "N806",
+    "N802",
+    "N803"
 ]
 
 [tool.ruff.lint.per-file-ignores]

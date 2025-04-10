@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from jaxtyping import Array, Float, PRNGKeyArray
+from jaxtyping import Array, Float
 
 
 class EmbedBase(eqx.Module, ABC):
@@ -117,7 +117,7 @@ class LinearEmbedding(EmbedBase):
         scaling: float,
         dtype: Float = jnp.float64,
         *,
-        key: PRNGKeyArray,
+        seed: int,
     ) -> None:
         """Instantiate linear embedding.
 
@@ -129,8 +129,8 @@ class LinearEmbedding(EmbedBase):
             Reservoir dimension.
         scaling : float
             Min/max values of input matrix.
-        key : PRNGKeyArray
-            JAX key for initialization.
+        seed : int
+            Random seed for generating the PRNG key for the reservoir computer.
         dtype : Float
             Dtype of model, jnp.float64 or jnp.float32.
         """
@@ -139,6 +139,7 @@ class LinearEmbedding(EmbedBase):
         self.res_dim = res_dim
         self.scaling = scaling
         self.dtype = dtype
+        key = jax.random.key(seed)
         self.win = jax.random.uniform(
             key, (res_dim, in_dim), minval=-scaling, maxval=scaling, dtype=dtype
         )

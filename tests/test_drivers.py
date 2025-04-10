@@ -14,7 +14,7 @@ def esndriver():
         density=0.02,
         bias=1.6,
         dtype=jnp.float64,
-        key=jax.random.key(0),
+        seed=0,
     )
 
 
@@ -61,7 +61,7 @@ def test_param_types_linearreadout(res_dim, leak, spec_rad, density, bias, dtype
             density=density,
             bias=bias,
             dtype=dtype,
-            key=jax.random.key(0),
+            seed=33,
         )
 
 
@@ -82,5 +82,5 @@ def test_param_vals_linearreadout(res_dim, leak, spec_rad, density, bias, dtype)
             density=density,
             bias=bias,
             dtype=dtype,
-            key=jax.random.key(0),
+            seed=32,
         )

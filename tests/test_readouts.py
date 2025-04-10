@@ -7,9 +7,7 @@ import orc
 
 @pytest.fixture
 def linearreadout():
-    return orc.readouts.LinearReadout(
-        out_dim=3, res_dim=982, dtype=jnp.float64, key=jax.random.key(0)
-    )
+    return orc.readouts.LinearReadout(out_dim=3, res_dim=982, dtype=jnp.float64, seed=0)
 
 
 def test_linearreadout_dims(linearreadout):
@@ -51,5 +49,5 @@ def test_param_types_linearreadout(out_dim, res_dim, dtype):
             out_dim=out_dim,
             res_dim=res_dim,
             dtype=dtype,
-            key=jax.random.key(111),
+            seed=111,
         )
