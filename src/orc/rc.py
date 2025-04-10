@@ -1,16 +1,16 @@
 """Define base class for Reservoir Computers."""
 
-from abc import ABC, abstractmethod
-from typing import Tuple
+from abc import ABC
 
-import jax
 import equinox as eqx
+import jax
 import jax.numpy as jnp
-from jaxtyping import Array, Float, PRNGKeyArray
+from jaxtyping import Array, Float
 
 from orc.drivers import DriverBase
-from orc.readouts import ReadoutBase
 from orc.embeddings import EmbedBase
+from orc.readouts import ReadoutBase
+
 
 class ReservoirComputerBase(eqx.Module, ABC):
     """
@@ -78,7 +78,7 @@ class ReservoirComputerBase(eqx.Module, ABC):
 
         _, res_seq = jax.lax.scan(scan_fn, res_state, in_seq)
         return res_seq
-    
+
     @eqx.filter_jit
     def forecast(self, fcast_len: int, res_state: Array) -> Array:
         """Forecast from an initial reservoir state.
@@ -104,7 +104,7 @@ class ReservoirComputerBase(eqx.Module, ABC):
 
         _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len)
         return state_seq
-    
+
     def set_readout(self, readout: ReadoutBase):
         """Replace readout layer.
 
@@ -144,15 +144,15 @@ class ReservoirComputerBase(eqx.Module, ABC):
 
         new_model = eqx.tree_at(where, self, embedding)
         return new_model
-    
-    
+
+
 def train_RC_forecaster(
     model: ReservoirComputerBase,
     train_seq: Array,
     spinup: int = 0,
     initial_res_state: Array = None,
     beta: float = 8e-8,
-) -> Tuple[ReservoirComputerBase, Array]:
+) -> tuple[ReservoirComputerBase, Array]:
     """Training function for RC forecaster.
 
     Parameters
@@ -173,7 +173,6 @@ def train_RC_forecaster(
     model : ReservoirComputerBase
         Trained ReservoirComputerBase model.
     """
-
     # zero IC of RC if not provided
     if initial_res_state is None:
         initial_res_state = jnp.zeros((model.res_dim,), dtype=model.dtype)
@@ -185,7 +184,7 @@ def train_RC_forecaster(
     lhs = res_seq[spinup:].T @ res_seq[spinup:] + beta * jnp.eye(
         model.res_dim, dtype=model.dtype
     )
-    rhs = res_seq[spinup:].T @ train_seq[spinup+1:,:]  
+    rhs = res_seq[spinup:].T @ train_seq[spinup+1:,:]
     cmat = jax.scipy.linalg.solve(lhs, rhs, assume_a="sym").T
 
     # replace wout with learned weights

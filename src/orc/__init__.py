@@ -1,3 +1,3 @@
 """Components of models."""
 
-from orc import rc, drivers, embeddings, models, readouts, utils
+from orc import drivers, embeddings, models, rc, readouts, utils

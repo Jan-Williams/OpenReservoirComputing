@@ -37,7 +37,7 @@ class DriverBase(eqx.Module, ABC):
         self.dtype = dtype
         if not (dtype == jnp.float64 or dtype == jnp.float32):
             raise TypeError("dtype must be jnp.float64 or jnp.float32.")
-        
+
     @abstractmethod
     def advance(self, proj_vars: Array, res_state: Array) -> Array:
         """Advance the reservoir given projected inputs and current state.

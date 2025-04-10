@@ -1,14 +1,12 @@
 """Classic ESN implementation with tanh nonlinearity and linear readout."""
 
-import equinox as eqx
 import jax
 import jax.numpy as jnp
-from jaxtyping import Float
 
 from orc.drivers import ESNDriver
 from orc.embeddings import LinearEmbedding
-from orc.readouts import LinearReadout
 from orc.rc import ReservoirComputerBase
+from orc.readouts import LinearReadout
 
 jax.config.update("jax_enable_x64", True)
 
@@ -40,13 +38,14 @@ class ESN(ReservoirComputerBase):
     set_embedding(embedding)
         Replace embedding layer.
     """
-    res_dim: int
-    
 
-    def __init__(self, 
+    res_dim: int
+
+
+    def __init__(self,
                  data_dim: int,
                  res_dim: int,
-                 leak_rate: float = 0.6, 
+                 leak_rate: float = 0.6,
                  bias: float = 1.6,
                  embedding_scaling: float = 0.08,
                  Wr_density: float = 0.02,
@@ -78,8 +77,6 @@ class ESN(ReservoirComputerBase):
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
         """
-        
-
         # Initialize the random key and reservoir dimension
         self.res_dim = res_dim
         self.seed = seed

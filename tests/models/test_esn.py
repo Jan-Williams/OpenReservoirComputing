@@ -1,8 +1,9 @@
 import jax
 import jax.numpy as jnp
-import orc
 import numpy as np
 from scipy import integrate
+
+import orc
 
 
 def test_esn_train():
@@ -31,7 +32,7 @@ def test_esn_train():
     esn = orc.models.esn.train_esn(esn,
                                jax_input[:-1],
                                jax.numpy.zeros(2000, dtype=jnp.float64),
-                               jax_input[1:], 
+                               jax_input[1:],
                                spinup=500,
                                beta=8e-8)
     output_seq = esn.force(jax_input, jax.numpy.zeros(2000, dtype=jnp.float64))
