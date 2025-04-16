@@ -7,6 +7,8 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float
 
+jax.config.update("jax_enable_x64", True)
+
 
 class EmbedBase(eqx.Module, ABC):
     """
@@ -65,11 +67,12 @@ class EmbedBase(eqx.Module, ABC):
         """
         pass
 
+    @eqx.filter_jit
     def batch_embed(
         self,
         in_state: Array,
     ) -> Array:
-        """Batch apply readout from reservoir states.
+        """Batch apply embedding from input states.
 
         Parameters
         ----------
@@ -97,11 +100,19 @@ class LinearEmbedding(EmbedBase):
         Min/max values of input matrix.
     win : Array
         Input matrix.
+    groups : int
+        Number of parallel reservoirs.
+    locality : int
+        Adjacent reservoir overlap.
 
     Methods
     -------
-    embed(in_state)
+    __call__(in_state)
         Embed input state to reservoir dimension.
+    localize(in_state, periodic=True)
+        Decompose input_state to parallel network inputs.
+    moving_window(a)
+
     """
 
     in_dim: int
@@ -109,6 +120,9 @@ class LinearEmbedding(EmbedBase):
     scaling: float
     win: Array
     dtype: Float
+    groups: int
+    locality: int
+    group_size: int
 
     def __init__(
         self,
@@ -116,6 +130,8 @@ class LinearEmbedding(EmbedBase):
         res_dim: int,
         scaling: float,
         dtype: Float = jnp.float64,
+        groups: int = 1,
+        locality: int = 0,
         *,
         seed: int,
     ) -> None:
@@ -135,17 +151,70 @@ class LinearEmbedding(EmbedBase):
             Dtype of model, jnp.float64 or jnp.float32.
         """
         super().__init__(in_dim=in_dim, res_dim=res_dim, dtype=dtype)
-        self.in_dim = in_dim
-        self.res_dim = res_dim
         self.scaling = scaling
         self.dtype = dtype
         key = jax.random.key(seed)
-        self.win = jax.random.uniform(
-            key, (res_dim, in_dim), minval=-scaling, maxval=scaling, dtype=dtype
-        )
+        self.group_size = int(in_dim / groups)
 
+        if in_dim % groups:
+            raise ValueError(
+                f"The number of groups {groups} must evenly divide in_dim {in_dim}."
+            )
+        if locality * 2 + self.group_size > in_dim:
+            raise ValueError(
+                "Input to each parallel reservoir too large; reduce either "
+                f"locality {locality} or group_size {self.group_size}."
+            )
+
+        self.win = jax.random.uniform(
+            key,
+            (groups, res_dim, self.group_size + 2 * locality),
+            minval=-scaling,
+            maxval=scaling,
+            dtype=dtype,
+        )
+        self.locality = locality
+        self.groups = groups
+
+    @eqx.filter_jit
+    def moving_window(self, a):
+        """Generate window to compute localized states."""
+        size = int(self.in_dim / self.groups + 2 * self.locality)
+        starts = jnp.arange(len(a) - size + 1)[: self.groups] * self.groups
+        return eqx.filter_vmap(
+            lambda start: jax.lax.dynamic_slice(a, (start,), (size,))
+        )(starts)
+
+    @eqx.filter_jit
+    def localize(self, in_state: Array, periodic=True) -> Array:
+        """Generate parallel reservoir inputs from input state.
+
+        Parameters
+        ----------
+        in_state : Array
+            Input state, (shape=(in_dim,))
+
+        Returns
+        -------
+        Array
+            Parallel reservoir inputs, (shape=(groups, group_size + 2*locality))
+        """
+        if len(in_state.shape) != 1:
+            raise ValueError(
+                "Only 1-dimensional localization is currently supported, detected a "
+                f"{len(in_state.shape)}D field."
+            )
+        aug_state = jnp.hstack(
+            [in_state[-self.locality :], in_state, in_state[: self.locality]]
+        )
+        if not periodic:
+            aug_state = aug_state.at[: self.locality].set(aug_state[self.locality])
+            aug_state = aug_state.at[-self.locality :].set(aug_state[-self.locality])
+        return self.moving_window(aug_state)
+
+    @eqx.filter_jit
     def embed(self, in_state: Array) -> Array:
-        """Embed into reservoir dimension.
+        """Embed single state to reservoir dimensions.
 
         Parameters
         ----------
@@ -155,10 +224,38 @@ class LinearEmbedding(EmbedBase):
         Returns
         -------
         Array
-            Embedded input to reservoir, (shape=(res_dim,)).
+            Embedded input to reservoir, (shape=(groups, res_dim,)).
         """
-        if in_state.shape[0] != self.in_dim:
+        if in_state.shape != (self.in_dim,):
+            raise ValueError("Incorrect dimension for input state.")
+        localized_states = self.localize(in_state)
+
+        def vmap_matmul(win, states):
+            return win @ states
+
+        return eqx.filter_vmap(vmap_matmul)(self.win, localized_states)
+
+    def __call__(self, in_state: Array) -> Array:
+        """Embed state to reservoir dimensions.
+
+        Parameters
+        ----------
+        in_state : Array
+            Input state, (shape=(in_dim,) or shape=(seq_len, in_dim)).
+
+        Returns
+        -------
+        Array
+            Embedded input to reservoir, (shape=(groups, res_dim,) or
+            shape=(seq_len, groups, res_dim)).
+        """
+        if len(in_state.shape) == 1:
+            to_ret = self.embed(in_state)
+        elif len(in_state.shape) == 2:
+            to_ret = self.batch_embed(in_state)
+        else:
             raise ValueError(
-                "Incorrect input dimension for instantiated embedding map."
+                "Only 1-dimensional localization is currently supported, detected a "
+                f"{len(in_state.shape)}D field."
             )
-        return self.win @ in_state
+        return to_ret
