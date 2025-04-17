@@ -60,6 +60,7 @@ class DriverBase(eqx.Module, ABC):
         """
         pass
 
+    @eqx.filter_jit
     def batch_advance(self, proj_vars: Array, res_state: Array) -> Array:
         """
         Batch advance the reservoir given projected inputs and current state.
@@ -87,7 +88,7 @@ class ESNDriver(DriverBase):
     res_dim : int
         Reservoir dimension.
     wr : Array
-        Reservoir update matrix, (shape=(res_dim, res_dim,)).
+        Reservoir update matrix, (shape=(groups, res_dim, res_dim,)).
     leak : float
         Leak rate parameter.
     spec_rad : float
@@ -96,6 +97,8 @@ class ESNDriver(DriverBase):
         Density of wr.
     bias : float
         Additive bias in tanh nonlinearity.
+    groups: int
+        Number of parallel reservoirs.
     dtype : Float
         Dtype, default jnp.float64.
 
@@ -111,6 +114,7 @@ class ESNDriver(DriverBase):
     bias: float
     dtype: Float
     wr: Array
+    groups: int
 
     def __init__(
         self,
@@ -120,6 +124,7 @@ class ESNDriver(DriverBase):
         density: float = 0.02,
         bias: float = 1.6,
         dtype: Float = jnp.float64,
+        groups: int = 1,
         *,
         seed: int,
     ) -> None:
@@ -137,6 +142,8 @@ class ESNDriver(DriverBase):
             Density of wr.
         bias : float
             Additive bias in tanh nonlinearity.
+        groups: int
+            Number of parallel reservoirs.
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
@@ -158,42 +165,77 @@ class ESNDriver(DriverBase):
             raise ValueError("Density must satisfy 0 < density < 1.")
         wrkey1, wrkey2 = jax.random.split(key, 2)
 
-        N_nonzero = int(res_dim**2 * density)
+        N_nonzero = int(res_dim**2 * density * groups)
         wr_indices = jax.random.choice(
-            wrkey1,
-            res_dim**2,
-            shape=(N_nonzero,),
+            wrkey1, groups * res_dim**2, shape=(N_nonzero,), replace=False
         )
         wr_vals = jax.random.uniform(
             wrkey2, shape=N_nonzero, minval=-1, maxval=1, dtype=self.dtype
         )
-        wr = jnp.zeros(self.res_dim * self.res_dim, dtype=dtype)
+        wr = jnp.zeros((groups * res_dim * res_dim), dtype=dtype)
         wr = wr.at[wr_indices].set(wr_vals)
-        wr = wr.reshape(res_dim, res_dim)
-        wr = wr * (spec_rad / jnp.max(jnp.abs(jnp.linalg.eigvals(wr))))
-        self.wr = sparse.BCOO.fromdense(wr)
+        wr = wr.reshape(groups, res_dim, res_dim)
+        wr = (wr.T * (spec_rad / jnp.max(jnp.abs(jnp.linalg.eigvals(wr)), axis=1))).T
+        self.wr = sparse.BCOO.fromdense(wr, n_batch=1)
+        self.groups = groups
 
         self.dtype = dtype
 
+    @eqx.filter_jit
     def advance(self, proj_vars: Array, res_state: Array) -> Array:
         """Advance the reservoir state.
 
         Parameters
         ----------
         proj_vars : Array
-            Reservoir projected inputs, (shape=(res_dim,)).
+            Reservoir projected inputs, (shape=(groups, res_dim,)).
         res_state : Array
-            Reservoir state, (shape=(res_dim,)).
+            Reservoir state, (shape=(groups, res_dim,)).
 
         Returns
         -------
         res_next : Array
-            Reservoir state, (shape=(res_dim,)).
+            Reservoir state, (shape=(groups, res_dim,)).
         """
-        if proj_vars.shape != (self.res_dim,) or res_state.shape != (self.res_dim,):
-            raise ValueError("proj_vars and res_state must both have shape (res_dim,).")
-        res_next = jnp.tanh(
-            self.wr @ res_state + proj_vars + self.bias * jnp.ones(self.res_dim)
+        if proj_vars.shape != (self.groups, self.res_dim):
+            raise ValueError("Incorrect proj_var dimension.")
+        return (
+            self.leak
+            * self.sparse_ops(
+                self.wr, res_state, proj_vars, self.bias * jnp.ones_like(proj_vars)
+            )
+            + (1 - self.leak) * res_state
         )
-        res_next = self.leak * res_next + (1 - self.leak) * res_state
-        return res_next
+
+    @staticmethod
+    @sparse.sparsify
+    @jax.vmap
+    def sparse_ops(wr, res_state, proj_vars, bias):
+        """Dense operation to sparsify for advancing reservoir."""
+        return jnp.tanh(wr @ res_state + proj_vars + bias)
+
+    def __call__(self, proj_vars: Array, res_state: Array) -> Array:
+        """Advance reservoir state
+
+        Parameters
+        ----------
+        proj_vars : Array
+            Reservoir projected inputs, (shape=(groups, res_dim) or
+            shape=(seq_len, groups, res_dim)).
+
+        Returns
+        -------
+        Array
+            Sequence of reservoir states, (shape=(groups, res_dim,) or
+            shape=(seq_len, groups, res_dim)).
+        """
+        if len(proj_vars.shape) == 2:
+            to_ret = self.advance(proj_vars, res_state)
+        elif len(proj_vars.shape) == 3:
+            to_ret = self.batch_advance(proj_vars, res_state)
+        else:
+            raise ValueError(
+                "Only 1-dimensional localization is currently supported, detected a "
+                f"{len(proj_vars.shape)}D field."
+            )
+        return to_ret
