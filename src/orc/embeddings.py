@@ -180,7 +180,9 @@ class LinearEmbedding(EmbedBase):
     def moving_window(self, a):
         """Generate window to compute localized states."""
         size = int(self.in_dim / self.groups + 2 * self.locality)
-        starts = jnp.arange(len(a) - size + 1)[: self.groups] * int(self.in_dim / self.groups)
+        starts = jnp.arange(len(a) - size + 1)[: self.groups] * int(
+            self.in_dim / self.groups
+        )
         return eqx.filter_vmap(
             lambda start: jax.lax.dynamic_slice(a, (start,), (size,))
         )(starts)
