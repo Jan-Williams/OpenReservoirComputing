@@ -53,8 +53,8 @@ class ESN(ReservoirComputerBase):
         Wr_spectral_radius: float = 0.8,
         dtype: type = jnp.float64,
         seed: int = 0,
-        groups: int= 1,
-        locality: int = 0
+        groups: int = 1,
+        locality: int = 0,
     ) -> None:
         """
         Initialize the ESN model.
@@ -93,7 +93,7 @@ class ESN(ReservoirComputerBase):
             seed=key_embedding[0],
             scaling=embedding_scaling,
             groups=groups,
-            locality = locality
+            locality=locality,
         )
         driver = ESNDriver(
             res_dim=res_dim,
@@ -102,9 +102,11 @@ class ESN(ReservoirComputerBase):
             bias=bias,
             density=Wr_density,
             spec_rad=Wr_spectral_radius,
-            groups = groups
+            groups=groups,
         )
-        readout = LinearReadout(out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], groups=groups)
+        readout = LinearReadout(
+            out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], groups=groups
+        )
         super().__init__(
             driver=driver,
             readout=readout,

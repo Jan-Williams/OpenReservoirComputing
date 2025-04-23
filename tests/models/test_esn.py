@@ -30,7 +30,9 @@ def test_esn_train():
     U = xt_lorenz.y
     train_len = 50000
     jax_input = jax.numpy.array(U[:, :train_len]).T
-    target_seq = jax.numpy.array(U[:, 1:train_len+1]).T.reshape(train_len, esn.readout.groups, -1)
+    target_seq = jax.numpy.array(U[:, 1 : train_len + 1]).T.reshape(
+        train_len, esn.readout.groups, -1
+    )
     esn, output_seq = orc.rc.train_RC_forecaster(
         esn,
         jax_input,
@@ -40,4 +42,10 @@ def test_esn_train():
         beta=8e-8,
     )
     fcast = esn.forecast(100, output_seq[-1])
-    assert jnp.linalg.norm(fcast - U[:, train_len + 1: train_len + 101].T.reshape(100, -1)) / 100 < 1e-3
+    assert (
+        jnp.linalg.norm(
+            fcast - U[:, train_len + 1 : train_len + 101].T.reshape(100, -1)
+        )
+        / 100
+        < 1e-3
+    )

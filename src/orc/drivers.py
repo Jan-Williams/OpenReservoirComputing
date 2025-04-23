@@ -5,6 +5,9 @@ from abc import ABC, abstractmethod
 import equinox as eqx
 import jax
 import jax.numpy as jnp
+import numpy as np
+import scipy.sparse
+import scipy.stats
 from jax.experimental import sparse
 from jaxtyping import Array, Float
 
@@ -165,18 +168,44 @@ class ESNDriver(DriverBase):
             raise ValueError("Density must satisfy 0 < density < 1.")
         wrkey1, wrkey2 = jax.random.split(key, 2)
 
-        N_nonzero = int(res_dim**2 * density * groups)
-        wr_indices = jax.random.choice(
-            wrkey1, groups * res_dim**2, shape=(N_nonzero,), replace=False
-        )
-        wr_vals = jax.random.uniform(
-            wrkey2, shape=N_nonzero, minval=-1, maxval=1, dtype=self.dtype
-        )
-        wr = jnp.zeros((groups * res_dim * res_dim), dtype=dtype)
-        wr = wr.at[wr_indices].set(wr_vals)
-        wr = wr.reshape(groups, res_dim, res_dim)
-        wr = (wr.T * (spec_rad / jnp.max(jnp.abs(jnp.linalg.eigvals(wr)), axis=1))).T
-        self.wr = sparse.BCOO.fromdense(wr, n_batch=1)
+        # N_nonzero = int(res_dim**2 * density * groups)
+        # wr_indices = jax.random.choice(
+        #     wrkey1, groups * res_dim**2, shape=(N_nonzero,), replace=False
+        # )
+        # wr_vals = jax.random.uniform(
+        #     wrkey2, shape=N_nonzero, minval=-1, maxval=1, dtype=self.dtype
+        # )
+        # wr = jnp.zeros((groups * res_dim * res_dim), dtype=dtype)
+        # wr = wr.at[wr_indices].set(wr_vals)
+        # wr = wr.reshape(groups, res_dim, res_dim)
+        # wr = (wr.T * (spec_rad / jnp.max(jnp.abs(jnp.linalg.eigvals(wr)), axis=1))).T
+        # self.wr = sparse.BCOO.fromdense(wr, n_batch=1)
+
+        # wr = sparse.random_bcoo(key=wrkey1, shape=(groups, res_dim, res_dim),
+        #                           dtype=dtype, nse=density, n_batch=1,
+        #                            generator=jax.random.uniform, minval=-1, maxval=1)
+        # x0 = jax.random.normal(key=wrkey2, shape=(groups, res_dim))
+        # x0 = x0 / jnp.linalg.norm(x0)
+        # eigvals = power_iteration_batch(wr, x0, 200)
+        # wr = ((1/eigvals[:, None, None]) * wr) * spec_rad
+
+        temp_list = []
+        for jj in range(groups):
+            rng = np.random.default_rng(int(seed + jj))
+            data_sampler = scipy.stats.uniform(loc=-1, scale=2).rvs
+            sp_mat = scipy.sparse.random_array(
+                (res_dim, res_dim), density=density, rng=rng, data_sampler=data_sampler
+            )
+            eigvals, _ = scipy.sparse.linalg.eigs(sp_mat, k=1)
+            sp_mat = sp_mat * spec_rad / np.abs(eigvals[0])
+            jax_mat = jax.experimental.sparse.BCOO.from_scipy_sparse(sp_mat)
+            jax_mat = jax.experimental.sparse.bcoo_broadcast_in_dim(
+                jax_mat, shape=(1, res_dim, res_dim), broadcast_dimensions=(1, 2)
+            )
+            temp_list.append(jax_mat)
+        wr = jax.experimental.sparse.bcoo_concatenate(temp_list, dimension=0)
+        self.wr = wr
+
         self.groups = groups
 
         self.dtype = dtype
@@ -215,7 +244,7 @@ class ESNDriver(DriverBase):
         return jnp.tanh(wr @ res_state + proj_vars + bias)
 
     def __call__(self, proj_vars: Array, res_state: Array) -> Array:
-        """Advance reservoir state
+        """Advance reservoir state.
 
         Parameters
         ----------

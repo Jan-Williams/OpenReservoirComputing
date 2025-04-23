@@ -1,7 +1,7 @@
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import pytest
-import equinox as eqx
 
 import orc
 
@@ -12,7 +12,7 @@ def linearreadout():
 
 
 def test_linearreadout_dims(linearreadout):
-    key = jax.random.key(999)   
+    key = jax.random.key(999)
     out_dim = linearreadout.out_dim
     res_dim = linearreadout.res_dim
     groups = linearreadout.groups
@@ -55,22 +55,32 @@ def test_param_types_linearreadout(out_dim, res_dim, dtype):
             seed=111,
         )
 
+
 def test_ravel():
     model = orc.readouts.LinearReadout(
-            out_dim=3,
-            res_dim=10,
-            dtype=jnp.float64,
-            groups=5,
-            seed=111,
-        )
+        out_dim=3,
+        res_dim=10,
+        dtype=jnp.float64,
+        groups=5,
+        seed=111,
+    )
+
     def where(m):
         return m.wout
+
     # to_rep = jnp.repeat(jnp.eye, 32, axis=0).reshape(5,3,10, order='F')
-    to_rep = jnp.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 1, 0, 0, 0, 0, 0, 0, 0]])
-    repped = jnp.repeat(to_rep,5, axis=0).reshape(5,3,10, order='F')
+    to_rep = jnp.array(
+        [
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        ]
+    )
+    repped = jnp.repeat(to_rep, 5, axis=0).reshape(5, 3, 10, order="F")
     model = eqx.tree_at(where, model, repped)
-    test_input = jnp.arange(50).reshape(5,10)
+    test_input = jnp.arange(50).reshape(5, 10)
     test_output = model(test_input)
-    assert (test_output == jnp.array([0, 1, 2, 10, 11, 12, 20, 21, 22, 30, 31, 32, 40, 41, 42])).all()
+    assert (
+        test_output
+        == jnp.array([0, 1, 2, 10, 11, 12, 20, 21, 22, 30, 31, 32, 40, 41, 42])
+    ).all()

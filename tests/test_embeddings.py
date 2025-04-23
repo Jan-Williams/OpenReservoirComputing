@@ -1,4 +1,3 @@
-import jax
 import jax.numpy as jnp
 import pytest
 
@@ -26,7 +25,7 @@ def test_win_dims_Linear(in_dim, groups, locality):
 )
 def test_bad_group_nums_Linear(in_dim, groups, locality):
     with pytest.raises(ValueError):
-        model = orc.embeddings.LinearEmbedding(
+        _ = orc.embeddings.LinearEmbedding(
             in_dim=in_dim,
             res_dim=200,
             scaling=0.014,

@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 
 import equinox as eqx
-import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float
 
@@ -162,8 +161,9 @@ class LinearReadout(ReadoutBase):
                 "Incorrect reservoir dimension for instantiated output map."
             )
         return jnp.ravel(eqx.filter_vmap(jnp.matmul)(self.wout, res_state))
-    
+
     def __call__(self, res_state: Array) -> Array:
+        """Call either readout or batch_readout depending on dimensions."""
         if len(res_state.shape) == 2:
             to_ret = self.readout(res_state)
         elif len(res_state.shape) == 3:
