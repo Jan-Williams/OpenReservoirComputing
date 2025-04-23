@@ -73,8 +73,8 @@ class ReservoirComputerBase(eqx.Module, ABC):
         """
 
         def scan_fn(state, in_vars):
-            proj_vars = self.embedding.embed(in_vars)
-            res_state = self.driver.advance(proj_vars, state)
+            proj_vars = self.embedding(in_vars)
+            res_state = self.driver(proj_vars, state)
             return (res_state, res_state)
 
         _, res_seq = jax.lax.scan(scan_fn, res_state, in_seq)
@@ -98,10 +98,10 @@ class ReservoirComputerBase(eqx.Module, ABC):
         """
 
         def scan_fn(state, _):
-            out_state = self.driver.advance(
-                self.embedding.embed(self.readout.readout(state)), state
+            out_state = self.driver(
+                self.embedding(self.readout(state)), state
             )
-            return (out_state, self.readout.readout(out_state))
+            return (out_state, self.readout(out_state))
 
         _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len)
         return state_seq
@@ -150,6 +150,7 @@ class ReservoirComputerBase(eqx.Module, ABC):
 def train_RC_forecaster(
     model: ReservoirComputerBase,
     train_seq: Array,
+    target_seq: Array,
     spinup: int = 0,
     initial_res_state: Array = None,
     beta: float = 8e-8,
@@ -176,17 +177,29 @@ def train_RC_forecaster(
     """
     # zero IC of RC if not provided
     if initial_res_state is None:
-        initial_res_state = jnp.zeros((model.res_dim,), dtype=model.dtype)
+        initial_res_state = jnp.zeros((1, model.res_dim,), dtype=model.dtype)
 
     # force the reservoir
-    res_seq = model.force(train_seq[:-1, :], initial_res_state)
+    res_seq = model.force(train_seq, initial_res_state)
 
-    # solve ridge regression problem to train readout
-    lhs = res_seq[spinup:].T @ res_seq[spinup:] + beta * jnp.eye(
-        model.res_dim, dtype=model.dtype
-    )
-    rhs = res_seq[spinup:].T @ train_seq[spinup + 1 :, :]
-    cmat = jax.scipy.linalg.solve(lhs, rhs, assume_a="sym").T
+
+    def solve_single_ridge_reg(res_seq, target_seq, beta):
+        lhs = res_seq.T @ res_seq + beta * jnp.eye(
+            res_seq.shape[1], dtype=res_seq.dtype
+        )
+        rhs = res_seq.T @ target_seq
+        cmat = jax.scipy.linalg.solve(lhs, rhs, assume_a="sym").T
+        return cmat
+    
+
+    solve_all_ridge_reg = eqx.filter_vmap(solve_single_ridge_reg, in_axes=eqx.if_array(1))
+    cmat = solve_all_ridge_reg(res_seq[spinup:], target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1), beta)
+    # print(model.readout.groups)
+    # cmat = jnp.empty((model.readout.groups, int(model.data_dim / model.readout.groups), model.res_dim))
+    # print(cmat.shape)
+    # for jj in range(model.readout.groups):
+    #     cmat_temp = solve_single_ridge_reg(res_seq[spinup:, jj, :], target_seq[spinup:, jj*int(model.data_dim / model.readout.groups): (jj+1)*int(model.data_dim / model.readout.groups)], 8e-8)
+    #     cmat = cmat.at[jj].set(cmat_temp)
 
     # replace wout with learned weights
     def where(m):

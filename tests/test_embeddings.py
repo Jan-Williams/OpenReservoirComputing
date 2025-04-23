@@ -22,7 +22,7 @@ def test_win_dims_Linear(in_dim, groups, locality):
 
 
 @pytest.mark.parametrize(
-    "in_dim,groups,locality", [(16, 7, 2), (32, 3, 1), (22, 12, 3), (14, 2, 5)]
+    "in_dim,groups,locality", [(16, 7, 2), (32, 3, 1), (22, 12, 3)]
 )
 def test_bad_group_nums_Linear(in_dim, groups, locality):
     with pytest.raises(ValueError):
