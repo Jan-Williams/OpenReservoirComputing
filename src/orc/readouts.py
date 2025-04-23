@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 
 import equinox as eqx
+import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float
 
@@ -92,8 +93,10 @@ class LinearReadout(ReadoutBase):
         Dimension of reservoir output.
     res_dim : int
         Reservoir dimension.
+    groups : int
+        Number of parallel reservoirs.
     wout : Array
-        output matrix
+        Output matrix.
     dtype : Float
             Dtype, default jnp.float64.
 
@@ -106,15 +109,17 @@ class LinearReadout(ReadoutBase):
     out_dim: int
     res_dim: int
     wout: Array
+    groups: int
     dtype: Float
 
     def __init__(
         self,
         out_dim: int,
         res_dim: int,
+        groups: int = 1,
         dtype: Float = jnp.float64,
         *,
-        seed: int,
+        seed: int = 0,
     ) -> None:
         """Initialize readout layer to zeros.
 
@@ -124,6 +129,8 @@ class LinearReadout(ReadoutBase):
             Dimension of reservoir output.
         res_dim : int
             Reservoir dimension.
+        groups : int
+            Number of parallel resrevoirs.
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
@@ -132,24 +139,38 @@ class LinearReadout(ReadoutBase):
         super().__init__(out_dim=out_dim, res_dim=res_dim, dtype=dtype)
         self.out_dim = out_dim
         self.res_dim = res_dim
-        self.wout = jnp.zeros((out_dim, res_dim), dtype=dtype)
+        self.wout = jnp.zeros((groups, out_dim, res_dim), dtype=dtype)
         self.dtype = dtype
+        self.groups = groups
 
+    @eqx.filter_jit
     def readout(self, res_state: Array) -> Array:
         """Readout from reservoir state.
 
         Parameters
         ----------
         res_state : Array
-            Reservoir state, (shape=(res_dim,)).
+            Reservoir state, (shape=(groups, res_dim,)).
 
         Returns
         -------
         Array
             Output from reservoir, (shape=(out_dim,)).
         """
-        if res_state.shape[0] != self.res_dim:
+        if res_state.shape[1] != self.res_dim:
             raise ValueError(
                 "Incorrect reservoir dimension for instantiated output map."
             )
-        return self.wout @ res_state
+        return jnp.ravel(eqx.filter_vmap(jnp.matmul)(self.wout, res_state))
+    
+    def __call__(self, res_state: Array) -> Array:
+        if len(res_state.shape) == 2:
+            to_ret = self.readout(res_state)
+        elif len(res_state.shape) == 3:
+            to_ret = self.batch_readout(res_state)
+        else:
+            raise ValueError(
+                "Only 1-dimensional localization is currently supported, detected a "
+                f"{len(res_state.shape)}D field."
+            )
+        return to_ret

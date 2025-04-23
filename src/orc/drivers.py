@@ -198,7 +198,7 @@ class ESNDriver(DriverBase):
             Reservoir state, (shape=(groups, res_dim,)).
         """
         if proj_vars.shape != (self.groups, self.res_dim):
-            raise ValueError("Incorrect proj_var dimension.")
+            raise ValueError(f"Incorrect proj_var dimension, got {proj_vars.shape}")
         return (
             self.leak
             * self.sparse_ops(

@@ -160,11 +160,11 @@ class LinearEmbedding(EmbedBase):
             raise ValueError(
                 f"The number of groups {groups} must evenly divide in_dim {in_dim}."
             )
-        if locality * 2 + self.group_size > in_dim:
-            raise ValueError(
-                "Input to each parallel reservoir too large; reduce either "
-                f"locality {locality} or group_size {self.group_size}."
-            )
+        # if locality * 2 + self.group_size > in_dim:
+        #     raise ValueError(
+        #         "Input to each parallel reservoir too large; reduce either "
+        #         f"locality {locality} or group_size {self.group_size}."
+        #     )
 
         self.win = jax.random.uniform(
             key,
@@ -180,7 +180,7 @@ class LinearEmbedding(EmbedBase):
     def moving_window(self, a):
         """Generate window to compute localized states."""
         size = int(self.in_dim / self.groups + 2 * self.locality)
-        starts = jnp.arange(len(a) - size + 1)[: self.groups] * self.groups
+        starts = jnp.arange(len(a) - size + 1)[: self.groups] * int(self.in_dim / self.groups)
         return eqx.filter_vmap(
             lambda start: jax.lax.dynamic_slice(a, (start,), (size,))
         )(starts)
@@ -230,10 +230,7 @@ class LinearEmbedding(EmbedBase):
             raise ValueError("Incorrect dimension for input state.")
         localized_states = self.localize(in_state)
 
-        def vmap_matmul(win, states):
-            return win @ states
-
-        return eqx.filter_vmap(vmap_matmul)(self.win, localized_states)
+        return eqx.filter_vmap(jnp.matmul)(self.win, localized_states)
 
     def __call__(self, in_state: Array) -> Array:
         """Embed state to reservoir dimensions.
