@@ -96,7 +96,7 @@ def test_call_ones_esn(groups):
         res_dim=212,
         leak=0.123,
         spec_rad=0.6,
-        density=0.02,
+        density=0.2,
         bias=1.6,
         dtype=jnp.float64,
         seed=0,
