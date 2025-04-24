@@ -10,7 +10,7 @@ def test_esn_train():
     """
     Test forecast on Lorenz system. Passes if forecast is accurate for 100 steps.
     """
-    esn = orc.models.ESN(data_dim=3, res_dim=500, seed=0)
+    esn = orc.models.ESN(data_dim=3, res_dim=3000, seed=0)
 
     def lorenz(t, x, sigma=10, beta=8 / 3, rho=28):
         return np.array(
@@ -38,7 +38,7 @@ def test_esn_train():
         jax_input,
         target_seq,
         spinup=500,
-        initial_res_state=jax.numpy.zeros((1, 500), dtype=jnp.float64),
+        initial_res_state=jax.numpy.zeros((1, 3000), dtype=jnp.float64),
         beta=8e-8,
     )
     fcast = esn.forecast(100, output_seq[-1])
