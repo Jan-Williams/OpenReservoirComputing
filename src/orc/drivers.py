@@ -8,6 +8,8 @@ import jax.numpy as jnp
 from jax.experimental import sparse
 from jaxtyping import Array, Float
 
+from orc.utils import max_eig_arnoldi_lax
+
 jax.config.update("jax_enable_x64", True)
 
 
@@ -170,8 +172,9 @@ class ESNDriver(DriverBase):
         wr = jnp.zeros(self.res_dim * self.res_dim, dtype=dtype)
         wr = wr.at[wr_indices].set(wr_vals)
         wr = wr.reshape(res_dim, res_dim)
-        wr = wr * (spec_rad / jnp.max(jnp.abs(jnp.linalg.eigvals(wr))))
-        self.wr = sparse.BCOO.fromdense(wr)
+        # wr = wr * (spec_rad / jnp.max(jnp.abs(jnp.linalg.eigvals(wr))))
+        wr = sparse.BCOO.fromdense(wr)
+        self.wr = wr * (spec_rad / jnp.max(jnp.abs(max_eig_arnoldi_lax(wr))))
 
         self.dtype = dtype
 
