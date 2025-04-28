@@ -15,12 +15,12 @@ def test_linearreadout_dims(linearreadout):
     key = jax.random.key(999)
     out_dim = linearreadout.out_dim
     res_dim = linearreadout.res_dim
-    groups = linearreadout.groups
-    test_vec = jax.random.normal(key, shape=(groups, res_dim))
+    chunks = linearreadout.chunks
+    test_vec = jax.random.normal(key, shape=(chunks, res_dim))
     out_vec = linearreadout.readout(test_vec)
     assert out_vec.shape == (out_dim,)
 
-    test_vec = jax.random.normal(key, shape=(groups, res_dim - 1))
+    test_vec = jax.random.normal(key, shape=(chunks, res_dim - 1))
     with pytest.raises(ValueError):
         out_vec = linearreadout.readout(test_vec)
 
@@ -30,13 +30,13 @@ def test_batchapply_dims_linear(batch_size, linearreadout):
     key = jax.random.key(42)
     out_dim = linearreadout.out_dim
     res_dim = linearreadout.res_dim
-    groups = linearreadout.groups
-    test_vec = jax.random.normal(key, shape=(batch_size, groups, res_dim))
+    chunks = linearreadout.chunks
+    test_vec = jax.random.normal(key, shape=(batch_size, chunks, res_dim))
     out_vec = linearreadout.batch_readout(test_vec)
 
     assert out_vec.shape == (batch_size, out_dim)
 
-    test_vec = jax.random.normal(key, shape=(batch_size, groups, res_dim - 1))
+    test_vec = jax.random.normal(key, shape=(batch_size, chunks, res_dim - 1))
 
     with pytest.raises(ValueError):
         out_vec = linearreadout.batch_readout(test_vec)
@@ -61,7 +61,7 @@ def test_ravel():
         out_dim=3,
         res_dim=10,
         dtype=jnp.float64,
-        groups=5,
+        chunks=5,
         seed=111,
     )
 

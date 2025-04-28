@@ -63,7 +63,7 @@ class EmbedBase(eqx.Module, ABC):
         Returns
         -------
         Array
-            Embedded input state to reservoir dimension(shape=(res_dim,)).
+            Embedded input state to reservoir dimension.
         """
         pass
 
@@ -77,7 +77,7 @@ class EmbedBase(eqx.Module, ABC):
         Parameters
         ----------
         in_state : Array
-            Input states, (shape=(batch_dim, in_dim,)).
+            Input states.
 
         Returns
         -------
@@ -93,14 +93,14 @@ class LinearEmbedding(EmbedBase):
     Attributes
     ----------
     in_dim : int
-        Reservoir output dimension.
+        Reservoir input dimension.
     res_dim : int
         Reservoir dimension.
     scaling : float
         Min/max values of input matrix.
     win : Array
         Input matrix.
-    groups : int
+    chunks : int
         Number of parallel reservoirs.
     locality : int
         Adjacent reservoir overlap.
@@ -112,7 +112,9 @@ class LinearEmbedding(EmbedBase):
     localize(in_state, periodic=True)
         Decompose input_state to parallel network inputs.
     moving_window(a)
-
+        Helper function for localize.
+    embed(in_state)
+        Embed single input state to reservoir dimension.
     """
 
     in_dim: int
@@ -120,7 +122,7 @@ class LinearEmbedding(EmbedBase):
     scaling: float
     win: Array
     dtype: Float
-    groups: int
+    chunks: int
     locality: int
     group_size: int
 
@@ -130,7 +132,7 @@ class LinearEmbedding(EmbedBase):
         res_dim: int,
         scaling: float,
         dtype: Float = jnp.float64,
-        groups: int = 1,
+        chunks: int = 1,
         locality: int = 0,
         *,
         seed: int,
@@ -154,34 +156,29 @@ class LinearEmbedding(EmbedBase):
         self.scaling = scaling
         self.dtype = dtype
         key = jax.random.key(seed)
-        self.group_size = int(in_dim / groups)
+        self.group_size = int(in_dim / chunks)
 
-        if in_dim % groups:
+        if in_dim % chunks:
             raise ValueError(
-                f"The number of groups {groups} must evenly divide in_dim {in_dim}."
+                f"The number of chunks {chunks} must evenly divide in_dim {in_dim}."
             )
-        # if locality * 2 + self.group_size > in_dim:
-        #     raise ValueError(
-        #         "Input to each parallel reservoir too large; reduce either "
-        #         f"locality {locality} or group_size {self.group_size}."
-        #     )
 
         self.win = jax.random.uniform(
             key,
-            (groups, res_dim, self.group_size + 2 * locality),
+            (chunks, res_dim, self.group_size + 2 * locality),
             minval=-scaling,
             maxval=scaling,
             dtype=dtype,
         )
         self.locality = locality
-        self.groups = groups
+        self.chunks = chunks
 
     @eqx.filter_jit
     def moving_window(self, a):
         """Generate window to compute localized states."""
-        size = int(self.in_dim / self.groups + 2 * self.locality)
-        starts = jnp.arange(len(a) - size + 1)[: self.groups] * int(
-            self.in_dim / self.groups
+        size = int(self.in_dim / self.chunks + 2 * self.locality)
+        starts = jnp.arange(len(a) - size + 1)[: self.chunks] * int(
+            self.in_dim / self.chunks
         )
         return eqx.filter_vmap(
             lambda start: jax.lax.dynamic_slice(a, (start,), (size,))
@@ -195,11 +192,13 @@ class LinearEmbedding(EmbedBase):
         ----------
         in_state : Array
             Input state, (shape=(in_dim,))
+        periodic : bool
+            Assume periodic boundary conditions.
 
         Returns
         -------
         Array
-            Parallel reservoir inputs, (shape=(groups, group_size + 2*locality))
+            Parallel reservoir inputs, (shape=(chunks, group_size + 2*locality))
         """
         if len(in_state.shape) != 1:
             raise ValueError(
@@ -226,7 +225,7 @@ class LinearEmbedding(EmbedBase):
         Returns
         -------
         Array
-            Embedded input to reservoir, (shape=(groups, res_dim,)).
+            Embedded input to reservoir, (shape=(chunks, res_dim,)).
         """
         if in_state.shape != (self.in_dim,):
             raise ValueError("Incorrect dimension for input state.")
@@ -245,8 +244,8 @@ class LinearEmbedding(EmbedBase):
         Returns
         -------
         Array
-            Embedded input to reservoir, (shape=(groups, res_dim,) or
-            shape=(seq_len, groups, res_dim)).
+            Embedded input to reservoir, (shape=(chunks, res_dim,) or
+            shape=(seq_len, chunks, res_dim)).
         """
         if len(in_state.shape) == 1:
             to_ret = self.embed(in_state)
@@ -255,6 +254,6 @@ class LinearEmbedding(EmbedBase):
         else:
             raise ValueError(
                 "Only 1-dimensional localization is currently supported, detected a "
-                f"{len(in_state.shape)}D field."
+                f"{len(in_state.shape) - 1}D field."
             )
         return to_ret
