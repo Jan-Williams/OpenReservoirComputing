@@ -11,8 +11,8 @@ def esndriver():
     return orc.drivers.ESNDriver(
         res_dim=212,
         leak=0.123,
-        spec_rad=0.6,
-        density=0.02,
+        spectral_radius=0.6,
+        density=0.2,
         bias=1.6,
         dtype=jnp.float64,
         seed=0,
@@ -50,18 +50,18 @@ def test_batchapply_dims_esn(batch_size, esndriver):
 
 
 @pytest.mark.parametrize(
-    "res_dim,leak,spec_rad,density,bias,dtype",
+    "res_dim,leak,spectral_radius,density,bias,dtype",
     [
         (22, 0.123, 0.6, 0.02, 1.6, jnp.int32),
         (22.2, 0.123, 0.6, 0.02, 1.6, jnp.float64),
     ],
 )
-def test_param_types_esn(res_dim, leak, spec_rad, density, bias, dtype):
+def test_param_types_esn(res_dim, leak, spectral_radius, density, bias, dtype):
     with pytest.raises(TypeError):
         _ = orc.drivers.ESNDriver(
             res_dim=res_dim,
             leak=leak,
-            spec_rad=spec_rad,
+            spectral_radius=spectral_radius,
             density=density,
             bias=bias,
             dtype=dtype,
@@ -70,19 +70,19 @@ def test_param_types_esn(res_dim, leak, spec_rad, density, bias, dtype):
 
 
 @pytest.mark.parametrize(
-    "res_dim,leak,spec_rad,density,bias,dtype",
+    "res_dim,leak,spectral_radius,density,bias,dtype",
     [
         (22, 0.123, -0.5, 0.02, 1.6, jnp.float32),
         (22, 0.123, 0.6, 1.3, 1.6, jnp.float64),
         (22, -0.2, 0.6, 0.04, 1.6, jnp.float32),
     ],
 )
-def test_param_vals_esn(res_dim, leak, spec_rad, density, bias, dtype):
+def test_param_vals_esn(res_dim, leak, spectral_radius, density, bias, dtype):
     with pytest.raises(ValueError):
         _ = orc.drivers.ESNDriver(
             res_dim=res_dim,
             leak=leak,
-            spec_rad=spec_rad,
+            spectral_radius=spectral_radius,
             density=density,
             bias=bias,
             dtype=dtype,
@@ -90,22 +90,22 @@ def test_param_vals_esn(res_dim, leak, spec_rad, density, bias, dtype):
         )
 
 
-@pytest.mark.parametrize("groups", [2, 4, 8, 9])
-def test_call_ones_esn(groups):
+@pytest.mark.parametrize("chunks", [2, 4, 8, 9])
+def test_call_ones_esn(chunks):
     model = orc.drivers.ESNDriver(
         res_dim=212,
         leak=0.123,
-        spec_rad=0.6,
+        spectral_radius=0.6,
         density=0.2,
         bias=1.6,
         dtype=jnp.float64,
         seed=0,
-        groups=groups,
+        chunks=chunks,
     )
     key = jax.random.key(0)
     key1, key2 = jax.random.split(key)
-    test_vec1 = jax.random.normal(key=key1, shape=(groups, 212))
-    test_vec2 = jax.random.normal(key=key2, shape=(groups, 212))
+    test_vec1 = jax.random.normal(key=key1, shape=(chunks, 212))
+    test_vec2 = jax.random.normal(key=key2, shape=(chunks, 212))
     test_outputs = model(test_vec1, test_vec2)
     wr = sparse.BCOO.todense(model.wr)
     bias = model.bias
@@ -117,8 +117,8 @@ def test_call_ones_esn(groups):
         )
         return leak * res_next + (1 - leak) * res_state
 
-    gt_outputs = jnp.empty((groups, 212))
-    for group in range(groups):
+    gt_outputs = jnp.empty((chunks, 212))
+    for group in range(chunks):
         gt = naive_imp_forward(
             wr[group], bias, leak, test_vec1[group], test_vec2[group]
         )

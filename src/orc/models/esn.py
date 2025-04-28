@@ -1,12 +1,14 @@
 """Classic ESN implementation with tanh nonlinearity and linear readout."""
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
+from jaxtyping import Array
 
 from orc.drivers import ESNDriver
 from orc.embeddings import LinearEmbedding
 from orc.rc import ReservoirComputerBase
-from orc.readouts import LinearReadout
+from orc.readouts import LinearReadout, QuadraticReadout
 
 jax.config.update("jax_enable_x64", True)
 
@@ -23,7 +25,7 @@ class ESN(ReservoirComputerBase):
         Input/output dimension.
     driver : ESNDriver
         Driver implmenting the Echo State Network dynamics.
-    readout : LinearReadout
+    readout : BaseReadout
         Trainable linear readout layer.
     embedding : LinearEmbedding
         Untrainable linear embedding layer.
@@ -41,6 +43,7 @@ class ESN(ReservoirComputerBase):
     """
 
     res_dim: int
+    data_dim: int
 
     def __init__(
         self,
@@ -53,8 +56,9 @@ class ESN(ReservoirComputerBase):
         Wr_spectral_radius: float = 0.8,
         dtype: type = jnp.float64,
         seed: int = 0,
-        groups: int = 1,
+        chunks: int = 1,
         locality: int = 0,
+        quadratic: bool = False
     ) -> None:
         """
         Initialize the ESN model.
@@ -79,10 +83,17 @@ class ESN(ReservoirComputerBase):
             Data type of the model (jnp.float64 is highly recommended).
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
+        chunks : int
+            Number of parallel reservoirs, must evenly divide data_dim.
+        locality : int
+            Overlap in adjacent parallel reservoirs.
+        quadratic : bool
+            Use quadratic nonlinearity in output, default False.
         """
         # Initialize the random key and reservoir dimension
         self.res_dim = res_dim
         self.seed = seed
+        self.data_dim = data_dim
         key = jax.random.PRNGKey(seed)
         key_driver, key_readout, key_embedding = jax.random.split(key, 3)
 
@@ -92,7 +103,7 @@ class ESN(ReservoirComputerBase):
             res_dim=res_dim,
             seed=key_embedding[0],
             scaling=embedding_scaling,
-            groups=groups,
+            chunks=chunks,
             locality=locality,
         )
         driver = ESNDriver(
@@ -101,17 +112,123 @@ class ESN(ReservoirComputerBase):
             leak=leak_rate,
             bias=bias,
             density=Wr_density,
-            spec_rad=Wr_spectral_radius,
-            groups=groups,
+            spectral_radius=Wr_spectral_radius,
+            chunks=chunks,
         )
-        readout = LinearReadout(
-            out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], groups=groups
-        )
+        if quadratic:
+            readout = QuadraticReadout(
+                out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
+            )
+        else:
+            readout = LinearReadout(
+                out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
+            )
+
         super().__init__(
             driver=driver,
             readout=readout,
             embedding=embedding,
-            data_dim=data_dim,
+            res_dim=res_dim,
+            in_dim=data_dim,
+            out_dim=data_dim,
             dtype=dtype,
             seed=seed,
         )
+
+    @eqx.filter_jit
+    def forecast(self, fcast_len: int, res_state: Array) -> Array:
+        """Forecast from an initial reservoir state.
+
+        Parameters
+        ----------
+        fcast_len : int
+            Steps to forecast.
+        res_state : Array
+            Initial reservoir state, (shape=(res_dim)).
+
+        Returns
+        -------
+        Array
+            Forecasted states, (shape=(fcast_len, data_dim))
+        """
+
+        def scan_fn(state, _):
+            out_state = self.driver(self.embedding(self.readout(state)), state)
+            return (out_state, self.readout(out_state))
+
+        _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len)
+        return state_seq
+
+def train_ESN_forecaster(
+    model: ESN,
+    train_seq: Array,
+    target_seq: Array = None,
+    spinup: int = 0,
+    initial_res_state: Array = None,
+    beta: float = 8e-8,
+) -> tuple[ESN, Array]:
+    """Training function for RC forecaster.
+
+    Parameters
+    ----------
+    model : ReservoirComputerBase
+        ReservoirComputerBase model to train.
+    train_seq : Array
+        Training input sequence for reservoir, (shape=(seq_len, data_dim)).
+    target_seq : Array
+        Target sequence for training reservoir, (shape=(seq_len, data_dim)).
+    initial_res_state : Array
+        Initial reservoir state, (shape=(chunks, res_dim,)).
+    spinup : int
+        Initial transient of reservoir states to discard.
+    beta : float
+        Tikhonov regularization parameter.
+
+    Returns
+    -------
+    model : ESN
+        Trained ESN model.
+    res_seq : Array
+        Training sequence of reservoir states.
+    """
+    if initial_res_state is None:
+        initial_res_state = jnp.zeros(
+            (
+                model.embedding.chunks,
+                model.res_dim,
+            ),
+            dtype=model.dtype,
+        )
+
+    if target_seq is None:
+        target_seq = train_seq[1:, :]
+        train_seq = train_seq[:-1, :]
+
+    res_seq = model.force(train_seq, initial_res_state)
+    if isinstance(model.readout, QuadraticReadout):
+        res_seq_train = res_seq.at[:, :, ::2].set(res_seq[:, :, ::2] ** 2)
+    else:
+        res_seq_train = res_seq
+
+    def solve_single_ridge_reg(res_seq, target_seq, beta):
+        lhs = res_seq.T @ res_seq + beta * jnp.eye(
+            res_seq.shape[1], dtype=res_seq.dtype
+        )
+        rhs = res_seq.T @ target_seq
+        cmat = jax.scipy.linalg.solve(lhs, rhs, assume_a="sym").T
+        return cmat
+
+    solve_all_ridge_reg = eqx.filter_vmap(
+        solve_single_ridge_reg, in_axes=eqx.if_array(1)
+    )
+    cmat = solve_all_ridge_reg(
+        res_seq_train[spinup:],
+        target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1),
+        beta,
+    )
+
+    def where(m):
+        return m.readout.wout
+    model = eqx.tree_at(where, model, cmat)
+
+    return model, res_seq
