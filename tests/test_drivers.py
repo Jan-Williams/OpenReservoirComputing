@@ -86,7 +86,7 @@ def test_param_vals_linearreadout(res_dim, leak, spec_rad, density, bias, dtype)
         )
 
 @pytest.mark.parametrize(
-    "res_dim, spectral_radius, density", 
+    "res_dim, spectral_radius, density",
     [
           (100, 0.876, 0.02),
           (500, 0.546, 0.01),
@@ -106,11 +106,12 @@ def test_driver_spectral_radius_sparse(res_dim, spectral_radius, density):
 
     wr = driver.wr
     wr_max_eig = jnp.max(jnp.abs(jax.numpy.linalg.eigvals(wr.todense())))
-    assert jnp.isclose(wr_max_eig, spectral_radius, atol=1e-5), f"Expected spectral radius {spectral_radius}, but got {wr_max_eig}"
-
+    assert jnp.isclose(wr_max_eig, spectral_radius, atol=1e-5), (
+        f"Expected spectral radius {spectral_radius}, but got {wr_max_eig}"
+    )
 
 @pytest.mark.parametrize(
-    "res_dim, spectral_radius, density", 
+    "res_dim, spectral_radius, density",
     [
           (10, 0.6, 0.5),
           (50, 0.6, 0.1),
@@ -127,9 +128,11 @@ def test_driver_spectral_radius_dense(res_dim, spectral_radius, density):
         density=density,
         dtype=jnp.float64,
         seed=0,
-        use_sparse_eigs=False,  
+        use_sparse_eigs=False,
     )
 
     wr = driver.wr
     wr_max_eig = jnp.max(jnp.abs(jax.numpy.linalg.eigvals(wr.todense())))
-    assert jnp.isclose(wr_max_eig, spectral_radius, atol=1e-5), f"Expected spectral radius {spectral_radius}, but got {wr_max_eig}"
+    assert jnp.isclose(wr_max_eig, spectral_radius, atol=1e-5), (
+        f"Expected spectral radius {spectral_radius}, but got {wr_max_eig}"
+    )
