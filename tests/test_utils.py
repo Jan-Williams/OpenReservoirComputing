@@ -10,7 +10,7 @@ from orc.utils import max_eig_arnoldi
 ATOL = 1e-5
 
 @pytest.fixture(params=
-                [(10, 0.5), (100, 0.02), (1000, 0.01), (2000, 0.01)] # low connectivity matrices
+                [(50, 0.1), (100, 0.02), (1000, 0.01), (2000, 0.01)] # low connectivity matrices
                 )
 def matrix_parms(request):
     return request.param
