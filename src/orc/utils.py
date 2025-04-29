@@ -58,9 +58,6 @@ def max_eig_arnoldi_lax(A, tol=1e-12, max_iters=200, seed=0):
     init_state = (0, V, H, 0.0 + 0j, False)
     j_final, _, _, lambda_max, _ = jax.lax.while_loop(cond, body, init_state)
 
-    # if j_final == max_iters:
-    #     print(f"Arnoldi iteration did not converge in {max_iters} iterations. Consider increasing max_iters.")
-
     jax.lax.cond(
         j_final == max_iters,
         lambda: jax.debug.print(f"Arnoldi iteration did not converge in {max_iters} iterations. Consider increasing max_iters."),
