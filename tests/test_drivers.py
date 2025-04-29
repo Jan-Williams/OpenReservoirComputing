@@ -88,8 +88,8 @@ def test_param_vals_linearreadout(res_dim, leak, spec_rad, density, bias, dtype)
 @pytest.mark.parametrize(
     "res_dim, spectral_radius, density", 
     [
-          (10, 0.6, 0.5),
-          (100, 0.876, 0.01),
+          (100, 0.876, 0.02),
+          (500, 0.546, 0.01),
           (1000, 0.432, 0.01),
           (1000, 0.1, 0.01),
           (1000, 1.3, 0.01),
@@ -113,6 +113,7 @@ def test_driver_spectral_radius_sparse(res_dim, spectral_radius, density):
     "res_dim, spectral_radius, density", 
     [
           (10, 0.6, 0.5),
+          (50, 0.6, 0.1),
           (100, 0.876, 0.01),
           (1000, 0.432, 0.01),
           (1000, 0.1, 0.01),
