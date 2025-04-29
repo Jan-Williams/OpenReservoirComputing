@@ -1,16 +1,15 @@
 import jax
-import jax.numpy as jnp
 import jax.experimental.sparse
+import jax.numpy as jnp
 import pytest
 
-import orc
 from orc.utils import max_eig_arnoldi
 
 # Tolerance for numerical comparisons
 ATOL = 1e-5
 
 @pytest.fixture(params=
-                [(50, 0.1), (100, 0.02), (1000, 0.01), (2000, 0.01)] # low connectivity matrices
+                [(50, 0.1), (100, 0.02), (1000, 0.01), (2000, 0.01)]
                 )
 def matrix_parms(request):
     return request.param
@@ -44,10 +43,9 @@ def test_max_eig_random_sparse(matrix_parms):
 def test_max_eig_seed_consistency(matrix_parms):
     """Test that the same seed produces the same max eigenvalue approximation."""
     n, density = matrix_parms
-    key = jax.random.PRNGKey(0)
     A = random_sparse_matrix(n, density)
-    
+
     eig1 = max_eig_arnoldi(A, seed=42)
     eig2 = max_eig_arnoldi(A, seed=42)
-    
+
     assert jnp.isclose(eig1, eig2) # no tolerance
