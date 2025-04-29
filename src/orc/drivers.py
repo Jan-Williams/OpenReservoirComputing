@@ -4,11 +4,12 @@ from abc import ABC, abstractmethod
 
 import equinox as eqx
 import jax
+import jax.experimental.sparse
 import jax.numpy as jnp
-from jax.experimental import sparse
+import jax.random
 from jaxtyping import Array, Float
 
-from orc.utils import max_eig_arnoldi_lax
+from orc.utils import max_eig_arnoldi
 
 jax.config.update("jax_enable_x64", True)
 
@@ -124,6 +125,7 @@ class ESNDriver(DriverBase):
         dtype: Float = jnp.float64,
         *,
         seed: int,
+        use_sparse_eigs: bool = True
     ) -> None:
         """Initialize weight matrices.
 
@@ -143,6 +145,10 @@ class ESNDriver(DriverBase):
             Dtype, default jnp.float64.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
+        use_sparse_eigs : bool
+            Whether to use sparse eigensolver for setting the spectral radius of wr.
+            Default is True, which is recommended to save memory and compute time. If
+            False, will use dense eigensolver which may be more accurate.
         """
         super().__init__(res_dim=res_dim, dtype=dtype)
         self.res_dim = res_dim
@@ -158,24 +164,24 @@ class ESNDriver(DriverBase):
             raise ValueError("Leak rate must satisfy 0 < leak < 1.")
         if density < 0 or density > 1:
             raise ValueError("Density must satisfy 0 < density < 1.")
-        wrkey1, wrkey2 = jax.random.split(key, 2)
+        _, wr_key = jax.random.split(key)
 
-        N_nonzero = int(res_dim**2 * density)
-        wr_indices = jax.random.choice(
-            wrkey1,
-            res_dim**2,
-            shape=(N_nonzero,),
-        )
-        wr_vals = jax.random.uniform(
-            wrkey2, shape=N_nonzero, minval=-1, maxval=1, dtype=self.dtype
-        )
-        wr = jnp.zeros(self.res_dim * self.res_dim, dtype=dtype)
-        wr = wr.at[wr_indices].set(wr_vals)
-        wr = wr.reshape(res_dim, res_dim)
-        # wr = wr * (spec_rad / jnp.max(jnp.abs(jnp.linalg.eigvals(wr))))
-        wr = sparse.BCOO.fromdense(wr)
-        self.wr = wr * (spec_rad / jnp.max(jnp.abs(max_eig_arnoldi_lax(wr))))
+        # generate initial wr
+        wr = jax.experimental.sparse.random_bcoo(key=wr_key,
+                                                 shape=(res_dim, res_dim),
+                                                 nse=density,
+                                                 dtype=dtype,
+                                                 generator = jax.random.normal)
+        del wr_key # consumed by wr
 
+        # set wr spectral radius
+        if use_sparse_eigs:
+            eig_max = jnp.abs(max_eig_arnoldi(wr))
+        else:
+            wr_dense = wr.todense()
+            eig_max = jnp.max(jnp.abs(jnp.linalg.eigvals(wr_dense)))
+
+        self.wr = wr * (spec_rad / eig_max)
         self.dtype = dtype
 
     def advance(self, proj_vars: Array, res_state: Array) -> Array:
