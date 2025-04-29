@@ -53,6 +53,7 @@ class ESN(ReservoirComputerBase):
         Wr_spectral_radius: float = 0.8,
         dtype: type = jnp.float64,
         seed: int = 0,
+        use_sparse_eigs: bool = True
     ) -> None:
         """
         Initialize the ESN model.
@@ -77,6 +78,10 @@ class ESN(ReservoirComputerBase):
             Data type of the model (jnp.float64 is highly recommended).
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
+        use_sparse_eigs : bool
+            Whether to use sparse eigensolver for setting the spectral radius of wr.
+            Default is True, which is recommended to save memory and compute time. If
+            False, will use dense eigensolver which may be more accurate.
         """
         # Initialize the random key and reservoir dimension
         self.res_dim = res_dim
@@ -98,6 +103,8 @@ class ESN(ReservoirComputerBase):
             bias=bias,
             density=Wr_density,
             spec_rad=Wr_spectral_radius,
+            dtype=dtype,
+            use_sparse_eigs=use_sparse_eigs,
         )
         readout = LinearReadout(out_dim=data_dim, res_dim=res_dim, seed=key_readout[0])
         super().__init__(
