@@ -1,7 +1,7 @@
 """Define base class for reservoir drivers and implement common architectures."""
 
-from abc import ABC, abstractmethod
 import warnings
+from abc import ABC, abstractmethod
 
 import equinox as eqx
 import jax
@@ -171,7 +171,9 @@ class ESNDriver(DriverBase):
         if res_dim < 100 and use_sparse_eigs:
             use_sparse_eigs = False
             warnings.warn(
-                "Reservoir dimension is less than 100, using dense eigensolver for spectral radius.")
+                "Reservoir dimension is less than 100, using dense " \
+                "eigensolver for spectral radius.", stacklevel=2
+            )
 
         # generate initial wr
         wr = jax.experimental.sparse.random_bcoo(key=wr_key,

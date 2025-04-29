@@ -6,6 +6,7 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array
 
+
 @functools.partial(jax.jit, static_argnames=["max_iters"])
 def _arnoldi_iteration(A,
                        max_iters=200,
@@ -34,7 +35,7 @@ def _arnoldi_iteration(A,
     m = A.shape[0]
     n = max_iters
 
-    # choose a random vector to start iterating on 
+    # choose a random vector to start iterating on
     key = jax.random.PRNGKey(seed)
     b = jax.random.normal(key, (m,))
     q0 = b / jnp.linalg.norm(b)
@@ -51,7 +52,7 @@ def _arnoldi_iteration(A,
         h_jk = jnp.where(mask[j], jnp.dot(Q[:,j], v), 0.0)
         v = jnp.where(mask[j], v - h_jk*Q[:,j], v)
         return (v, Q, mask), h_jk
-    
+
     def arnoldi_step(carry, k):
         A, Q, H = carry
 
@@ -60,28 +61,28 @@ def _arnoldi_iteration(A,
 
         # Create a mask for valid indices (0 to k)
         idx_mask = jnp.arange(n+1) <= k
-        
+
         # run modified gs with fixed-size loop and masking
         final_carry_gs, h_jk_vals = jax.lax.scan(
-            gs_step, 
-            (v, Q, idx_mask), 
+            gs_step,
+            (v, Q, idx_mask),
             jnp.arange(n+1)  # fixed size scan
         )
         v = final_carry_gs[0]  # orthogonalized candidate vector
-        
+
         # Calculate subdiagonal
         h_kplus1k = jnp.linalg.norm(v)
-        
+
         # Update H column k using a mask
         col_indices = jnp.arange(n+1)
         mask = col_indices <= k  # For the first k+1 elements
-        
+
         # Apply h_jk_vals for the first k+1 elements using the mask
         H_col = jnp.where(mask, h_jk_vals, H[:, k])
-        
+
         # Set the k+1 element to h_kplus1k
         H_col = H_col.at[k+1].set(h_kplus1k)
-        
+
         # Update the k-th column of H
         H = H.at[:, k].set(H_col)
 
