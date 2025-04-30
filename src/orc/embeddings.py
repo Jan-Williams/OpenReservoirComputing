@@ -125,6 +125,7 @@ class LinearEmbedding(EmbedBase):
     chunks: int
     locality: int
     group_size: int
+    periodic: bool
 
     def __init__(
         self,
@@ -134,6 +135,7 @@ class LinearEmbedding(EmbedBase):
         dtype: Float = jnp.float64,
         chunks: int = 1,
         locality: int = 0,
+        periodic: bool = True,
         *,
         seed: int,
     ) -> None:
@@ -172,6 +174,7 @@ class LinearEmbedding(EmbedBase):
         )
         self.locality = locality
         self.chunks = chunks
+        self.periodic = periodic
 
     @eqx.filter_jit
     def moving_window(self, a):
@@ -185,7 +188,7 @@ class LinearEmbedding(EmbedBase):
         )(starts)
 
     @eqx.filter_jit
-    def localize(self, in_state: Array, periodic=True) -> Array:
+    def localize(self, in_state: Array) -> Array:
         """Generate parallel reservoir inputs from input state.
 
         Parameters
@@ -208,7 +211,7 @@ class LinearEmbedding(EmbedBase):
         aug_state = jnp.hstack(
             [in_state[-self.locality :], in_state, in_state[: self.locality]]
         )
-        if not periodic:
+        if not self.periodic:
             aug_state = aug_state.at[: self.locality].set(aug_state[self.locality])
             aug_state = aug_state.at[-self.locality :].set(aug_state[-self.locality])
         return self.moving_window(aug_state)
