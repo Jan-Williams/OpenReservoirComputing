@@ -169,7 +169,6 @@ class ESNDriver(DriverBase):
             raise ValueError("Leak rate must satisfy 0 < leak < 1.")
         if density < 0 or density > 1:
             raise ValueError("Density must satisfy 0 < density < 1.")
-        wrkey1, wrkey2 = jax.random.split(key, 2)
 
         temp_list = []
         for jj in range(chunks):
