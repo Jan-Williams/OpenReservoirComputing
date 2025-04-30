@@ -53,7 +53,7 @@ class ReservoirComputerBase(eqx.Module, ABC):
     embedding: EmbedBase
     in_dim: int
     out_dim: int
-    res_dim : int
+    res_dim: int
     dtype: Float = jnp.float64
     seed: int = 0
 
@@ -73,6 +73,7 @@ class ReservoirComputerBase(eqx.Module, ABC):
         Array
             Forced reservoir sequence, (shape=(seq_len, res_dim)).
         """
+
         def scan_fn(state, in_vars):
             proj_vars = self.embedding(in_vars)
             res_state = self.driver(proj_vars, state)

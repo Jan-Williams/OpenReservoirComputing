@@ -59,7 +59,7 @@ class ESN(ReservoirComputerBase):
         chunks: int = 1,
         locality: int = 0,
         quadratic: bool = False,
-        periodic: bool = True
+        periodic: bool = True,
     ) -> None:
         """
         Initialize the ESN model.
@@ -90,6 +90,8 @@ class ESN(ReservoirComputerBase):
             Overlap in adjacent parallel reservoirs.
         quadratic : bool
             Use quadratic nonlinearity in output, default False.
+        periodic : bool
+            Periodic BCs for embedding layer.
         """
         # Initialize the random key and reservoir dimension
         self.res_dim = res_dim
@@ -106,7 +108,7 @@ class ESN(ReservoirComputerBase):
             scaling=embedding_scaling,
             chunks=chunks,
             locality=locality,
-            periodic=periodic
+            periodic=periodic,
         )
         driver = ESNDriver(
             res_dim=res_dim,
@@ -160,6 +162,7 @@ class ESN(ReservoirComputerBase):
 
         _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len)
         return state_seq
+
 
 def train_ESN_forecaster(
     model: ESN,
@@ -231,6 +234,7 @@ def train_ESN_forecaster(
 
     def where(m):
         return m.readout.wout
+
     model = eqx.tree_at(where, model, cmat)
 
     return model, res_seq

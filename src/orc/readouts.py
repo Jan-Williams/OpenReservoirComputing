@@ -187,6 +187,7 @@ class LinearReadout(ReadoutBase):
             )
         return to_ret
 
+
 class QuadraticReadout(ReadoutBase):
     """Quadratic readout layer.
 
