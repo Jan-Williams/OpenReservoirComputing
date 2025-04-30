@@ -58,7 +58,8 @@ class ESN(ReservoirComputerBase):
         seed: int = 0,
         chunks: int = 1,
         locality: int = 0,
-        quadratic: bool = False
+        quadratic: bool = False,
+        periodic: bool = True
     ) -> None:
         """
         Initialize the ESN model.
@@ -105,6 +106,7 @@ class ESN(ReservoirComputerBase):
             scaling=embedding_scaling,
             chunks=chunks,
             locality=locality,
+            periodic=periodic
         )
         driver = ESNDriver(
             res_dim=res_dim,
