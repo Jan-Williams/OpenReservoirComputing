@@ -22,6 +22,7 @@ description = "GPU accelerated implementations of common RC architectures"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
+    "jax",
     "equinox",
     "numpy",
     "scipy",
@@ -33,7 +34,6 @@ requires-python = ">=3.10"
 keywords = ["reservoir computing", ""]
 classifiers = [
     "License :: OSI Approved :: BSD License",
-    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -64,7 +64,6 @@ select = [
     "N",
     "SIM",
     "I",
-    # "C90",
 ]
 
 ignore = [
@@ -77,6 +76,19 @@ ignore = [
 "tests/*" = ["D"]
 "docs/*.py" = ["D", "A"]
 "setup.py" = ["D"]
+"*.ipynb" = [
+    "E",
+    "W",
+    "F",
+    "D",
+    "UP",
+    "B",
+    "A",
+    "C4",
+    "N",
+    "SIM",
+    "I",
+]
 
 [tool.ruff.lint.pycodestyle]
 max-line-length = 88
