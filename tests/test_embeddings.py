@@ -1,44 +1,39 @@
-import jax
 import jax.numpy as jnp
 import pytest
 
 import orc
 
 
-@pytest.fixture
-def linearembedding():
-    return orc.embeddings.LinearEmbedding(
-        in_dim=3, res_dim=982, scaling=0.2745, dtype=jnp.float64, seed=0
+@pytest.mark.parametrize(
+    "in_dim,chunks,locality", [(16, 8, 2), (32, 4, 1), (22, 11, 3), (14, 1, 0)]
+)
+def test_win_dims_Linear(in_dim, chunks, locality):
+    model = orc.embeddings.LinearEmbedding(
+        in_dim=in_dim,
+        res_dim=200,
+        scaling=0.014,
+        dtype=jnp.float32,
+        seed=0,
+        chunks=chunks,
+        locality=locality,
     )
+    assert model.win.shape == (chunks, 200, int(in_dim / chunks) + 2 * locality)
 
 
-def test_linearembedding_dims(linearembedding):
-    key = jax.random.key(999)
-    in_dim = linearembedding.in_dim
-    res_dim = linearembedding.res_dim
-    test_vec = jax.random.normal(key, shape=(in_dim))
-    out_vec = linearembedding.embed(test_vec)
-    assert out_vec.shape == (res_dim,)
-
-    test_vec = jax.random.normal(key, shape=(in_dim - 1))
+@pytest.mark.parametrize(
+    "in_dim,chunks,locality", [(16, 7, 2), (32, 3, 1), (22, 12, 3)]
+)
+def test_bad_group_nums_Linear(in_dim, chunks, locality):
     with pytest.raises(ValueError):
-        out_vec = linearembedding.embed(test_vec)
-
-
-@pytest.mark.parametrize("batch_size", [3, 12, 52])
-def test_batchapply_dims_linear(batch_size, linearembedding):
-    key = jax.random.key(42)
-    in_dim = linearembedding.in_dim
-    res_dim = linearembedding.res_dim
-    test_vec = jax.random.normal(key, shape=(batch_size, in_dim))
-    out_vec = linearembedding.batch_embed(test_vec)
-
-    assert out_vec.shape == (batch_size, res_dim)
-
-    test_vec = jax.random.normal(key, shape=(batch_size, in_dim - 1))
-
-    with pytest.raises(ValueError):
-        out_vec = linearembedding.batch_embed(test_vec)
+        _ = orc.embeddings.LinearEmbedding(
+            in_dim=in_dim,
+            res_dim=200,
+            scaling=0.014,
+            dtype=jnp.float32,
+            seed=0,
+            chunks=chunks,
+            locality=locality,
+        )
 
 
 @pytest.mark.parametrize(
@@ -49,7 +44,7 @@ def test_batchapply_dims_linear(batch_size, linearembedding):
         (3, 222, 0.084, jnp.int32),
     ],
 )
-def test_param_types_linearembedding(in_dim, res_dim, scaling, dtype):
+def test_param_types_Linear(in_dim, res_dim, scaling, dtype):
     with pytest.raises(TypeError):
         _ = orc.embeddings.LinearEmbedding(
             in_dim=in_dim,
@@ -58,3 +53,24 @@ def test_param_types_linearembedding(in_dim, res_dim, scaling, dtype):
             dtype=dtype,
             seed=111,
         )
+
+
+@pytest.mark.parametrize(
+    "chunks,locality,seq_len,",
+    [
+        (5, 2, 20),
+        (3, 12, 1),
+        (15, 10, 30),
+    ],
+)
+def test_call_Linear(chunks, locality, seq_len):
+    model = orc.embeddings.LinearEmbedding(
+        in_dim=180,
+        res_dim=300,
+        scaling=0.12,
+        locality=locality,
+        chunks=chunks,
+        seed=123,
+    )
+    output = model(jnp.ones((seq_len, 180)))
+    assert output.shape == (seq_len, chunks, 300)
