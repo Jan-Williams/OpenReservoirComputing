@@ -104,6 +104,8 @@ class LinearEmbedding(EmbedBase):
         Number of parallel reservoirs.
     locality : int
         Adjacent reservoir overlap.
+    periodic : bool
+        Assume periodic BCs.
 
     Methods
     -------
@@ -153,6 +155,8 @@ class LinearEmbedding(EmbedBase):
             Random seed for generating the PRNG key for the reservoir computer.
         dtype : Float
             Dtype of model, jnp.float64 or jnp.float32.
+        periodi : bool
+            Assume periodic BCs.
         """
         super().__init__(in_dim=in_dim, res_dim=res_dim, dtype=dtype)
         self.scaling = scaling
@@ -195,8 +199,6 @@ class LinearEmbedding(EmbedBase):
         ----------
         in_state : Array
             Input state, (shape=(in_dim,))
-        periodic : bool
-            Assume periodic boundary conditions.
 
         Returns
         -------

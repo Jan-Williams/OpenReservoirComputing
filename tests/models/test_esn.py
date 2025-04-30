@@ -51,20 +51,21 @@ def test_esn_train():
         < 1e-3
     )
 
+
 def test_periodic_par_esn(gen_KS_data):
-    
     Nx = gen_KS_data[0]
     U_train = gen_KS_data[1]
     U_test = gen_KS_data[2]
 
     train_len = 15000
-    input_sequence = jnp.array(U_train[-train_len-1:-1])
+    input_sequence = jnp.array(U_train[-train_len - 1 : -1])
     target_sequence = jnp.array(U_train[-train_len:])
     NR = 1000
     chunks = 32
     locality = 3
-    esn = orc.models.ESN(data_dim=Nx, res_dim=NR, seed=2, chunks=chunks, locality=locality)
-
+    esn = orc.models.ESN(
+        data_dim=Nx, res_dim=NR, seed=2, chunks=chunks, locality=locality
+    )
 
     esn, output_seq = orc.models.esn.train_ESN_forecaster(
         esn,
@@ -77,16 +78,16 @@ def test_periodic_par_esn(gen_KS_data):
 
     fcast = esn.forecast(U_test.shape[0], output_seq[-1])
 
-    assert (
-        jnp.linalg.norm(
-            fcast[:50] - U_test[:50]
-        )
-        / (50 * Nx)
-        < 1e-3
+    assert jnp.linalg.norm(fcast[:50] - U_test[:50]) / (50 * Nx) < 1e-3
+
+    esn = orc.models.ESN(
+        data_dim=Nx,
+        res_dim=NR,
+        seed=2,
+        chunks=chunks,
+        locality=locality,
+        periodic=False,
     )
-
-    esn = orc.models.ESN(data_dim=Nx, res_dim=NR, seed=2, chunks=chunks, locality=locality, periodic=False)
-
 
     esn, output_seq = orc.models.esn.train_ESN_forecaster(
         esn,
@@ -99,14 +100,7 @@ def test_periodic_par_esn(gen_KS_data):
 
     fcast = esn.forecast(U_test.shape[0], output_seq[-1])
 
-    assert (
-        jnp.linalg.norm(
-            fcast[:50] - U_test[:50]
-        )
-        / (50 * Nx)
-        < 1e-3
-    )
-
+    assert jnp.linalg.norm(fcast[:50] - U_test[:50]) / (50 * Nx) < 1e-3
 
 
 @pytest.fixture
@@ -127,59 +121,60 @@ def gen_KS_data():
     U_train = U[:, :split_idx].T
     U_test = U[:, split_idx:].T
     return Nx, U_train, U_test
-     
+
+
 def KS_1D_PBC(
-        u0, tN, dt=0.1, domain=(0, 100), Nx=200, rtol=1e-12, atol=1e-12, max_steps=1e4
-    ):
-        # Define the spatial grid
-        Nx = Nx - 1  # PBC - only solving for Nx-1 points
-        u0 = u0[:-1]  # PBC: throw away duplicate point
-        x = np.linspace(domain[0], domain[1], int(Nx), endpoint=False)
-        dx = x[1] - x[0]
+    u0, tN, dt=0.1, domain=(0, 100), Nx=200, rtol=1e-12, atol=1e-12, max_steps=1e4
+):
+    # Define the spatial grid
+    Nx = Nx - 1  # PBC - only solving for Nx-1 points
+    u0 = u0[:-1]  # PBC: throw away duplicate point
+    x = np.linspace(domain[0], domain[1], int(Nx), endpoint=False)
+    dx = x[1] - x[0]
 
-        # initialize solutions
-        U = np.zeros((Nx, int(tN / dt)))
-        U[:, 0] = u0
+    # initialize solutions
+    U = np.zeros((Nx, int(tN / dt)))
+    U[:, 0] = u0
 
-        # Define the wavenumbers
-        k = np.fft.fftfreq(int(Nx), d=dx) * 2 * np.pi
-        k2 = k**2
-        k4 = k**4
-        L_op = k2 - k4  # Linear operator
-        N_op_u = lambda u: 1j * k * np.fft.fft(-0.5 * u**2)  # Nonlinear operator acts on u
-        N_op_uhat = (
-            lambda u: 1j * k * np.fft.fft(-0.5 * np.real(np.fft.ifft(u)) ** 2)
-        )  # Nonlinear operator acts on u_hat
+    # Define the wavenumbers
+    k = np.fft.fftfreq(int(Nx), d=dx) * 2 * np.pi
+    k2 = k**2
+    k4 = k**4
+    L_op = k2 - k4  # Linear operator
+    N_op_u = lambda u: 1j * k * np.fft.fft(-0.5 * u**2)  # Nonlinear operator acts on u
+    N_op_uhat = (
+        lambda u: 1j * k * np.fft.fft(-0.5 * np.real(np.fft.ifft(u)) ** 2)
+    )  # Nonlinear operator acts on u_hat
 
-        # compute exp coeffs using complex means from Kassam et al, 2005
-        E1 = np.exp(L_op * dt)
-        E2 = np.exp(L_op * dt / 2)
-        M = 16
-        r = np.exp(1j * np.pi * (np.arange(1, M + 1) - 0.5) / M)
-        LR = dt * np.column_stack([L_op] * M) + np.row_stack([r] * (Nx))
-        Q = dt * np.mean((np.exp(LR / 2) - 1) / LR, axis=1)
-        f1 = dt * np.mean((-4 - LR + np.exp(LR) * (4 - 3 * LR + LR**2)) / LR**3, axis=1)
-        f2 = dt * np.mean((2 + LR + np.exp(LR) * (-2 + LR)) / LR**3, axis=1)
-        f3 = dt * np.mean((-4 - 3 * LR - LR**2 + np.exp(LR) * (4 - LR)) / LR**3, axis=1)
+    # compute exp coeffs using complex means from Kassam et al, 2005
+    E1 = np.exp(L_op * dt)
+    E2 = np.exp(L_op * dt / 2)
+    M = 16
+    r = np.exp(1j * np.pi * (np.arange(1, M + 1) - 0.5) / M)
+    LR = dt * np.column_stack([L_op] * M) + np.row_stack([r] * (Nx))
+    Q = dt * np.mean((np.exp(LR / 2) - 1) / LR, axis=1)
+    f1 = dt * np.mean((-4 - LR + np.exp(LR) * (4 - 3 * LR + LR**2)) / LR**3, axis=1)
+    f2 = dt * np.mean((2 + LR + np.exp(LR) * (-2 + LR)) / LR**3, axis=1)
+    f3 = dt * np.mean((-4 - 3 * LR - LR**2 + np.exp(LR) * (4 - LR)) / LR**3, axis=1)
 
-        # time stepping loop
-        for i in range(int(tN / dt) - 1):
-            u = U[:, i]
-            u_hat = np.fft.fft(u)
-            a = E2 * u_hat + Q * N_op_u(u)
-            b = E2 * u_hat + Q * N_op_uhat(a)
-            c = E2 * a + Q * (2 * N_op_uhat(b) - N_op_u(u))
-            u_hat = (
-                E1 * u_hat
-                + f1 * N_op_u(u)
-                + f2 * (N_op_uhat(a) + N_op_uhat(b))
-                + f3 * N_op_uhat(c)
-            )
+    # time stepping loop
+    for i in range(int(tN / dt) - 1):
+        u = U[:, i]
+        u_hat = np.fft.fft(u)
+        a = E2 * u_hat + Q * N_op_u(u)
+        b = E2 * u_hat + Q * N_op_uhat(a)
+        c = E2 * a + Q * (2 * N_op_uhat(b) - N_op_u(u))
+        u_hat = (
+            E1 * u_hat
+            + f1 * N_op_u(u)
+            + f2 * (N_op_uhat(a) + N_op_uhat(b))
+            + f3 * N_op_uhat(c)
+        )
 
-            U[:, i + 1] = np.real((np.fft.ifft(u_hat, n=Nx)))
+        U[:, i + 1] = np.real((np.fft.ifft(u_hat, n=Nx)))
 
-        # Fill in PBC
-        U = np.vstack((U, U[0, :]))
-        t = np.arange(0, tN, dt)
+    # Fill in PBC
+    U = np.vstack((U, U[0, :]))
+    t = np.arange(0, tN, dt)
 
-        return U, t
+    return U, t
