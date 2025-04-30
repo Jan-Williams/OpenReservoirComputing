@@ -140,11 +140,13 @@ def KS_1D_PBC(
     k = np.fft.fftfreq(int(Nx), d=dx) * 2 * np.pi
     k2 = k**2
     k4 = k**4
+
+    # define operators
     L_op = k2 - k4  # Linear operator
-    N_op_u = lambda u: 1j * k * np.fft.fft(-0.5 * u**2)  # Nonlinear operator acts on u
-    N_op_uhat = (
-        lambda u: 1j * k * np.fft.fft(-0.5 * np.real(np.fft.ifft(u)) ** 2)
-    )  # Nonlinear operator acts on u_hat
+    def N_op_u(u):  # Nonlinear operator acts on u
+        return 1j * k * np.fft.fft(-0.5 * u**2)
+    def N_op_uhat(u):
+        return 1j * k * np.fft.fft(-0.5 * np.real(np.fft.ifft(u)) ** 2)
 
     # compute exp coeffs using complex means from Kassam et al, 2005
     E1 = np.exp(L_op * dt)
@@ -171,7 +173,7 @@ def KS_1D_PBC(
             + f3 * N_op_uhat(c)
         )
 
-        U[:, i + 1] = np.real((np.fft.ifft(u_hat, n=Nx)))
+        U[:, i + 1] = np.real(np.fft.ifft(u_hat, n=Nx))
 
     # Fill in PBC
     U = np.vstack((U, U[0, :]))
