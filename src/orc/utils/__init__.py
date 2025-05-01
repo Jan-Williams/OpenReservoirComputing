@@ -1,4 +1,4 @@
-"""Common utility functions for numerics and visualization"""
+"""Common utility functions for numerics and visualization."""
 
 from orc.utils import numerics
 from orc.utils.numerics import max_eig_arnoldi
