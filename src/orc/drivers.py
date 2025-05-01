@@ -1,15 +1,17 @@
 """Define base class for reservoir drivers and implement common architectures."""
 
+import warnings
 from abc import ABC, abstractmethod
 
 import equinox as eqx
 import jax
+import jax.experimental.sparse
 import jax.numpy as jnp
-import numpy as np
-import scipy.sparse
-import scipy.stats
+import jax.random
 from jax.experimental import sparse
 from jaxtyping import Array, Float
+
+from orc.utils import max_eig_arnoldi
 
 jax.config.update("jax_enable_x64", True)
 
@@ -133,6 +135,7 @@ class ESNDriver(DriverBase):
         chunks: int = 1,
         *,
         seed: int,
+        use_sparse_eigs: bool = True
     ) -> None:
         """Initialize weight matrices.
 
@@ -154,6 +157,10 @@ class ESNDriver(DriverBase):
             Dtype, default jnp.float64.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
+        use_sparse_eigs : bool
+            Whether to use sparse eigensolver for setting the spectral radius of wr.
+            Default is True, which is recommended to save memory and compute time. If
+            False, will use dense eigensolver which may be more accurate.
         """
         super().__init__(res_dim=res_dim, dtype=dtype)
         self.res_dim = res_dim
@@ -162,30 +169,51 @@ class ESNDriver(DriverBase):
         self.density = density
         self.bias = bias
         self.dtype = dtype
+        key = jax.random.key(seed)
         if spectral_radius <= 0:
             raise ValueError("Spectral radius must be positve.")
         if leak < 0 or leak > 1:
             raise ValueError("Leak rate must satisfy 0 < leak < 1.")
         if density < 0 or density > 1:
             raise ValueError("Density must satisfy 0 < density < 1.")
+        subkey, wr_key = jax.random.split(key)
 
+        # check res_dim size for eigensolver choice
+        if res_dim < 100 and use_sparse_eigs:
+            use_sparse_eigs = False
+            warnings.warn(
+                "Reservoir dimension is less than 100, using dense " \
+                "eigensolver for spectral radius.", stacklevel=2
+            )
+        
+        # generate all wr matricies TODO: vmap this
         temp_list = []
         for jj in range(chunks):
-            rng = np.random.default_rng(int(seed + jj))
-            data_sampler = scipy.stats.uniform(loc=-1, scale=2).rvs
-            sp_mat = scipy.sparse.random_array(
-                (res_dim, res_dim), density=density, rng=rng, data_sampler=data_sampler
-            )
-            eigvals, _ = scipy.sparse.linalg.eigs(sp_mat, k=1)
-            sp_mat = sp_mat * spectral_radius / np.abs(eigvals[0])
-            jax_mat = jax.experimental.sparse.BCOO.from_scipy_sparse(sp_mat)
+            
+            #generate initial matrix
+            sp_mat = jax.experimental.sparse.random_bcoo(key=wr_key,
+                                                 shape=(res_dim, res_dim),
+                                                 nse=density,
+                                                 dtype=dtype,
+                                                 generator = jax.random.normal)
+            del wr_key # consumed by wr
+            subkey, wr_key = jax.random.split(subkey)
+
+            # set spectral radius
+            if use_sparse_eigs:
+                eig_max = jnp.abs(max_eig_arnoldi(sp_mat))
+            else:
+                dense_mat = sp_mat.todense()
+                eig_max = jnp.max(jnp.abs(jnp.linalg.eigvals(dense_mat)))
+            sp_mat = sp_mat * (spectral_radius / eig_max)
+
+            # add to wr list
             jax_mat = jax.experimental.sparse.bcoo_broadcast_in_dim(
-                jax_mat, shape=(1, res_dim, res_dim), broadcast_dimensions=(1, 2)
+                sp_mat, shape=(1, res_dim, res_dim), broadcast_dimensions=(1, 2)
             )
             temp_list.append(jax_mat)
-        wr = jax.experimental.sparse.bcoo_concatenate(temp_list, dimension=0)
-
-        self.wr = wr
+        
+        self.wr = jax.experimental.sparse.bcoo_concatenate(temp_list, dimension=0)
         self.chunks = chunks
         self.dtype = dtype
 
