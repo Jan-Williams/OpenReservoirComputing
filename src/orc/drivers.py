@@ -185,11 +185,11 @@ class ESNDriver(DriverBase):
                 "Reservoir dimension is less than 100, using dense " \
                 "eigensolver for spectral radius.", stacklevel=2
             )
-        
+
         # generate all wr matricies TODO: vmap this
         temp_list = []
-        for jj in range(chunks):
-            
+        for _ in range(chunks):
+
             #generate initial matrix
             sp_mat = jax.experimental.sparse.random_bcoo(key=wr_key,
                                                  shape=(res_dim, res_dim),
@@ -212,7 +212,7 @@ class ESNDriver(DriverBase):
                 sp_mat, shape=(1, res_dim, res_dim), broadcast_dimensions=(1, 2)
             )
             temp_list.append(jax_mat)
-        
+
         self.wr = jax.experimental.sparse.bcoo_concatenate(temp_list, dimension=0)
         self.chunks = chunks
         self.dtype = dtype
