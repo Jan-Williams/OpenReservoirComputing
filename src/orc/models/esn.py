@@ -60,6 +60,7 @@ class ESN(ReservoirComputerBase):
         locality: int = 0,
         quadratic: bool = False,
         periodic: bool = True,
+        use_sparse_eigs: bool = True
     ) -> None:
         """
         Initialize the ESN model.
@@ -92,6 +93,10 @@ class ESN(ReservoirComputerBase):
             Use quadratic nonlinearity in output, default False.
         periodic : bool
             Periodic BCs for embedding layer.
+        use_sparse_eigs : bool
+            Whether to use sparse eigensolver for setting the spectral radius of wr.
+            Default is True, which is recommended to save memory and compute time. If
+            False, will use dense eigensolver which may be more accurate.
         """
         # Initialize the random key and reservoir dimension
         self.res_dim = res_dim
@@ -118,6 +123,8 @@ class ESN(ReservoirComputerBase):
             density=Wr_density,
             spectral_radius=Wr_spectral_radius,
             chunks=chunks,
+            dtype=dtype,
+            use_sparse_eigs=use_sparse_eigs,
         )
         if quadratic:
             readout = QuadraticReadout(
