@@ -7,22 +7,22 @@ import jax.numpy as jnp
 
 jax.config.update("jax_enable_x64", True)
 
-
+#TODO: typing
 ######################## Basic Chaotic ODEs ########################
 @jax.jit
-def _lorenz63_f(t,y,args):
+def _lorenz63_f(t,u,args):
     """Define Lorenz 63 ODE."""
     rho, sigma, beta = args
-    y1, y2, y3 = y
-    dy1dt = sigma*(y2 - y1)
-    dy2dt = y1*(rho - y3) - y2
-    dy3dt = y1*y2 - beta*y3
-    dydt = dy1dt, dy2dt, dy3dt
-    return jnp.array(dydt)
+    u1, u2, u3 = u
+    du1dt = sigma*(u2 - u1)
+    du2dt = u1*(rho - u3) - u2
+    du3dt = u1*u2 - beta*u3
+    dudt = du1dt, du2dt, du3dt
+    return jnp.array(dudt)
 
 def lorenz63(tN,
              dt,
-             y0 = (-10.0,1.0,10.0),
+             u0 = (-10.0,1.0,10.0),
              rho = 28.0,
              sigma = 10.0,
              beta = 8.0/3.0,
@@ -36,7 +36,7 @@ def lorenz63(tN,
     dt : float
         The time step size for the interpolated solution. Will be overridden if
         `diffeqsolve_kwargs` contains a saveat argument with a different time grid.
-    y0 : jnp.ndarray, optional
+    u0 : jnp.ndarray, optional
         The initial conditions for the ODEs. Default is (-10, 1, 10).
     rho : float, optional
         The rho parameter for the Lorenz system. Default is 28.0.
@@ -53,7 +53,7 @@ def lorenz63(tN,
 
     Returns
     -------
-    ys : jnp.ndarray
+    us : jnp.ndarray
         The solution array with shape (Nt, 3), where Nt is the number of time steps.
     ts : jnp.ndarray
         The time vector corresponding to the solution steps.
@@ -67,32 +67,33 @@ def lorenz63(tN,
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
     # solve
-    y0 = jnp.array(y0)
+    u0 = jnp.array(u0)
     term = diffrax.ODETerm(_lorenz63_f)
     args = (rho, sigma, beta)
     sol = diffrax.diffeqsolve(term,
                               t0=0,
                               t1=tN,
-                              y0=y0,
+                              y0=u0,
                               args=args,
                               **diffeqsolve_kwargs)
-    return sol.ys, sol.ts
+    us = sol.ys
+    return us, sol.ts
 
 
 @jax.jit
-def _rossler_f(t,y,args):
+def _rossler_f(t,u,args):
     """Define Rössler ODE."""
     a,b,c = args
-    y1, y2, y3 = y
-    dy1dt = -y2 - y3
-    dy2dt = y1 + a*y2
-    dy3dt = b+y3*(y1-c)
-    dydt = dy1dt, dy2dt, dy3dt
-    return jnp.array(dydt)
+    u1, u2, u3 = u
+    du1dt = -u2 - u3
+    du2dt = u1 + a*u2
+    du3dt = b+u3*(u1-c)
+    dudt = du1dt, du2dt, du3dt
+    return jnp.array(dudt)
 
 def rossler(tN,
             dt,
-            y0 = (1.0,1.0,1.0),
+            u0 = (1.0,1.0,1.0),
             a = 0.1,
             b = 0.1,
             c = 14.0,
@@ -106,7 +107,7 @@ def rossler(tN,
     dt : float
         The time step size for the interpolated solution. Will be overridden if
         `diffeqsolve_kwargs` contains a saveat argument with a different time grid.
-    y0 : jnp.ndarray, optional
+    u0 : jnp.ndarray, optional
         The initial conditions for the ODEs. Default is (1.0, 1.0, 1.0).
     a : float, optional
         The a parameter for the Rössler system. Default is 0.1.
@@ -123,7 +124,7 @@ def rossler(tN,
 
     Returns
     -------
-    ys : jnp.ndarray
+    us : jnp.ndarray
         The solution array with shape (Nt, 3), where Nt is the number of time steps.
     ts : jnp.ndarray
         The time vector corresponding to the solution steps.
@@ -137,32 +138,33 @@ def rossler(tN,
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
     # solve
-    y0 = jnp.array(y0)
+    u0 = jnp.array(u0)
     term = diffrax.ODETerm(_rossler_f)
     args = (a, b, c)
     sol = diffrax.diffeqsolve(term,
                               t0=0,
                               t1=tN,
-                              y0=y0,
+                              y0=u0,
                               args=args,
                               **diffeqsolve_kwargs)
-    return sol.ys, sol.ts
+    us = sol.ys
+    return us, sol.ts
 
 
 @jax.jit
-def _sakaraya_f(t,y,args):
+def _sakaraya_f(t,u,args):
     """Define Sakaraya ODE."""
     a, b, m = args
-    y1, y2, y3 = y
-    dy1dt = a * y1 + y2 + y2*y3
-    dy2dt = -y1*y3 + y2*y3
-    dy3dt = -y3 - m*y1*y2 + b
+    u1, u2, u3 = u
+    du1dt = a * u1 + u2 + u2*u3
+    du2dt = -u1*u3 + u2*u3
+    du3dt = -u3 - m*u1*u2 + b
 
-    return jnp.array([dy1dt, dy2dt, dy3dt])
+    return jnp.array([du1dt, du2dt, du3dt])
 
 def sakaraya(tN,
              dt,
-             y0 = (-2.8976045, 3.8877978, 3.07465),
+             u0 = (-2.8976045, 3.8877978, 3.07465),
              a = 1.0,
              b = 1.0,
              m = 1.0,
@@ -176,7 +178,7 @@ def sakaraya(tN,
     dt : float
         The time step size for the interpolated solution. Will be overridden if
         `diffeqsolve_kwargs` contains a saveat argument with a different time grid.
-    y0 : jnp.ndarray, optional
+    u0 : jnp.ndarray, optional
         The initial conditions for the ODEs. Default is
         (-2.8976045, 3.8877978, 3.07465).
     a : float, optional
@@ -194,7 +196,7 @@ def sakaraya(tN,
 
     Returns
     -------
-    ys : jnp.ndarray
+    us : jnp.ndarray
         The solution array with shape (Nt, 3), where Nt is the number of time steps.
     ts : jnp.ndarray
         The time vector corresponding to the solution steps.
@@ -208,31 +210,32 @@ def sakaraya(tN,
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
     # solve
-    y0 = jnp.array(y0)
+    u0 = jnp.array(u0)
     term = diffrax.ODETerm(_sakaraya_f)
     args = (a, b, m)
     sol = diffrax.diffeqsolve(term,
                                 t0=0,
                                 t1=tN,
-                                y0=y0,
+                                y0=u0,
                                 args=args,
                                 **diffeqsolve_kwargs)
-    return sol.ys, sol.ts
+    us = sol.ys
+    return us, sol.ts
 
 
 @jax.jit
-def _colpitts_f(t,y,args):
+def _colpitts_f(t,u,args):
     """Define Colpitts oscillator ODE."""
-    y1, y2, y3 = y
+    u1, u2, u3 = u
     alpha, gamma, q, eta = args
-    dy1dt = alpha * y2
-    dy2dt = -gamma*(y1 + y3) - q*y2
-    dy3dt = eta*(y2 + 1 - jnp.exp(-y1))
-    return jnp.array([dy1dt, dy2dt, dy3dt])
+    du1dt = alpha * u2
+    du2dt = -gamma*(u1 + u3) - q*u2
+    du3dt = eta*(u2 + 1 - jnp.exp(-u1))
+    return jnp.array([du1dt, du2dt, du3dt])
 
 def colpitts(tN,
              dt,
-             y0 = (1.0, -1.0, 1.0),
+             u0 = (1.0, -1.0, 1.0),
              alpha = 5.0,
              gamma = 0.0797,
              q = 0.6898,
@@ -247,7 +250,7 @@ def colpitts(tN,
     dt : float
         The time step size for the interpolated solution. Will be overridden if
         `diffeqsolve_kwargs` contains a saveat argument with a different time grid.
-    y0 : jnp.ndarray, optional
+    u0 : jnp.ndarray, optional
         The initial conditions for the ODEs. Default is (1.0, -1.0, 1.0).
     alpha : float, optional
         The alpha parameter for the Colpitts oscillator system. Default is
@@ -270,7 +273,7 @@ def colpitts(tN,
 
     Returns
     -------
-    ys : jnp.ndarray
+    us : jnp.ndarray
         The solution array with shape (Nt, 3), where Nt is the number of time steps.
     ts : jnp.ndarray
         The time vector corresponding to the solution steps.
@@ -284,34 +287,35 @@ def colpitts(tN,
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
     # solve
-    y0 = jnp.array(y0)
+    u0 = jnp.array(u0)
     term = diffrax.ODETerm(_colpitts_f)
     args = (alpha, gamma, q, eta)
     sol = diffrax.diffeqsolve(term,
                               t0=0,
                               t1=tN,
-                              y0=y0,
+                              y0=u0,
                               args=args,
                               **diffeqsolve_kwargs)
-    return sol.ys, sol.ts
+    us = sol.ys
+    return us, sol.ts
 
 
 
 ######################## Hyper-chaotic ODEs ########################
 @jax.jit
-def _hyper_lorenz63_f(t,y,args):
+def _hyper_lorenz63_f(t,u,args):
     """Define Hyper-Lorenz 63 ODE."""
     a, b, c, d = args
-    y1, y2, y3, y4 = y
-    dy1dt = a*(y2 - y1) + y4
-    dy2dt = y1*(b - y3) - y2
-    dy3dt = y1*y2 - c*y3
-    dy4dt = d*y4 - y2*y3
-    return jnp.array([dy1dt, dy2dt, dy3dt, dy4dt])
+    u1, u2, u3, u4 = u
+    du1dt = a*(u2 - u1) + u4
+    du2dt = u1*(b - u3) - u2
+    du3dt = u1*u2 - c*u3
+    du4dt = d*u4 - u2*u3
+    return jnp.array([du1dt, du2dt, du3dt, du4dt])
 
 def hyper_lorenz63(tN,
                    dt,
-                   y0 = (-10.0, 6.0, 0.0, 10.0),
+                   u0 = (-10.0, 6.0, 0.0, 10.0),
                    a = 10.0,
                    b = 28.0,
                    c = 8.0/3.0,
@@ -326,7 +330,7 @@ def hyper_lorenz63(tN,
     dt : float
         The time step size for the interpolated solution. Will be overridden if
         `diffeqsolve_kwargs` contains a saveat argument with a different time grid.
-    y0 : jnp.ndarray, optional
+    u0 : jnp.ndarray, optional
         The initial conditions for the ODEs. Default is (-10.0, 6.0, 0.0, 10.0).
     a : float, optional
         The a parameter for the Hyper-Lorenz system. Default is 10.0.
@@ -345,7 +349,7 @@ def hyper_lorenz63(tN,
 
     Returns
     -------
-    ys : jnp.ndarray
+    us : jnp.ndarray
         The solution array with shape (Nt, 4), where Nt is the number of time steps.
     ts : jnp.ndarray
         The time vector corresponding to the solution steps.
@@ -359,32 +363,33 @@ def hyper_lorenz63(tN,
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
     # solve
-    y0 = jnp.array(y0)
+    u0 = jnp.array(u0)
     term = diffrax.ODETerm(_hyper_lorenz63_f)
     args = (a, b, c, d)
     sol = diffrax.diffeqsolve(term,
                               t0=0,
                               t1=tN,
-                              y0=y0,
+                              y0=u0,
                               args=args,
                               **diffeqsolve_kwargs)
-    return sol.ys, sol.ts
+    us = sol.ys
+    return us, sol.ts
 
 
 @jax.jit
-def _hyper_xu_f(t, y, args):
+def _hyper_xu_f(t, u, args):
     """Define Hyper-Xu ODE."""
     a, b, c, d, e = args
-    y1, y2, y3, y4 = y
-    dy1dt = a * (y2 - y1) + y4
-    dy2dt = b * y1 + e * y1*y3
-    dy3dt = -c*y3 - y1*y2
-    dy4dt = y1*y3 - d*y2
-    return jnp.array([dy1dt, dy2dt, dy3dt, dy4dt])
+    u1, u2, u3, u4 = u
+    du1dt = a * (u2 - u1) + u4
+    du2dt = b * u1 + e * u1*u3
+    du3dt = -c*u3 - u1*u2
+    du4dt = u1*u3 - d*u2
+    return jnp.array([du1dt, du2dt, du3dt, du4dt])
 
 def hyper_xu(tN,
              dt,
-             y0 = (-2.0, -1.0, -2.0, -10.0),
+             u0 = (-2.0, -1.0, -2.0, -10.0),
              a = 10.0,
              b = 40.0,
              c = 2.5,
@@ -400,7 +405,7 @@ def hyper_xu(tN,
     dt : float
         The time step size for the interpolated solution. Will be overridden if
         `diffeqsolve_kwargs` contains a saveat argument with a different time grid.
-    y0 : jnp.ndarray, optional
+    u0 : jnp.ndarray, optional
         The initial conditions for the ODEs. Default is (-2.0, -1.0, -2.0, -10.0).
     a : float, optional
         The a parameter for the Hyper-Xu system. Default is 10.0.
@@ -421,7 +426,7 @@ def hyper_xu(tN,
 
     Returns
     -------
-    ys : jnp.ndarray
+    us : jnp.ndarray
         The solution array with shape (Nt, 4), where Nt is the number of time steps.
     ts : jnp.ndarray
         The time vector corresponding to the solution steps.
@@ -435,25 +440,26 @@ def hyper_xu(tN,
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
     # solve
-    y0 = jnp.array(y0)
+    u0 = jnp.array(u0)
     term = diffrax.ODETerm(_hyper_xu_f)
     args = (a, b, c, d, e)
     sol = diffrax.diffeqsolve(term,
                               t0=0,
                               t1=tN,
-                              y0=y0,
+                              y0=u0,
                               args=args,
                               **diffeqsolve_kwargs)
-    return sol.ys, sol.ts
+    us = sol.ys
+    return us, sol.ts
 
 
 
 ####################### Hamiltonian Systems #######################
 @jax.jit
-def _double_pendulum_f(t,y,args):
+def _double_pendulum_f(t,u,args):
     """Define the equations of motion for double pendulum."""
     m1, m2, L1, L2, g, damping = args
-    theta1, omega1, theta2, omega2 = y
+    theta1, omega1, theta2, omega2 = u
 
     #define some vars to shorten the expressions
     delta_theta = theta1 - theta2
@@ -482,7 +488,7 @@ def _double_pendulum_f(t,y,args):
 
 def double_pendulum(tN,
                     dt,
-                    y0 = (jnp.pi/4, -1.0, jnp.pi/2, 1.0),
+                    u0 = (jnp.pi/4, -1.0, jnp.pi/2, 1.0),
                     m1 = 1.0,
                     m2 = 1.0,
                     L1 = 1.0,
@@ -492,7 +498,7 @@ def double_pendulum(tN,
                     **diffeqsolve_kwargs):
     """Solve the equations of motion for a damped double pendulum.
 
-    The state y is represented as a 4-tuple (theta1, omega1, theta2, omega2) where:
+    The state u is represented as a 4-tuple (theta1, omega1, theta2, omega2) where:
         - theta1 is the angle of the first pendulum from vertical (in radians).
         - omega1 is the angular velocity of the first pendulum (in radians/s).
         - theta2 is the angle of the second pendulum from vertical (in radians).
@@ -505,7 +511,7 @@ def double_pendulum(tN,
     dt : float
         The time step size for the interpolated solution. Will be overridden if
         `diffeqsolve_kwargs` contains a saveat argument with a different time grid.
-    y0 : jnp.ndarray, optional
+    u0 : jnp.ndarray, optional
         The initial conditions for the ODEs. Default is (jnp.pi/4, -1.0, jnp.pi/2, 1.0).
     m1 : float, optional
         The mass of the first pendulum bob. Default is 1.0.
@@ -528,7 +534,7 @@ def double_pendulum(tN,
 
     Returns
     -------
-    ys : jnp.ndarray
+    us : jnp.ndarray
         The solution array with shape (Nt, 4), where Nt is the number of time steps.
     ts : jnp.ndarray
         The time vector corresponding to the solution steps.
@@ -542,43 +548,44 @@ def double_pendulum(tN,
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
     # solve
-    y0 = jnp.array(y0)
+    u0 = jnp.array(u0)
     term = diffrax.ODETerm(_double_pendulum_f)
     args = (m1, m2, L1, L2, g, damping)
     sol = diffrax.diffeqsolve(term,
                               t0=0,
                               t1=tN,
-                              y0=y0,
+                              y0=u0,
                               args=args,
                               **diffeqsolve_kwargs)
-    return sol.ys, sol.ts
+    us = sol.ys
+    return us, sol.ts
 
 
 
 ###################### High Dimensional ODEs ######################
 @jax.jit
-def _lorenz96_interior(i,y,F):
+def _lorenz96_interior(i,u,F):
     """Define the interior points of the Lorenz 96 ODE."""
-    return (y[i+1] - y[i-2])*y[i-1]-y[i] + F
+    return (u[i+1] - u[i-2])*u[i-1]-u[i] + F
 
 @functools.partial(jax.jit, static_argnames=["args"])
-def _lorenz96_f(t,y,args):
+def _lorenz96_f(t,u,args):
     """Define the Lorenz 96 ODE."""
     N, F = args
 
     # boundary at N
-    dydt_N = (y[0] - y[N-3])*y[N-2]-y[N-1] + F
+    dudt_N = (u[0] - u[N-3])*u[N-2]-u[N-1] + F
 
     # calculate all other points (interior plus boundary at 0)
-    dydt_func = jax.vmap(_lorenz96_interior, in_axes=(0,None,None))
+    dudt_func = jax.vmap(_lorenz96_interior, in_axes=(0,None,None))
     interior_idxs = jnp.arange(N-1)
-    dydt_interior = dydt_func(interior_idxs, y, F)
+    dudt_interior = dudt_func(interior_idxs, u, F)
 
-    return jnp.append(dydt_interior, dydt_N)
+    return jnp.append(dudt_interior, dudt_N)
 
 def lorenz96(tN,
              dt,
-             y0 = None,
+             u0 = None,
              N = 10,
              F = 8.0,
              **diffeqsolve_kwargs):
@@ -591,7 +598,7 @@ def lorenz96(tN,
     dt : float
         The time step size for the interpolated solution. Will be overridden if
         `diffeqsolve_kwargs` contains a saveat argument with a different time grid.
-    y0 : jnp.ndarray, optional
+    u0 : jnp.ndarray, optional
         The initial conditions for the ODEs. Default is None, which initializes y0
         to `jnp.sin(jnp.arange(N))`.
     N : int, optional
@@ -607,7 +614,7 @@ def lorenz96(tN,
 
     Returns
     -------
-    ys : jnp.ndarray
+    us : jnp.ndarray
         The solution array with shape (Nt, N), where Nt is the number of time steps.
     ts : jnp.ndarray
         The time vector corresponding to the solution steps.
@@ -621,18 +628,19 @@ def lorenz96(tN,
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
     # solve
-    if y0 is None:
-        y0 = jnp.sin(jnp.arange(N))
-    y0 = jnp.array(y0)
+    if u0 is None:
+        u0 = jnp.sin(jnp.arange(N))
+    u0 = jnp.array(u0)
     term = diffrax.ODETerm(_lorenz96_f)
     args = (N, F)
     sol = diffrax.diffeqsolve(term,
                               t0=0,
                               t1=tN,
-                              y0=y0,
+                              y0=u0,
                               args=args,
                               **diffeqsolve_kwargs)
-    return sol.ys, sol.ts
+    us = sol.ys
+    return us, sol.ts
 
 
 
@@ -672,7 +680,7 @@ def KS_1D(tN, u0=None, dt=0.25, domain=(0, 22), Nx=64):
     # Setup spatial grid
     if u0 is None:
         x0 = jnp.linspace(domain[0], domain[1], Nx, endpoint=True)
-        u0 = jnp.sin((32/domain[1])*jnp.pi * x0)
+        u0 = jnp.sin((32/domain[1])*jnp.pi * x0) #TODO find a better default
     u0 = u0[:-1]
     Nx = Nx - 1  # remove duplicate periodic point
     x = jnp.linspace(domain[0], domain[1], Nx, endpoint=False)
