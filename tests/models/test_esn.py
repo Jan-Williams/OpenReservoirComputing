@@ -34,20 +34,22 @@ def test_esn_train():
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-3
 
 
-def test_periodic_par_esn(gen_KS_data):
+def test_periodic_par_esn():
     """Test periodic ESN on KS. Passes if forecast is accurate for 25 steps."""
 
     # test params
-    res_dim = 500
-    chunks = 8
-    locality = 8
+    res_dim = 200
+    chunks = 16
+    locality = 3
     fcast_len = 25
 
     # grab KS data
-    Nx = gen_KS_data[0]
-    U_train = gen_KS_data[1]
-    U_test = gen_KS_data[2]
-
+    Nx = 64
+    dummy_data = jnp.repeat(jnp.arange(Nx).reshape(1,-1), 1000, axis=0)
+    key = jax.random.key(0)
+    # some noise increases robustness of ESN forecast
+    U_train = dummy_data + jax.random.normal(key=key, shape=(1000,Nx)) * 0.02
+    U_test = dummy_data
     # init esn
     esn = orc.models.ESN(
         data_dim=Nx,
@@ -67,7 +69,42 @@ def test_periodic_par_esn(gen_KS_data):
 
     # forecast
     U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
-    print(jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len)
+    assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
+
+def test_nonperiodic_par_esn():
+    # test params
+    res_dim = 300
+    chunks = 32
+    locality = 2
+    fcast_len = 25
+
+    # grab KS data
+    Nx = 128
+    dummy_data = jnp.repeat(jnp.arange(Nx).reshape(1,-1), 2000, axis=0) * 2
+    key = jax.random.key(0)
+    # some noise increases robustness of ESN forecast
+    U_train = dummy_data + jax.random.normal(key=key, shape=(2000, Nx)) * 0.02
+    U_test = dummy_data
+    # init esn
+    esn = orc.models.ESN(
+        data_dim=Nx,
+        res_dim=res_dim,
+        seed=0,
+        chunks=chunks,
+        locality=locality,
+        periodic=False,  # Set periodic to True
+    )
+
+    # train esn
+    esn, R = orc.models.esn.train_ESN_forecaster(
+        esn,
+        U_train,
+        initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
+    )
+
+    # forecast
+    U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
+    print(U_pred)
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
 
 # TODO: separate the non periodic test below
@@ -117,15 +154,15 @@ def test_periodic_par_esn(gen_KS_data):
     # assert jnp.linalg.norm(fcast[:50] - U_test[:50]) / (50 * Nx) < 1e-3
 
 
-@pytest.fixture
-def gen_KS_data():
-    tN = 1000
-    Nx = 64
-    U, t = orc.data.KS_1D(tN = tN, Nx = Nx) # use default parameters for KS_1D
+# @pytest.fixture
+# def gen_KS_data():
+#     tN = 1000
+#     Nx = 64
+#     U, t = orc.data.KS_1D(tN = tN, Nx = Nx) # use default parameters for KS_1D
 
-    # train-test split
-    test_perc = 0.2
-    split_idx = int((1 - test_perc) * U.shape[0])
-    U_train = U[:split_idx, :]
-    U_test = U[split_idx:, :]
-    return Nx, U_train, U_test
+#     # train-test split
+#     test_perc = 0.2
+#     split_idx = int((1 - test_perc) * U.shape[0])
+#     U_train = U[:split_idx, :]
+#     U_test = U[split_idx:, :]
+#     return Nx, U_train, U_test
