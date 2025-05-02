@@ -77,13 +77,14 @@ def test_nonperiodic_par_esn():
     locality = 2
     fcast_len = 25
 
-    # grab KS data
+    # create dummy data
     Nx = 128
     dummy_data = jnp.repeat(jnp.arange(Nx).reshape(1,-1), 2000, axis=0) * 2
     key = jax.random.key(0)
     # some noise increases robustness of ESN forecast
     U_train = dummy_data + jax.random.normal(key=key, shape=(2000, Nx)) * 0.02
     U_test = dummy_data
+
     # init esn
     esn = orc.models.ESN(
         data_dim=Nx,
@@ -105,63 +106,3 @@ def test_nonperiodic_par_esn():
     U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
     print(U_pred)
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
-
-# TODO: separate the non periodic test below
-    # train_len = 15000
-    # input_sequence = jnp.array(U_train[-train_len - 1 : -1])
-    # target_sequence = jnp.array(U_train[-train_len:])
-    # NR = 1000
-    # chunks = 4
-    # locality = 6
-    # esn = orc.models.ESN(
-    #     data_dim=Nx, res_dim=NR, seed=2, chunks=chunks, locality=locality
-    # )
-
-    # esn, output_seq = orc.models.esn.train_ESN_forecaster(
-    #     esn,
-    #     input_sequence,
-    #     target_sequence,
-    #     spinup=200,
-    #     initial_res_state=jax.numpy.zeros((chunks, NR), dtype=jnp.float64),
-    #     beta=8e-8,
-    # )
-
-    # fcast = esn.forecast(U_test.shape[0], output_seq[-1])
-
-    # assert jnp.linalg.norm(fcast[:50] - U_test[:50]) / (50 * Nx) < 1e-3
-
-    # esn = orc.models.ESN(
-    #     data_dim=Nx,
-    #     res_dim=NR,
-    #     seed=2,
-    #     chunks=chunks,
-    #     locality=locality,
-    #     periodic=False,
-    # )
-
-    # esn, output_seq = orc.models.esn.train_ESN_forecaster(
-    #     esn,
-    #     input_sequence,
-    #     target_sequence,
-    #     spinup=200,
-    #     initial_res_state=jax.numpy.zeros((chunks, NR), dtype=jnp.float64),
-    #     beta=8e-8,
-    # )
-
-    # fcast = esn.forecast(U_test.shape[0], output_seq[-1])
-
-    # assert jnp.linalg.norm(fcast[:50] - U_test[:50]) / (50 * Nx) < 1e-3
-
-
-# @pytest.fixture
-# def gen_KS_data():
-#     tN = 1000
-#     Nx = 64
-#     U, t = orc.data.KS_1D(tN = tN, Nx = Nx) # use default parameters for KS_1D
-
-#     # train-test split
-#     test_perc = 0.2
-#     split_idx = int((1 - test_perc) * U.shape[0])
-#     U_train = U[:split_idx, :]
-#     U_test = U[split_idx:, :]
-#     return Nx, U_train, U_test
