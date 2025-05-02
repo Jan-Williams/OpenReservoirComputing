@@ -1,10 +1,11 @@
-import pytest
-import numpy as np
-import jax.numpy as jnp
-import matplotlib.pyplot as plt
 from unittest.mock import patch
 
+import jax.numpy as jnp
+import numpy as np
+import pytest
+
 from orc.utils import visualization as vis
+
 
 @pytest.fixture
 def sample_time_series():
@@ -34,7 +35,7 @@ def test_plot_time_series_with_options(mock_show, sample_time_series):
     # Test with optional parameters
     t = np.linspace(0, 10, 100)
     vis.plot_time_series(
-        [sample_time_series, sample_time_series], 
+        [sample_time_series, sample_time_series],
         t=t,
         time_series_labels=["Data 1", "Data 2"],
         line_formats=['-', '--'],
@@ -62,7 +63,7 @@ def test_imshow_1D_spatiotemp_basic(mock_show, sample_spatiotemporal):
 def test_imshow_1D_spatiotemp_with_options(mock_show, sample_spatiotemporal):
     # Test with various options
     vis.imshow_1D_spatiotemp(
-        sample_spatiotemporal, 
+        sample_spatiotemporal,
         tN=10,
         domain=(0, 2),
         figsize=(15, 5),
@@ -76,12 +77,12 @@ def test_input_validation():
     # Test input validation for both functions
     with pytest.raises(TypeError):
         vis.plot_time_series("not an array")
-    
+
     with pytest.raises(TypeError):
         vis.plot_time_series(np.array([1, 2, 3]))  # 1D array
-        
+
     with pytest.raises(TypeError):
         vis.imshow_1D_spatiotemp("not an array", 10)
-    
+
     with pytest.raises(TypeError):
         vis.imshow_1D_spatiotemp(np.array([1, 2, 3]), 10)  # 1D array
