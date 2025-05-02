@@ -104,5 +104,4 @@ def test_nonperiodic_par_esn():
 
     # forecast
     U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
-    print(U_pred)
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
