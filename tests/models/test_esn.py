@@ -2,10 +2,10 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import pytest
-import diffrax
 
 import orc
 import orc.data
+
 
 def test_esn_train():
     """
@@ -18,15 +18,14 @@ def test_esn_train():
     test_perc = 0.2
     fcast_len = 100
 
-    # get data 
+    # get data
     U, _ = orc.data.lorenz63(tN=tN, dt=dt, u0=u0)
     split_idx = int((1 - test_perc) * U.shape[0])
     U_train = U[:split_idx, :]
     U_test = U[split_idx:, :]
-    
-    # train esn 
+
+    # train esn
     esn = orc.models.ESN(data_dim=3, res_dim=res_dim, seed=0)
-    r0 = jnp.zeros((res_dim,), dtype=jnp.float64)
     esn, R = orc.models.esn.train_ESN_forecaster(esn, U_train)
 
     # forecast
@@ -36,7 +35,7 @@ def test_esn_train():
 
 
 def test_periodic_par_esn(gen_KS_data):
-    #TODO: clean this test up a bit 
+    #TODO: clean this test up a bit
     Nx = gen_KS_data[0]
     U_train = gen_KS_data[1]
     U_test = gen_KS_data[2]
