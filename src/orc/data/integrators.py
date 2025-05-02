@@ -49,7 +49,7 @@ def lorenz63(tN: Float,
         Additional keyword arguments to pass to the `diffrax.diffeqsolve` function.
         Default solver is `diffrax.Tsit5()`, saveat is set to a grid of times from 0 to
         tN with step size dt, and stepsize_controller is set to
-        `diffrax.PIDController(rtol=1e-3, atol=1e-6)`. dt0 is set to dt. max_steps is
+        `diffrax.PIDController(rtol=1e-7, atol=1e-9)`. dt0 is set to dt. max_steps is
         set to None.
 
     Returns
@@ -63,7 +63,7 @@ def lorenz63(tN: Float,
     diffeqsolve_kwargs.setdefault('solver', diffrax.Tsit5())
     diffeqsolve_kwargs.setdefault('saveat', diffrax.SaveAt(ts=jnp.arange(0,tN,dt)))
     diffeqsolve_kwargs.setdefault('stepsize_controller',
-                                  diffrax.PIDController(rtol=1e-3, atol=1e-6))
+                                  diffrax.PIDController(rtol=1e-7, atol=1e-9))
     diffeqsolve_kwargs.setdefault('dt0', dt)
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
@@ -120,7 +120,7 @@ def rossler(tN: Float,
         Additional keyword arguments to pass to the `diffrax.diffeqsolve` function.
         Default solver is `diffrax.Tsit5()`, saveat is set to a grid of times from 0 to
         tN with step size dt, and stepsize_controller is set to
-        `diffrax.PIDController(rtol=1e-3, atol=1e-6)`. dt0 is set to dt. max_steps is
+        `diffrax.PIDController(rtol=1e-7, atol=1e-9)`. dt0 is set to dt. max_steps is
         set to None.
 
     Returns
@@ -134,7 +134,7 @@ def rossler(tN: Float,
     diffeqsolve_kwargs.setdefault('solver', diffrax.Tsit5())
     diffeqsolve_kwargs.setdefault('saveat', diffrax.SaveAt(ts=jnp.arange(0,tN,dt)))
     diffeqsolve_kwargs.setdefault('stepsize_controller',
-                                  diffrax.PIDController(rtol=1e-3, atol=1e-6))
+                                  diffrax.PIDController(rtol=1e-7, atol=1e-9))
     diffeqsolve_kwargs.setdefault('dt0', dt)
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
@@ -192,7 +192,7 @@ def sakaraya(tN:Float,
         Additional keyword arguments to pass to the `diffrax.diffeqsolve` function.
         Default solver is `diffrax.Tsit5()`, saveat is set to a grid of times from 0 to
         tN with step size dt, and stepsize_controller is set to
-        `diffrax.PIDController(rtol=1e-3, atol=1e-6)`. dt0 is set to dt. max_steps is
+        `diffrax.PIDController(rtol=1e-7, atol=1e-9)`. dt0 is set to dt. max_steps is
         set to None.
 
     Returns
@@ -206,7 +206,7 @@ def sakaraya(tN:Float,
     diffeqsolve_kwargs.setdefault('solver', diffrax.Tsit5())
     diffeqsolve_kwargs.setdefault('saveat', diffrax.SaveAt(ts=jnp.arange(0,tN,dt)))
     diffeqsolve_kwargs.setdefault('stepsize_controller',
-                                diffrax.PIDController(rtol=1e-3, atol=1e-6))
+                                diffrax.PIDController(rtol=1e-7, atol=1e-9))
     diffeqsolve_kwargs.setdefault('dt0', dt)
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
@@ -269,7 +269,7 @@ def colpitts(tN:Float,
         Additional keyword arguments to pass to the `diffrax.diffeqsolve` function.
         Default solver is `diffrax.Tsit5()`, saveat is set to a grid of times from 0 to
         tN with step size dt, and stepsize_controller is set to
-        `diffrax.PIDController(rtol=1e-3, atol=1e-6)`. dt0 is set to dt. max_steps is
+        `diffrax.PIDController(rtol=1e-7, atol=1e-9)`. dt0 is set to dt. max_steps is
         set to None.
 
     Returns
@@ -283,7 +283,7 @@ def colpitts(tN:Float,
     diffeqsolve_kwargs.setdefault('solver', diffrax.Tsit5())
     diffeqsolve_kwargs.setdefault('saveat', diffrax.SaveAt(ts=jnp.arange(0,tN,dt)))
     diffeqsolve_kwargs.setdefault('stepsize_controller',
-                                  diffrax.PIDController(rtol=1e-3, atol=1e-6))
+                                  diffrax.PIDController(rtol=1e-7, atol=1e-9))
     diffeqsolve_kwargs.setdefault('dt0', dt)
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
@@ -345,7 +345,7 @@ def hyper_lorenz63(tN:Float,
         Additional keyword arguments to pass to the `diffrax.diffeqsolve` function.
         Default solver is `diffrax.Tsit5()`, saveat is set to a grid of times from 0 to
         tN with step size dt, and stepsize_controller is set to
-        `diffrax.PIDController(rtol=1e-3, atol=1e-6)`. dt0 is set to dt. max_steps is
+        `diffrax.PIDController(rtol=1e-7, atol=1e-9)`. dt0 is set to dt. max_steps is
         set to None.
 
     Returns
@@ -359,7 +359,7 @@ def hyper_lorenz63(tN:Float,
     diffeqsolve_kwargs.setdefault('solver', diffrax.Tsit5())
     diffeqsolve_kwargs.setdefault('saveat', diffrax.SaveAt(ts=jnp.arange(0,tN,dt)))
     diffeqsolve_kwargs.setdefault('stepsize_controller',
-                                  diffrax.PIDController(rtol=1e-3, atol=1e-6))
+                                  diffrax.PIDController(rtol=1e-7, atol=1e-9))
     diffeqsolve_kwargs.setdefault('dt0', dt)
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
@@ -422,7 +422,7 @@ def hyper_xu(tN:Float,
         Additional keyword arguments to pass to the `diffrax.diffeqsolve` function.
         Default solver is `diffrax.Tsit5()`, saveat is set to a grid of times from 0 to
         tN with step size dt, and stepsize_controller is set to
-        `diffrax.PIDController(rtol=1e-3, atol=1e-6)`. dt0 is set to dt. max_steps is
+        `diffrax.PIDController(rtol=1e-7, atol=1e-9)`. dt0 is set to dt. max_steps is
         set to None.
 
     Returns
@@ -436,7 +436,7 @@ def hyper_xu(tN:Float,
     diffeqsolve_kwargs.setdefault('solver', diffrax.Tsit5())
     diffeqsolve_kwargs.setdefault('saveat', diffrax.SaveAt(ts=jnp.arange(0,tN,dt)))
     diffeqsolve_kwargs.setdefault('stepsize_controller',
-                                  diffrax.PIDController(rtol=1e-3, atol=1e-6))
+                                  diffrax.PIDController(rtol=1e-7, atol=1e-9))
     diffeqsolve_kwargs.setdefault('dt0', dt)
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
@@ -530,7 +530,7 @@ def double_pendulum(tN:Float,
         Additional keyword arguments to pass to the `diffrax.diffeqsolve` function.
         Default solver is `diffrax.Tsit5()`, saveat is set to a grid of times from 0 to
         tN with step size dt, and stepsize_controller is set to
-        `diffrax.PIDController(rtol=1e-3, atol=1e-6)`. dt0 is set to dt. max_steps is
+        `diffrax.PIDController(rtol=1e-7, atol=1e-9)`. dt0 is set to dt. max_steps is
         set to None.
 
     Returns
@@ -544,7 +544,7 @@ def double_pendulum(tN:Float,
     diffeqsolve_kwargs.setdefault('solver', diffrax.Tsit5())
     diffeqsolve_kwargs.setdefault('saveat', diffrax.SaveAt(ts=jnp.arange(0,tN,dt)))
     diffeqsolve_kwargs.setdefault('stepsize_controller',
-                                  diffrax.PIDController(rtol=1e-3, atol=1e-6))
+                                  diffrax.PIDController(rtol=1e-7, atol=1e-9))
     diffeqsolve_kwargs.setdefault('dt0', dt)
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
@@ -610,7 +610,7 @@ def lorenz96(tN:Float,
         Additional keyword arguments to pass to the `diffrax.diffeqsolve` function.
         Default solver is `diffrax.Tsit5()`, saveat is set to a grid of times from 0 to
         tN with step size dt, and stepsize_controller is set to
-        `diffrax.PIDController(rtol=1e-3, atol=1e-6)`. dt0 is set to dt. max_steps is
+        `diffrax.PIDController(rtol=1e-7, atol=1e-9)`. dt0 is set to dt. max_steps is
         set to None.
 
     Returns
@@ -624,7 +624,7 @@ def lorenz96(tN:Float,
     diffeqsolve_kwargs.setdefault('solver', diffrax.Tsit5())
     diffeqsolve_kwargs.setdefault('saveat', diffrax.SaveAt(ts=jnp.arange(0,tN,dt)))
     diffeqsolve_kwargs.setdefault('stepsize_controller',
-                                  diffrax.PIDController(rtol=1e-3, atol=1e-6))
+                                  diffrax.PIDController(rtol=1e-7, atol=1e-9))
     diffeqsolve_kwargs.setdefault('dt0', dt)
     diffeqsolve_kwargs.setdefault('max_steps', None)
 
