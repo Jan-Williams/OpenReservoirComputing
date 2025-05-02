@@ -25,8 +25,8 @@ def test_esn_train():
     U_test = U[split_idx:, :]
 
     # train esn
-    esn = orc.models.ESN(data_dim=3, res_dim=res_dim, seed=0)
-    esn, R = orc.models.esn.train_ESN_forecaster(esn, U_train)
+    esn = orc.models.ESNForecaster(data_dim=3, res_dim=res_dim, seed=0)
+    esn, R = orc.models.esn.train_ESNForecaster(esn, U_train)
 
     # forecast
     U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
@@ -46,11 +46,11 @@ def test_periodic_par_esn(gen_KS_data):
     NR = 1000
     chunks = 32
     locality = 3
-    esn = orc.models.ESN(
+    esn = orc.models.ESNForecaster(
         data_dim=Nx, res_dim=NR, seed=2, chunks=chunks, locality=locality
     )
 
-    esn, output_seq = orc.models.esn.train_ESN_forecaster(
+    esn, output_seq = orc.models.esn.train_ESNForecaster(
         esn,
         input_sequence,
         target_sequence,
@@ -63,7 +63,7 @@ def test_periodic_par_esn(gen_KS_data):
 
     assert jnp.linalg.norm(fcast[:50] - U_test[:50]) / (50 * Nx) < 1e-3
 
-    esn = orc.models.ESN(
+    esn = orc.models.ESNForecaster(
         data_dim=Nx,
         res_dim=NR,
         seed=2,
@@ -72,7 +72,7 @@ def test_periodic_par_esn(gen_KS_data):
         periodic=False,
     )
 
-    esn, output_seq = orc.models.esn.train_ESN_forecaster(
+    esn, output_seq = orc.models.esn.train_ESNForecaster(
         esn,
         input_sequence,
         target_sequence,
