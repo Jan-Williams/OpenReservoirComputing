@@ -3,7 +3,7 @@ name: Run tests
 on:
     push:
       branches:
-        - ci-testing 
+        - ci_tests 
         
 jobs:
   build-linux:
