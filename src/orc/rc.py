@@ -12,8 +12,8 @@ from orc.embeddings import EmbedBase
 from orc.readouts import ReadoutBase
 
 
-class ReservoirComputerBase(eqx.Module, ABC):
-    """Base class for Reservoir Computers.
+class RCForecasterBase(eqx.Module, ABC):
+    """Base class for reservoir computer forecasters.
 
     Defines the interface for the reservoir computer which includes the driver,
     readout and embedding layers.
@@ -92,11 +92,11 @@ class ReservoirComputerBase(eqx.Module, ABC):
 
         Returns
         -------
-        ReservoirComputerBase
+        RCForecasterBase
             Updated model with new readout layer.
         """
 
-        def where(m: ReservoirComputerBase):
+        def where(m: RCForecasterBase):
             return m.readout
 
         new_model = eqx.tree_at(where, self, readout)
@@ -112,12 +112,36 @@ class ReservoirComputerBase(eqx.Module, ABC):
 
         Returns
         -------
-        ReservoirComputerBase
+        RCForecasterBase
             Updated model with new embedding layer.
         """
 
-        def where(m: ReservoirComputerBase):
+        def where(m: RCForecasterBase):
             return m.embedding
 
         new_model = eqx.tree_at(where, self, embedding)
         return new_model
+
+    @eqx.filter_jit
+    def forecast(self, fcast_len: int, res_state: Array) -> Array:
+        """Forecast from an initial reservoir state.
+
+        Parameters
+        ----------
+        fcast_len : int
+            Steps to forecast.
+        res_state : Array
+            Initial reservoir state, (shape=(res_dim)).
+
+        Returns
+        -------
+        Array
+            Forecasted states, (shape=(fcast_len, data_dim))
+        """
+
+        def scan_fn(state, _):
+            out_state = self.driver(self.embedding(self.readout(state)), state)
+            return (out_state, self.readout(out_state))
+
+        _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len)
+        return state_seq
