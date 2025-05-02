@@ -7,13 +7,13 @@ from jaxtyping import Array
 
 from orc.drivers import ESNDriver
 from orc.embeddings import LinearEmbedding
-from orc.rc import ReservoirComputerBase
+from orc.rc import RCForecasterBase
 from orc.readouts import LinearReadout, QuadraticReadout
 
 jax.config.update("jax_enable_x64", True)
 
 
-class ESN(ReservoirComputerBase):
+class ESNForecaster(RCForecasterBase):
     """
     Basic implementation of ESN for forecasting.
 
@@ -146,45 +146,20 @@ class ESN(ReservoirComputerBase):
             seed=seed,
         )
 
-    @eqx.filter_jit
-    def forecast(self, fcast_len: int, res_state: Array) -> Array:
-        """Forecast from an initial reservoir state.
-
-        Parameters
-        ----------
-        fcast_len : int
-            Steps to forecast.
-        res_state : Array
-            Initial reservoir state, (shape=(res_dim)).
-
-        Returns
-        -------
-        Array
-            Forecasted states, (shape=(fcast_len, data_dim))
-        """
-
-        def scan_fn(state, _):
-            out_state = self.driver(self.embedding(self.readout(state)), state)
-            return (out_state, self.readout(out_state))
-
-        _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len)
-        return state_seq
-
-
-def train_ESN_forecaster(
-    model: ESN,
+def train_ESNForecaster(
+    model: ESNForecaster,
     train_seq: Array,
     target_seq: Array = None,
     spinup: int = 0,
     initial_res_state: Array = None,
     beta: float = 8e-8,
-) -> tuple[ESN, Array]:
-    """Training function for RC forecaster.
+) -> tuple[ESNForecaster, Array]:
+    """Training function for ESNForecaster.
 
     Parameters
     ----------
-    model : ReservoirComputerBase
-        ReservoirComputerBase model to train.
+    model : ESNForecaster
+        ESNForecaster model to train.
     train_seq : Array
         Training input sequence for reservoir, (shape=(seq_len, data_dim)).
     target_seq : Array
@@ -198,7 +173,7 @@ def train_ESN_forecaster(
 
     Returns
     -------
-    model : ESN
+    model : ESNForecaster
         Trained ESN model.
     res_seq : Array
         Training sequence of reservoir states.
