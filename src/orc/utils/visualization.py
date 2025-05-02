@@ -1,6 +1,7 @@
 """Visualization utilities for plotting time series and spatiotemporal data."""
 
 import jax.numpy as jnp
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -46,14 +47,49 @@ def plot_time_series(U_lst,
     plot_kwargs : dict, optional
         Additional arguments to pass to the plot function.
     """
-    # defaults
-    plot_kwargs.setdefault('linewidth', 2)
-
-    # handle input data
+    # Input validation
     if not isinstance(U_lst, list):
+        if not isinstance(U_lst, (jnp.ndarray, np.ndarray)) or U_lst.ndim != 2:
+            raise TypeError("U_lst must be a 2D JAX or NumPy array or a list of 2D JAX/NumPy arrays.")
         U_lst = [U_lst]
+    else:
+        if not all(isinstance(U, (jnp.ndarray, np.ndarray)) and U.ndim == 2 for U in U_lst):
+            raise TypeError("All elements in U_lst must be 2D JAX or NumPy arrays.")
+        if not all(U.shape == U_lst[0].shape for U in U_lst):
+            raise ValueError("All arrays in U_lst must have the same shape.")
+
     Nu = U_lst[0].shape[1]
     Nt = U_lst[0].shape[0]
+
+    if t is not None:
+        if not isinstance(t, (jnp.ndarray, np.ndarray)) or t.ndim != 1:
+            raise TypeError("t must be a 1D JAX or NumPy array.")
+        if len(t) != Nt:
+            raise ValueError(f"Length of t ({len(t)}) must match the number of time points in U_lst ({Nt}).")
+
+    if time_series_labels is not None:
+        if not isinstance(time_series_labels, list):
+            raise TypeError("time_series_labels must be a list of strings.")
+        if len(time_series_labels) != len(U_lst):
+            raise ValueError(f"Length of time_series_labels ({len(time_series_labels)}) must match the number of time series ({len(U_lst)}).")
+
+    if line_formats is not None:
+        if not isinstance(line_formats, list):
+            raise TypeError("line_formats must be a list of strings.")
+        if len(line_formats) != len(U_lst):
+            raise ValueError(f"Length of line_formats ({len(line_formats)}) must match the number of time series ({len(U_lst)}).")
+
+    if state_var_names is not None:
+        if not isinstance(state_var_names, list):
+            raise TypeError("state_var_names must be a list of strings.")
+        if len(state_var_names) != Nu:
+            raise ValueError(f"Length of state_var_names ({len(state_var_names)}) must match the number of state variables ({Nu}).")
+
+    if t_lim is not None and not isinstance(t_lim, (int, float)):
+         raise TypeError("t_lim must be a number (int or float).")
+
+    # defaults
+    plot_kwargs.setdefault('linewidth', 2)
 
     # setup time vectors
     if t is None:
@@ -69,6 +105,9 @@ def plot_time_series(U_lst,
 
     # plot
     fig, axs = plt.subplots(Nu, figsize = figsize)
+    # Ensure axs is always iterable, even if Nu=1
+    if Nu == 1:
+        axs = [axs]
     for i in range(Nu):
         for j, Y in enumerate(U_lst):
             axs[i].plot(t, Y[:, i], line_formats[j], label=time_series_labels[j],
@@ -110,6 +149,14 @@ def imshow_1D_spatiotemp(U,
         Label for the x-axis, default is r'$t$'
     **imshow_kwargs: additional arguments to pass to imshow
     """
+    # Input validation
+    if not isinstance(U, (jnp.ndarray, np.ndarray)) or U.ndim != 2:
+        raise TypeError("U must be a 2D JAX or NumPy array.")
+    if not isinstance(domain, tuple) or len(domain) != 2:
+        raise TypeError("domain must be a tuple of length 2.")
+    if not all(isinstance(x, (int, float)) for x in domain):
+        raise TypeError("Both elements of domain must be numbers (int or float).")
+
     #set defaults for imshow
     imshow_kwargs.setdefault('aspect', 'auto')
     imshow_kwargs.setdefault('origin', 'lower')
