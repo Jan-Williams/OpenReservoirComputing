@@ -50,7 +50,7 @@ def test_periodic_par_esn():
     U_train = dummy_data + jax.random.normal(key=key, shape=(1000,Nx)) * 0.02
     U_test = dummy_data
     # init esn
-    esn = orc.models.ESN(
+    esn = orc.models.ESNForecaster(
         data_dim=Nx,
         res_dim=res_dim,
         seed=0,
@@ -60,7 +60,7 @@ def test_periodic_par_esn():
     )
 
     # train esn
-    esn, R = orc.models.esn.train_ESN_forecaster(
+    esn, R = orc.models.esn.train_ESNForecaster(
         esn,
         U_train,
         initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
@@ -86,7 +86,7 @@ def test_nonperiodic_par_esn():
     U_test = dummy_data
 
     # init esn
-    esn = orc.models.ESN(
+    esn = orc.models.ESNForecaster(
         data_dim=Nx,
         res_dim=res_dim,
         seed=0,
@@ -96,7 +96,7 @@ def test_nonperiodic_par_esn():
     )
 
     # train esn
-    esn, R = orc.models.esn.train_ESN_forecaster(
+    esn, R = orc.models.esn.train_ESNForecaster(
         esn,
         U_train,
         initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
