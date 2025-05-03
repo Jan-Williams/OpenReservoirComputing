@@ -4,7 +4,7 @@
 
 # ORC: Open Reservoir Computing
 
-[![Tests](https://github.com/dtretiak/OpenReservoirComputing/actions/workflows/tests.yml/badge.svg)](https://github.com/dtretiak/OpenReservoirComputing/actions/workflows/tests.yml)
+[![CI](https://github.com/dtretiak/OpenReservoirComputing/actions/workflows/tests.yml/badge.svg)](https://github.com/dtretiak/OpenReservoirComputing/actions/workflows/tests.yml)
 
 
 ORC is the one-stop-shop for performant reservoir computing in jax. Key high-level features include
