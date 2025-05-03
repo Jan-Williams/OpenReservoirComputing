@@ -24,8 +24,8 @@ def test_esn_train():
     U_test = U[split_idx:, :]
 
     # train esn
-    esn = orc.models.ESN(data_dim=3, res_dim=res_dim, seed=0)
-    esn, R = orc.models.esn.train_ESN_forecaster(esn, U_train)
+    esn = orc.models.ESNForecaster(data_dim=3, res_dim=res_dim, seed=0)
+    esn, R = orc.models.esn.train_ESNForecaster(esn, U_train)
 
     # forecast
     U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
@@ -42,7 +42,7 @@ def test_periodic_par_esn():
     locality = 3
     fcast_len = 25
 
-    # grab KS data
+    # grab dummy data
     Nx = 64
     dummy_data = jnp.repeat(jnp.arange(Nx).reshape(1,-1), 1000, axis=0)
     key = jax.random.key(0)
