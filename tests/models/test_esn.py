@@ -34,7 +34,7 @@ def test_esn_train():
 
 
 def test_periodic_par_esn():
-    """Test periodic ESN on KS. Passes if forecast is accurate for 25 steps."""
+    """Test periodic parallel ESN on dummy problem."""
 
     # test params
     res_dim = 200
@@ -71,6 +71,7 @@ def test_periodic_par_esn():
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
 
 def test_nonperiodic_par_esn():
+    """Test nonperiodic parallel ESN on dummy problem. """
     # test params
     res_dim = 300
     chunks = 32
