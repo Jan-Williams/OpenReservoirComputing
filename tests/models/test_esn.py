@@ -106,3 +106,32 @@ def test_nonperiodic_par_esn():
     # forecast
     U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
+
+def test_forecast_from_IC():
+    res_dim = 100
+    chunks = 32
+    locality = 2
+    fcast_len = 25
+
+    Nx = 128
+    dummy_data = jnp.repeat(jnp.arange(Nx).reshape(1,-1), 2000, axis=0) * 2
+    key = jax.random.key(0)
+    U_train = dummy_data + jax.random.normal(key=key, shape=(2000, Nx)) * 0.02
+
+    esn = orc.models.ESNForecaster(
+        data_dim=Nx,
+        res_dim=res_dim,
+        seed=0,
+        chunks=chunks,
+        locality=locality,
+        periodic=False,
+    )
+
+    esn, R = orc.models.esn.train_ESNForecaster(
+        esn,
+        U_train,
+        initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
+    )
+    U_pred1 = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
+    U_pred2 = esn.forecast_from_IC(fcast_len, U_train[-101:-1])
+    assert jnp.allclose(U_pred1, U_pred2)
