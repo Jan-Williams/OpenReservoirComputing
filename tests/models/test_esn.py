@@ -108,6 +108,7 @@ def test_nonperiodic_par_esn():
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
 
 def test_forecast_from_IC():
+    """Test forecast from IC vs forecast from reservoir state."""
     res_dim = 100
     chunks = 32
     locality = 2
