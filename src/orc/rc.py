@@ -55,6 +55,7 @@ class RCForecasterBase(eqx.Module, ABC):
     out_dim: int
     res_dim: int
     dtype: Float = jnp.float64
+    chunks: int = 1
     seed: int = 0
 
     @eqx.filter_jit
@@ -66,7 +67,7 @@ class RCForecasterBase(eqx.Module, ABC):
         in_seq: Array
             Input sequence to force the reservoir, (shape=(seq_len, data_dim)).
         res_state : Array
-            Initial reservoir stat, (shape=(res_dim,)).
+            Initial reservoir state, (shape=(chunks, res_dim,)).
 
         Returns
         -------
@@ -145,3 +146,24 @@ class RCForecasterBase(eqx.Module, ABC):
 
         _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len)
         return state_seq
+
+    @eqx.filter_jit
+    def forecast_from_IC(self, fcast_len: int, spinup_data: Array) -> Array:
+        """Forecast from a sequence of spinup data.
+
+        Parameters
+        ----------
+        fcast_len : int
+            Steps to forecast.
+        spinup_data : Array
+            Initial condition sequence, (shape=(seq_len, data_dim)).
+
+        Returns
+        -------
+        Array
+            Forecasted states, (shape=(fcast_len, data_dim)).
+        """
+        res_seq = self.force(
+            spinup_data, jnp.zeros((self.chunks, self.res_dim), dtype=self.dtype)
+        )
+        return self.forecast(fcast_len, res_seq[-1])
