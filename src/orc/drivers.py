@@ -122,6 +122,8 @@ class ESNDriver(DriverBase):
     dtype: Float
     wr: Array
     chunks: int
+    mode: str
+    gamma: float
 
     def __init__(
         self,
@@ -132,6 +134,8 @@ class ESNDriver(DriverBase):
         bias: float = 1.6,
         dtype: Float = jnp.float64,
         chunks: int = 1,
+        mode: str = "discrete",
+        gamma: float = None,
         *,
         seed: int,
         use_sparse_eigs: bool = True
@@ -168,6 +172,8 @@ class ESNDriver(DriverBase):
         self.density = density
         self.bias = bias
         self.dtype = dtype
+        self.mode = mode 
+        self.gamma = gamma 
         key = jax.random.key(seed)
         if spectral_radius <= 0:
             raise ValueError("Spectral radius must be positve.")
@@ -219,13 +225,16 @@ class ESNDriver(DriverBase):
         """
         if proj_vars.shape != (self.chunks, self.res_dim):
             raise ValueError(f"Incorrect proj_var dimension, got {proj_vars.shape}")
-        return (
-            self.leak
-            * self.sparse_ops(
-                self.wr, res_state, proj_vars, self.bias * jnp.ones_like(proj_vars)
+        if self.mode == "continuous":
+            return self.gamma * (-res_state + self.sparse_ops(self.wr, res_state, proj_vars, self.bias*jnp.ones_like(proj_vars)))
+        else:
+            return (
+                self.leak
+                * self.sparse_ops(
+                    self.wr, res_state, proj_vars, self.bias * jnp.ones_like(proj_vars)
+                )
+                + (1 - self.leak) * res_state
             )
-            + (1 - self.leak) * res_state
-        )
 
     @staticmethod
     @sparse.sparsify
