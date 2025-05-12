@@ -145,6 +145,7 @@ class ESNForecaster(RCForecasterBase):
             dtype=dtype,
             seed=seed,
         )
+        self.chunks = chunks
 
 def train_ESNForecaster(
     model: ESNForecaster,
