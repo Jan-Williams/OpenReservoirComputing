@@ -5,6 +5,7 @@ from abc import ABC
 import equinox as eqx
 import jax
 import jax.numpy as jnp
+import diffrax
 from jaxtyping import Array, Float
 
 from orc.drivers import DriverBase
@@ -145,3 +146,72 @@ class RCForecasterBase(eqx.Module, ABC):
 
         _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len)
         return state_seq
+
+class CRCForecasterBase(RCForecasterBase, ABC):
+    #TODO add in parameters to describe solver, diffrax kwargs, etc
+
+    def force(self, in_seq, res_state, ts):
+        coeffs = diffrax.backward_hermite_coefficients(ts, in_seq)
+        in_seq_interp = diffrax.CubicInterpolation(ts, coeffs)
+
+        @eqx.filter_jit
+        def res_ode(t,r,args):
+            interp = args
+            proj_vars = self.embedding(interp.evaluate(t))
+            return self.driver(proj_vars, r)
+        
+        dt0 = ts[1] - ts[0]
+        term = diffrax.ODETerm(res_ode)
+        args = in_seq_interp
+        solver = diffrax.Euler()
+        stepsize_controller = diffrax.PIDController(rtol=1e-2, atol=1e-2, icoeff=1.0)
+        save_at = diffrax.SaveAt(ts=ts) # SAVE AT ts[1:] TODO
+        sol = diffrax.diffeqsolve(term,
+                                    t0=0.0, 
+                                    t1=ts[-1],
+                                    dt0=dt0,
+                                    y0=res_state,
+                                    solver=solver,
+                                    # stepsize_controller=stepsize_controller,
+                                    args=args,
+                                    saveat=save_at,
+                                    max_steps=None)
+        res_seq = sol.ys
+        return res_seq 
+    
+    def forecast(self, ts, res_state: Array) -> Array:
+        """Forecast from an initial reservoir state.
+
+        Parameters
+        ----------
+        #TODO
+        res_state : Array
+            Initial reservoir state, (shape=(res_dim)).
+
+        Returns
+        -------
+        Array
+            Forecasted states, (shape=(fcast_len, data_dim))
+        """
+        @eqx.filter_jit
+        def res_ode(t, r, args):
+            out_state = self.driver(self.embedding(self.readout(r)), r)
+            return out_state
+        
+        dt0 = ts[1] - ts[0]
+        term = diffrax.ODETerm(res_ode)
+        solver = diffrax.Euler()
+        stepsize_controller = diffrax.PIDController(rtol=1e-2, atol=1e-2, icoeff=1.0)
+        save_at = diffrax.SaveAt(ts=ts[1:]) # SAVE AT ts[1:]??? TODO
+
+        sol = diffrax.diffeqsolve(term,
+                                    t0=0.0,
+                                    t1=ts[-1],
+                                    dt0=dt0,
+                                    y0=res_state,
+                                    solver=solver,
+                                    # stepsize_controller=stepsize_controller,
+                                    saveat=save_at,                                      
+                                    max_steps=None)
+        res_seq = sol.ys
+        return eqx.filter_vmap(self.readout)(res_seq)
