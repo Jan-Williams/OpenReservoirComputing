@@ -173,7 +173,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
     """Base class for continuous reservoir computer forecasters.
 
     Override the force and forecast methods of RCForecasterBase
-    to timestep the RC forward using a continous time ODE solver.
+    to timestep the RC forward using a continuous time ODE solver.
 
     Attributes
     ----------
