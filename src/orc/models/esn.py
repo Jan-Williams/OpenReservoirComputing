@@ -339,6 +339,14 @@ def train_ESNForecaster(
     res_seq : Array
         Training sequence of reservoir states.
     """
+    # Check that model is an ESN
+    if not isinstance(model, ESNForecaster):
+        raise TypeError("Model must be an ESNForecaster.")
+        
+    # check that spinup is less than the length of the training sequence
+    if spinup >= train_seq.shape[0]:
+        raise ValueError("spinup must be less than the length of the training sequence.")
+
     if initial_res_state is None:
         initial_res_state = jnp.zeros(
             (
@@ -407,6 +415,18 @@ def train_CESNForecaster(
     res_seq : Array
         Training sequence of reservoir states.
     """
+    # check that model is continuous
+    if not isinstance(model, CESNForecaster):
+        raise TypeError("Model must be a CESNForecaster.")
+    
+    # check that train_seq and t_train have the same length
+    if train_seq.shape[0] != t_train.shape[0]:
+        raise ValueError("train_seq and t_train must have the same length.")
+    
+    # check that spinup is less than the length of the training sequence
+    if spinup >= train_seq.shape[0]:
+        raise ValueError("spinup must be less than the length of the training sequence.")
+
     if initial_res_state is None:
         initial_res_state = jnp.zeros(
             (
