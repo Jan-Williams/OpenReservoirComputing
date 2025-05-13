@@ -160,7 +160,7 @@ class CESNForecaster(CRCForecasterBase):
     data_dim : int
         Input/output dimension.
     driver : ESNDriver
-        Driver implmenting the Echo State Network dynamics
+        Driver implementing the Echo State Network dynamics
         in continuous time.
     readout : BaseReadout
         Trainable linear readout layer.
