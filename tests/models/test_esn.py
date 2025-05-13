@@ -1,7 +1,3 @@
-import os
-
-os.environ["JAX_TRACEBACK_FILTERING"] = "off"  # Disable JAX traceback filtering
-
 import diffrax
 import jax
 import jax.numpy as jnp
