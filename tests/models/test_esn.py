@@ -148,9 +148,9 @@ def test_cesn_train():
     """
     Test forecast on Lorenz system with continuous ESN. Passes if forecast is accurate.
     """
-    res_dim = 400
+    res_dim = 200
     tN = 100
-    dt = 0.01
+    dt = 0.02
     u0 = np.array([0.05, 1, 1.05])
     test_perc = 0.2
     fcast_len = 100
@@ -164,7 +164,9 @@ def test_cesn_train():
     ts_test = jnp.arange(0, fcast_len, dtype=jnp.float64) * dt
 
     # train cesn
-    cesn = orc.models.CESNForecaster(data_dim=3, res_dim=res_dim, seed=0)
+    solver = diffrax.Euler()
+    stepsize_controller = diffrax.ConstantStepSize() # faster for testing
+    cesn = orc.models.CESNForecaster(data_dim=3, res_dim=res_dim, seed=0, stepsize_controller=stepsize_controller, solver=solver)
     cesn, R = orc.models.esn.train_CESNForecaster(cesn, U_train, ts_train)
 
     # forecast
