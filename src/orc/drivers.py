@@ -103,6 +103,10 @@ class ESNDriver(DriverBase):
         Additive bias in tanh nonlinearity.
     chunks: int
         Number of parallel reservoirs.
+    mode : str
+        Mode of reservoir update, either "discrete" or "continuous".
+    time_const : float
+        Time constant for continuous mode.
     dtype : Float
         Dtype, default jnp.float64.
 
@@ -122,6 +126,8 @@ class ESNDriver(DriverBase):
     dtype: Float
     wr: Array
     chunks: int
+    mode: str
+    time_const: float
 
     def __init__(
         self,
@@ -132,9 +138,11 @@ class ESNDriver(DriverBase):
         bias: float = 1.6,
         dtype: Float = jnp.float64,
         chunks: int = 1,
+        mode: str = "discrete",
+        time_const: float = 50.0,
         *,
         seed: int,
-        use_sparse_eigs: bool = True
+        use_sparse_eigs: bool = True,
     ) -> None:
         """Initialize weight matrices.
 
@@ -152,6 +160,10 @@ class ESNDriver(DriverBase):
             Additive bias in tanh nonlinearity.
         chunks: int
             Number of parallel reservoirs.
+        mode : str
+            Mode of reservoir update, either "discrete" or "continuous".
+        time_const : float
+            Time constant for continuous mode. Ignored in discrete mode.
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
@@ -168,6 +180,8 @@ class ESNDriver(DriverBase):
         self.density = density
         self.bias = bias
         self.dtype = dtype
+        self.mode = mode
+        self.time_const = time_const
         key = jax.random.key(seed)
         if spectral_radius <= 0:
             raise ValueError("Spectral radius must be positve.")
@@ -175,29 +189,36 @@ class ESNDriver(DriverBase):
             raise ValueError("Leak rate must satisfy 0 < leak < 1.")
         if density < 0 or density > 1:
             raise ValueError("Density must satisfy 0 < density < 1.")
+        if mode not in ["discrete", "continuous"]:
+            raise ValueError("Mode must be either 'discrete' or 'continuous'.")
+        if time_const <= 0:
+            raise ValueError("Time constant must be positive.")
         subkey, wr_key = jax.random.split(key)
 
         # check res_dim size for eigensolver choice
         if res_dim < 100 and use_sparse_eigs:
             use_sparse_eigs = False
             warnings.warn(
-                "Reservoir dimension is less than 100, using dense " \
-                "eigensolver for spectral radius.", stacklevel=2
+                "Reservoir dimension is less than 100, using dense "
+                "eigensolver for spectral radius.",
+                stacklevel=2,
             )
 
         # generate all wr matricies
-        sp_mat = sparse.random_bcoo(key=wr_key,
-                                    shape=(chunks, res_dim, res_dim),
-                                    n_batch=1,
-                                    nse=density,
-                                    dtype=dtype,
-                                    generator=jax.random.normal)
+        sp_mat = sparse.random_bcoo(
+            key=wr_key,
+            shape=(chunks, res_dim, res_dim),
+            n_batch=1,
+            nse=density,
+            dtype=dtype,
+            generator=jax.random.normal,
+        )
         if use_sparse_eigs:
             eigs = jnp.abs(jax.vmap(max_eig_arnoldi)(sp_mat))
         else:
             dense_mat = sparse.bcoo_todense(sp_mat)
             eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(dense_mat)), axis=1)
-        self.wr = spectral_radius*(sp_mat / eigs[:, None, None])
+        self.wr = spectral_radius * (sp_mat / eigs[:, None, None])
         self.chunks = chunks
         self.dtype = dtype
 
@@ -219,13 +240,21 @@ class ESNDriver(DriverBase):
         """
         if proj_vars.shape != (self.chunks, self.res_dim):
             raise ValueError(f"Incorrect proj_var dimension, got {proj_vars.shape}")
-        return (
-            self.leak
-            * self.sparse_ops(
-                self.wr, res_state, proj_vars, self.bias * jnp.ones_like(proj_vars)
+        if self.mode == "continuous":
+            return self.time_const * (
+                -res_state
+                + self.sparse_ops(
+                    self.wr, res_state, proj_vars, self.bias * jnp.ones_like(proj_vars)
+                )
             )
-            + (1 - self.leak) * res_state
-        )
+        else:
+            return (
+                self.leak
+                * self.sparse_ops(
+                    self.wr, res_state, proj_vars, self.bias * jnp.ones_like(proj_vars)
+                )
+                + (1 - self.leak) * res_state
+            )
 
     @staticmethod
     @sparse.sparsify
