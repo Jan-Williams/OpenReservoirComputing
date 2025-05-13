@@ -8,8 +8,10 @@ from orc.models.esn import (
     train_ESNForecaster,
 )
 
-__all__ = ["esn",
-           "ESNForecaster",
-           "CESNForecaster",
-           "train_ESNForecaster",
-           "train_CESNForecaster"]
+__all__ = [
+    "esn",
+    "ESNForecaster",
+    "CESNForecaster",
+    "train_ESNForecaster",
+    "train_CESNForecaster",
+]

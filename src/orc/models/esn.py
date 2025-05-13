@@ -1,5 +1,6 @@
 """Classic ESN implementation with tanh nonlinearity and linear readout."""
 
+import diffrax
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -60,7 +61,7 @@ class ESNForecaster(RCForecasterBase):
         locality: int = 0,
         quadratic: bool = False,
         periodic: bool = True,
-        use_sparse_eigs: bool = True
+        use_sparse_eigs: bool = True,
     ) -> None:
         """
         Initialize the ESN model.
@@ -158,7 +159,8 @@ class CESNForecaster(CRCForecasterBase):
     data_dim : int
         Input/output dimension.
     driver : ESNDriver
-        Driver implmenting the Echo State Network dynamics.
+        Driver implmenting the Echo State Network dynamics
+        in continuous time.
     readout : BaseReadout
         Trainable linear readout layer.
     embedding : LinearEmbedding
@@ -183,7 +185,7 @@ class CESNForecaster(CRCForecasterBase):
         self,
         data_dim: int,
         res_dim: int,
-        leak_rate: float = 0.6,
+        time_const: float = 50.0,
         bias: float = 1.6,
         embedding_scaling: float = 0.08,
         Wr_density: float = 0.02,
@@ -192,13 +194,14 @@ class CESNForecaster(CRCForecasterBase):
         seed: int = 0,
         chunks: int = 1,
         locality: int = 0,
-        gamma = 1.0,
         quadratic: bool = False,
         periodic: bool = True,
-        use_sparse_eigs: bool = True
+        use_sparse_eigs: bool = True,
+        solver: diffrax.AbstractSolver = None,
+        stepsize_controller: diffrax.AbstractAdaptiveStepSizeController = None,
     ) -> None:
         """
-        Initialize the ESN model.
+        Initialize the CESN model.
 
         Parameters
         ----------
@@ -206,8 +209,8 @@ class CESNForecaster(CRCForecasterBase):
             Dimension of the input data.
         res_dim : int
             Dimension of the reservoir adjacency matrix Wr.
-        leak_rate : float
-            Integration leak rate of the reservoir dynamics.
+        time_const : float
+            Time constant of the reservoir dynamics.
         bias : float
             Bias term for the reservoir dynamics.
         embedding_scaling : float
@@ -253,13 +256,12 @@ class CESNForecaster(CRCForecasterBase):
         driver = ESNDriver(
             res_dim=res_dim,
             seed=key_driver[0],
-            leak=leak_rate,
+            time_const=time_const,
             bias=bias,
             density=Wr_density,
             spectral_radius=Wr_spectral_radius,
             chunks=chunks,
-            mode = "continuous",
-            gamma = gamma,
+            mode="continuous",
             dtype=dtype,
             use_sparse_eigs=use_sparse_eigs,
         )
@@ -272,6 +274,13 @@ class CESNForecaster(CRCForecasterBase):
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
 
+        if solver is None:
+            solver = diffrax.Tsit5()
+        if stepsize_controller is None:
+            stepsize_controller = diffrax.PIDController(rtol=1e-3,
+                                                        atol=1e-6,
+                                                        icoeff=1.0)
+
         super().__init__(
             driver=driver,
             readout=readout,
@@ -281,23 +290,22 @@ class CESNForecaster(CRCForecasterBase):
             out_dim=data_dim,
             dtype=dtype,
             seed=seed,
+            solver=solver,
+            stepsize_controller=stepsize_controller,
         )
-
 
 
 def _solve_single_ridge_reg(res_seq, target_seq, beta):
     """Solve a single matrix ridge regression problem."""
-    lhs = res_seq.T @ res_seq + beta * jnp.eye(
-        res_seq.shape[1], dtype=res_seq.dtype
-    )
+    lhs = res_seq.T @ res_seq + beta * jnp.eye(res_seq.shape[1], dtype=res_seq.dtype)
     rhs = res_seq.T @ target_seq
     cmat = jax.scipy.linalg.solve(lhs, rhs, assume_a="sym").T
     return cmat
 
+
 # vmap ridge regression solver for parallel RC cases
-_solve_all_ridge_reg = eqx.filter_vmap(
-    _solve_single_ridge_reg, in_axes=eqx.if_array(1)
-)
+_solve_all_ridge_reg = eqx.filter_vmap(_solve_single_ridge_reg, in_axes=eqx.if_array(1))
+
 
 def train_ESNForecaster(
     model: ESNForecaster,
@@ -413,7 +421,7 @@ def train_CESNForecaster(
         train_seq = train_seq[:-1, :]
         t_train = t_train[:-1]
 
-    res_seq = model.force(train_seq, initial_res_state, ts = t_train)
+    res_seq = model.force(train_seq, initial_res_state, ts=t_train)
     if isinstance(model.readout, QuadraticReadout):
         res_seq_train = res_seq.at[:, :, ::2].set(res_seq[:, :, ::2] ** 2)
     else:
