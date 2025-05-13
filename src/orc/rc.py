@@ -325,3 +325,39 @@ class CRCForecasterBase(RCForecasterBase, ABC):
                                     max_steps=None)
         res_seq = sol.ys
         return eqx.filter_vmap(self.readout)(res_seq)
+
+    def forecast_from_IC(self, ts:Array,
+                         spinup_data: Array,
+                         spinup_ts: Array = None) -> Array:
+        """Forecast from a sequence of spinup data.
+
+        Parameters
+        ----------
+        ts : Array
+            Time steps for the forecast, (shape=(fcast_len,)).
+        spinup_data : Array
+            Initial condition sequence, (shape=(seq_len, data_dim)).
+        spinup_ts : Array
+            Time steps for the spinup data, (shape=(seq_len,)).
+            If None, the spinup data is assumed to have the same dt
+            as the forecast data.  If not None, the spinup data
+            Default is None.
+
+        Returns
+        -------
+        Array
+            Forecasted states, (shape=(fcast_len, data_dim)).
+        """
+        if spinup_ts is None:
+            dt0 = ts[1] - ts[0]
+            spinup_ts = jnp.arange(
+                0.0, spinup_data.shape[0], dtype=self.dtype
+            ) * dt0
+
+        res_seq = self.force(
+            spinup_data,
+            jnp.zeros((self.chunks, self.res_dim), dtype=self.dtype),
+            spinup_ts
+        )
+
+        return self.forecast(ts, res_seq[-1])

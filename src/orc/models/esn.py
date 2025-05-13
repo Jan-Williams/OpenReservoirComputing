@@ -294,6 +294,7 @@ class CESNForecaster(CRCForecasterBase):
             solver=solver,
             stepsize_controller=stepsize_controller,
         )
+        self.chunks = chunks
 
 
 def _solve_single_ridge_reg(res_seq, target_seq, beta):
