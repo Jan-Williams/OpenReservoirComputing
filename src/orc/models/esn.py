@@ -7,7 +7,7 @@ from jaxtyping import Array
 
 from orc.drivers import ESNDriver
 from orc.embeddings import LinearEmbedding
-from orc.rc import RCForecasterBase, CRCForecasterBase
+from orc.rc import CRCForecasterBase, RCForecasterBase
 from orc.readouts import LinearReadout, QuadraticReadout
 
 jax.config.update("jax_enable_x64", True)
@@ -146,80 +146,6 @@ class ESNForecaster(RCForecasterBase):
             seed=seed,
         )
 
-def train_ESNForecaster(
-    model: ESNForecaster,
-    train_seq: Array,
-    target_seq: Array = None,
-    spinup: int = 0,
-    initial_res_state: Array = None,
-    beta: float = 8e-8,
-) -> tuple[ESNForecaster, Array]:
-    """Training function for ESNForecaster.
-
-    Parameters
-    ----------
-    model : ESNForecaster
-        ESNForecaster model to train.
-    train_seq : Array
-        Training input sequence for reservoir, (shape=(seq_len, data_dim)).
-    target_seq : Array
-        Target sequence for training reservoir, (shape=(seq_len, data_dim)).
-    initial_res_state : Array
-        Initial reservoir state, (shape=(chunks, res_dim,)).
-    spinup : int
-        Initial transient of reservoir states to discard.
-    beta : float
-        Tikhonov regularization parameter.
-
-    Returns
-    -------
-    model : ESNForecaster
-        Trained ESN model.
-    res_seq : Array
-        Training sequence of reservoir states.
-    """
-    if initial_res_state is None:
-        initial_res_state = jnp.zeros(
-            (
-                model.embedding.chunks,
-                model.res_dim,
-            ),
-            dtype=model.dtype,
-        )
-
-    if target_seq is None:
-        target_seq = train_seq[1:, :]
-        train_seq = train_seq[:-1, :]
-
-    res_seq = model.force(train_seq, initial_res_state)
-    if isinstance(model.readout, QuadraticReadout):
-        res_seq_train = res_seq.at[:, :, ::2].set(res_seq[:, :, ::2] ** 2)
-    else:
-        res_seq_train = res_seq
-        
-    def solve_single_ridge_reg(res_seq, target_seq, beta):
-        lhs = res_seq.T @ res_seq + beta * jnp.eye(
-            res_seq.shape[1], dtype=res_seq.dtype
-        )
-        rhs = res_seq.T @ target_seq
-        cmat = jax.scipy.linalg.solve(lhs, rhs, assume_a="sym").T
-        return cmat
-
-    solve_all_ridge_reg = eqx.filter_vmap(
-        solve_single_ridge_reg, in_axes=eqx.if_array(1)
-    )
-    cmat = solve_all_ridge_reg(
-        res_seq_train[spinup:],
-        target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1),
-        beta,
-    )
-
-    def where(m):
-        return m.readout.wout
-
-    model = eqx.tree_at(where, model, cmat)
-
-    return model, res_seq
 
 class CESNForecaster(CRCForecasterBase):
     """
@@ -356,3 +282,152 @@ class CESNForecaster(CRCForecasterBase):
             dtype=dtype,
             seed=seed,
         )
+
+
+
+def _solve_single_ridge_reg(res_seq, target_seq, beta):
+    """Solve a single matrix ridge regression problem."""
+    lhs = res_seq.T @ res_seq + beta * jnp.eye(
+        res_seq.shape[1], dtype=res_seq.dtype
+    )
+    rhs = res_seq.T @ target_seq
+    cmat = jax.scipy.linalg.solve(lhs, rhs, assume_a="sym").T
+    return cmat
+
+# vmap ridge regression solver for parallel RC cases
+_solve_all_ridge_reg = eqx.filter_vmap(
+    _solve_single_ridge_reg, in_axes=eqx.if_array(1)
+)
+
+def train_ESNForecaster(
+    model: ESNForecaster,
+    train_seq: Array,
+    target_seq: Array = None,
+    spinup: int = 0,
+    initial_res_state: Array = None,
+    beta: float = 8e-8,
+) -> tuple[ESNForecaster, Array]:
+    """Training function for ESNForecaster.
+
+    Parameters
+    ----------
+    model : ESNForecaster
+        ESNForecaster model to train.
+    train_seq : Array
+        Training input sequence for reservoir, (shape=(seq_len, data_dim)).
+    target_seq : Array
+        Target sequence for training reservoir, (shape=(seq_len, data_dim)).
+    initial_res_state : Array
+        Initial reservoir state, (shape=(chunks, res_dim,)).
+    spinup : int
+        Initial transient of reservoir states to discard.
+    beta : float
+        Tikhonov regularization parameter.
+
+    Returns
+    -------
+    model : ESNForecaster
+        Trained ESN model.
+    res_seq : Array
+        Training sequence of reservoir states.
+    """
+    if initial_res_state is None:
+        initial_res_state = jnp.zeros(
+            (
+                model.embedding.chunks,
+                model.res_dim,
+            ),
+            dtype=model.dtype,
+        )
+
+    if target_seq is None:
+        target_seq = train_seq[1:, :]
+        train_seq = train_seq[:-1, :]
+
+    res_seq = model.force(train_seq, initial_res_state)
+    if isinstance(model.readout, QuadraticReadout):
+        res_seq_train = res_seq.at[:, :, ::2].set(res_seq[:, :, ::2] ** 2)
+    else:
+        res_seq_train = res_seq
+
+    cmat = _solve_all_ridge_reg(
+        res_seq_train[spinup:],
+        target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1),
+        beta,
+    )
+
+    def where(m):
+        return m.readout.wout
+
+    model = eqx.tree_at(where, model, cmat)
+
+    return model, res_seq
+
+
+def train_CESNForecaster(
+    model: CESNForecaster,
+    train_seq: Array,
+    t_train: Array,
+    target_seq: Array = None,
+    spinup: int = 0,
+    initial_res_state: Array = None,
+    beta: float = 8e-8,
+) -> tuple[CESNForecaster, Array]:
+    """Training function for CESNForecaster.
+
+    Parameters
+    ----------
+    model : CESNForecaster
+        CESNForecaster model to train.
+    train_seq : Array
+        Training input sequence for reservoir, (shape=(seq_len, data_dim)).
+    t_train : Array
+        time vector corresponding to the training sequence, (shape=(seq_len,)).
+    target_seq : Array
+        Target sequence for training reservoir, (shape=(seq_len, data_dim)).
+    initial_res_state : Array
+        Initial reservoir state, (shape=(chunks, res_dim,)).
+    spinup : int
+        Initial transient of reservoir states to discard.
+    beta : float
+        Tikhonov regularization parameter.
+
+    Returns
+    -------
+    model : CESNForecaster
+        Trained CESN model.
+    res_seq : Array
+        Training sequence of reservoir states.
+    """
+    if initial_res_state is None:
+        initial_res_state = jnp.zeros(
+            (
+                model.embedding.chunks,
+                model.res_dim,
+            ),
+            dtype=model.dtype,
+        )
+
+    if target_seq is None:
+        target_seq = train_seq[1:, :]
+        train_seq = train_seq[:-1, :]
+        t_train = t_train[:-1]
+
+    res_seq = model.force(train_seq, initial_res_state, ts = t_train)
+    if isinstance(model.readout, QuadraticReadout):
+        res_seq_train = res_seq.at[:, :, ::2].set(res_seq[:, :, ::2] ** 2)
+    else:
+        res_seq_train = res_seq
+
+    cmat = _solve_all_ridge_reg(
+        res_seq_train[spinup:],
+        target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1),
+        beta,
+    )
+
+    def where(m):
+        return m.readout.wout
+
+    model = eqx.tree_at(where, model, cmat)
+
+    return model, res_seq

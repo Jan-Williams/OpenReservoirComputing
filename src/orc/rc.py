@@ -2,10 +2,10 @@
 
 from abc import ABC
 
+import diffrax
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-import diffrax
 from jaxtyping import Array, Float
 
 from orc.drivers import DriverBase
@@ -159,15 +159,16 @@ class CRCForecasterBase(RCForecasterBase, ABC):
             interp = args
             proj_vars = self.embedding(interp.evaluate(t))
             return self.driver(proj_vars, r)
-        
+
         dt0 = ts[1] - ts[0]
+        ts = ts + dt0 # roll time forward one step for targets
         term = diffrax.ODETerm(res_ode)
         args = in_seq_interp
         solver = diffrax.Euler()
         stepsize_controller = diffrax.PIDController(rtol=1e-2, atol=1e-2, icoeff=1.0)
-        save_at = diffrax.SaveAt(ts=ts) # SAVE AT ts[1:] TODO
+        save_at = diffrax.SaveAt(ts=ts)
         sol = diffrax.diffeqsolve(term,
-                                    t0=0.0, 
+                                    t0=0.0,
                                     t1=ts[-1],
                                     dt0=dt0,
                                     y0=res_state,
@@ -177,8 +178,8 @@ class CRCForecasterBase(RCForecasterBase, ABC):
                                     saveat=save_at,
                                     max_steps=None)
         res_seq = sol.ys
-        return res_seq 
-    
+        return res_seq
+
     def forecast(self, ts, res_state: Array) -> Array:
         """Forecast from an initial reservoir state.
 
@@ -197,12 +198,13 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         def res_ode(t, r, args):
             out_state = self.driver(self.embedding(self.readout(r)), r)
             return out_state
-        
+
         dt0 = ts[1] - ts[0]
+        ts = ts+dt0
         term = diffrax.ODETerm(res_ode)
         solver = diffrax.Euler()
         stepsize_controller = diffrax.PIDController(rtol=1e-2, atol=1e-2, icoeff=1.0)
-        save_at = diffrax.SaveAt(ts=ts[1:]) # SAVE AT ts[1:]??? TODO
+        save_at = diffrax.SaveAt(ts=ts)
 
         sol = diffrax.diffeqsolve(term,
                                     t0=0.0,
@@ -211,7 +213,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
                                     y0=res_state,
                                     solver=solver,
                                     # stepsize_controller=stepsize_controller,
-                                    saveat=save_at,                                      
+                                    saveat=save_at,
                                     max_steps=None)
         res_seq = sol.ys
         return eqx.filter_vmap(self.readout)(res_seq)
