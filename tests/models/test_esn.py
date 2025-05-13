@@ -166,7 +166,9 @@ def test_cesn_train():
     # train cesn
     solver = diffrax.Euler()
     stepsize_controller = diffrax.ConstantStepSize() # faster for testing
-    cesn = orc.models.CESNForecaster(data_dim=3, res_dim=res_dim, seed=0, stepsize_controller=stepsize_controller, solver=solver)
+    cesn = orc.models.CESNForecaster(data_dim=3, res_dim=res_dim, seed=0,
+                                     stepsize_controller=stepsize_controller,
+                                     solver=solver)
     cesn, R = orc.models.esn.train_CESNForecaster(cesn, U_train, ts_train)
 
     # forecast
