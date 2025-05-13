@@ -148,44 +148,131 @@ class RCForecasterBase(eqx.Module, ABC):
         return state_seq
 
 class CRCForecasterBase(RCForecasterBase, ABC):
-    #TODO add in parameters to describe solver, diffrax kwargs, etc
+    """Base class for continuous reservoir computer forecasters.
 
-    def force(self, in_seq, res_state, ts):
+    Override the force and forecast methods of RCForecasterBase
+    to timestep the RC forward using a continous time ODE solver.
+
+    Attributes
+    ----------
+    driver : DriverBase
+        Driver layer of the reservoir computer.
+    readout : ReadoutBase
+        Readout layer of the reservoir computer.
+    embedding : EmbedBase
+        Embedding layer of the reservoir computer.
+    in_dim : int
+        Dimension of the input data.
+    out_dim : int
+        Dimension of the output data.
+    res_dim : int
+        Dimension of the reservoir.
+    dtype : type
+        Data type of the reservoir computer (jnp.float64 is highly recommended).
+    seed : int
+        Random seed for generating the PRNG key for the reservoir computer.
+    solver : diffrax.Solver
+        ODE solver to use for the reservoir computer.
+    stepsize_controller : diffrax.StepsizeController
+        Stepsize controller to use for the ODE solver.
+
+    Methods
+    -------
+    force(in_seq, res_state)
+        Teacher forces the reservoir with the input sequence.
+    set_readout(readout)
+        Replaces the readout layer of the reservoir computer.
+    set_embedding(embedding)
+        Replaces the embedding layer of the reservoir computer.
+    """
+
+    solver: diffrax.AbstractSolver
+    stepsize_controller: diffrax.AbstractAdaptiveStepSizeController
+
+    def __init__(self,
+                *args,
+                solver: diffrax.AbstractSolver = None,
+                stepsize_controller:
+                    diffrax.AbstractAdaptiveStepSizeController = None,
+                **kwargs):
+        """Initialize the continuous reservoir computer.
+
+        Parameters
+        ----------
+        *args : tuple
+            Positional arguments to pass to the parent class RCForecasterBase.
+        solver : diffrax.AbstractSolver
+            ODE solver to use for the reservoir computer.
+        stepsize_controller : diffrax.AbstractAdaptiveStepSizeController
+            Stepsize controller to use for the ODE solver.
+        **kwargs : dict
+            Keyword arguments to pass to the parent class RCForecasterBase.
+        """
+        super().__init__(*args, **kwargs)
+        if solver is None:
+            solver = diffrax.Tsit5()
+        if stepsize_controller is None:
+            stepsize_controller = diffrax.PIDController(rtol=1e-3,
+                                                        atol=1e-6,
+                                                        icoeff=1.0)
+        self.solver = solver
+        self.stepsize_controller = stepsize_controller
+
+    def force(self, in_seq: Array, res_state: Array, ts: Array) -> Array:
+        """
+        Teacher forces the reservoir.
+
+        Parameters
+        ----------
+        in_seq: Array
+            Input sequence to force the reservoir, (shape=(seq_len, data_dim)).
+        res_state : Array
+            Initial reservoir state, (shape=(res_dim,)).
+        ts: Array
+            Time steps for the input sequence, (shape=(seq_len,)).
+
+        Returns
+        -------
+        Array
+            Forced reservoir sequence, (shape=(seq_len, res_dim)).
+        """
+        # form interpolants
         coeffs = diffrax.backward_hermite_coefficients(ts, in_seq)
         in_seq_interp = diffrax.CubicInterpolation(ts, coeffs)
 
+        # RC forced ODE definition
         @eqx.filter_jit
         def res_ode(t,r,args):
             interp = args
             proj_vars = self.embedding(interp.evaluate(t))
             return self.driver(proj_vars, r)
 
+        # integrate RC
         dt0 = ts[1] - ts[0]
         ts = ts + dt0 # roll time forward one step for targets
         term = diffrax.ODETerm(res_ode)
         args = in_seq_interp
-        solver = diffrax.Euler()
-        stepsize_controller = diffrax.PIDController(rtol=1e-2, atol=1e-2, icoeff=1.0)
         save_at = diffrax.SaveAt(ts=ts)
         sol = diffrax.diffeqsolve(term,
                                     t0=0.0,
                                     t1=ts[-1],
                                     dt0=dt0,
                                     y0=res_state,
-                                    solver=solver,
-                                    # stepsize_controller=stepsize_controller,
+                                    solver=self.solver,
+                                    stepsize_controller=self.stepsize_controller,
                                     args=args,
                                     saveat=save_at,
                                     max_steps=None)
         res_seq = sol.ys
         return res_seq
 
-    def forecast(self, ts, res_state: Array) -> Array:
+    def forecast(self, ts: Array, res_state: Array) -> Array:
         """Forecast from an initial reservoir state.
 
         Parameters
         ----------
-        #TODO
+        ts : Array
+            Time steps for the forecast, (shape=(fcast_len,)).
         res_state : Array
             Initial reservoir state, (shape=(res_dim)).
 
@@ -194,25 +281,24 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         Array
             Forecasted states, (shape=(fcast_len, data_dim))
         """
+        # RC autonomous ODE definition
         @eqx.filter_jit
         def res_ode(t, r, args):
             out_state = self.driver(self.embedding(self.readout(r)), r)
             return out_state
 
+        # integrate RC
         dt0 = ts[1] - ts[0]
         ts = ts+dt0
         term = diffrax.ODETerm(res_ode)
-        solver = diffrax.Euler()
-        stepsize_controller = diffrax.PIDController(rtol=1e-2, atol=1e-2, icoeff=1.0)
         save_at = diffrax.SaveAt(ts=ts)
-
         sol = diffrax.diffeqsolve(term,
                                     t0=0.0,
                                     t1=ts[-1],
                                     dt0=dt0,
                                     y0=res_state,
-                                    solver=solver,
-                                    # stepsize_controller=stepsize_controller,
+                                    solver=self.solver,
+                                    stepsize_controller=self.stepsize_controller,
                                     saveat=save_at,
                                     max_steps=None)
         res_seq = sol.ys
