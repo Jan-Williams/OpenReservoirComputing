@@ -172,8 +172,8 @@ class ESNDriver(DriverBase):
         self.density = density
         self.bias = bias
         self.dtype = dtype
-        self.mode = mode 
-        self.gamma = gamma 
+        self.mode = mode
+        self.gamma = gamma
         key = jax.random.key(seed)
         if spectral_radius <= 0:
             raise ValueError("Spectral radius must be positve.")
