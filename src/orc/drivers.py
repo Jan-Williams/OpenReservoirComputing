@@ -184,7 +184,7 @@ class ESNDriver(DriverBase):
         self.time_const = time_const
         key = jax.random.key(seed)
         if spectral_radius <= 0:
-            raise ValueError("Spectral radius must be positve.")
+            raise ValueError("Spectral radius must be positive.")
         if leak < 0 or leak > 1:
             raise ValueError("Leak rate must satisfy 0 < leak < 1.")
         if density < 0 or density > 1:
