@@ -1,3 +1,7 @@
+import os
+
+os.environ["JAX_TRACEBACK_FILTERING"] = "off"  # Disable JAX traceback filtering
+
 import diffrax
 import jax
 import jax.numpy as jnp
@@ -161,7 +165,7 @@ def test_cesn_train():
     U_train = U[:split_idx, :]
     U_test = U[split_idx:, :]
     ts_train = ts[:split_idx]
-    ts_test = jnp.arange(0, fcast_len) * dt  # Time values for testing
+    ts_test = jnp.arange(0, fcast_len, dtype=jnp.float64) * dt
 
     # train cesn
     cesn = orc.models.CESNForecaster(data_dim=3, res_dim=res_dim, seed=0)
@@ -188,9 +192,9 @@ def test_periodic_par_cesn():
     # some noise increases robustness of ESN forecast
     U_train = dummy_data + jax.random.normal(key=key, shape=(1000,Nx)) * 0.02
     U_test = dummy_data
-    ts_train = jnp.linspace(0, 10, 1000)  # Time values for training
+    ts_train = jnp.linspace(0, 10, 1000)
     dt = ts_train[1] - ts_train[0]
-    ts_test = jnp.arange(0, fcast_len) * dt  # Time values for testing
+    ts_test = jnp.arange(0, fcast_len, dtype=jnp.float64) * dt
 
     # init cesn
     cesn = orc.models.CESNForecaster(
@@ -229,7 +233,8 @@ def test_nonperiodic_par_cesn():
     dummy_data = jnp.repeat(jnp.sin(Nx).reshape(1,-1), 2000, axis=0) * 2
     key = jax.random.key(0)
     # some noise increases robustness of ESN forecast
-    U_train = dummy_data + jax.random.normal(key=key, shape=(2000, Nx)) * 0.02
+    U_train = dummy_data + \
+        jax.random.normal(key=key, shape=(2000, Nx)) * 0.02
     U_test = dummy_data
     ts_train = jnp.linspace(0, 20, 2000)  # Time values for training
     dt = ts_train[1] - ts_train[0]
@@ -257,6 +262,49 @@ def test_nonperiodic_par_cesn():
     # forecast
     U_pred = cesn.forecast(ts=ts_test, res_state=R[-1])
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
+
+def test_forecast_from_IC_CESN():
+    """Test forecast from IC vs forecast from reservoir state."""
+    res_dim = 100
+    chunks = 32
+    locality = 2
+    fcast_len = 25
+
+    Nx = 128
+    dummy_data = jnp.repeat(jnp.sin(Nx).reshape(1,-1), 2000, axis=0) * 2
+    key = jax.random.key(0)
+    U_train = dummy_data + \
+        jax.random.normal(key=key, shape=(2000, Nx), dtype=jnp.float64) * 0.02
+    ts_train = jnp.linspace(0, 20, 2000)  # Time values for training
+    dt = ts_train[1] - ts_train[0]
+    ts_test = jnp.arange(0, fcast_len, dtype=jnp.float64
+                         ) * dt  # Time values for testing
+
+    esn = orc.models.CESNForecaster(
+        data_dim=Nx,
+        res_dim=res_dim,
+        seed=0,
+        chunks=chunks,
+        locality=locality,
+        periodic=False,
+        time_const = 20.0,
+    )
+
+    esn, R = orc.models.esn.train_CESNForecaster(
+        esn,
+        U_train,
+        ts_train,
+        initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
+    )
+    U_pred1 = esn.forecast(ts=ts_test, res_state=R[-1])
+    U_pred2 = esn.forecast_from_IC(ts=ts_test, spinup_data=U_train[-101:-1])
+
+    print("U_pred1 shape:", U_pred1.shape)
+    print("U_pred2 shape:", U_pred2.shape)
+
+    print("difference:", jnp.linalg.norm(U_pred1 - U_pred2))
+
+    assert jnp.allclose(U_pred1, U_pred2, atol=1e-2)
 
 @pytest.mark.parametrize(
     "solver, controller",
