@@ -240,6 +240,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         self.solver = solver
         self.stepsize_controller = stepsize_controller
 
+    @eqx.filter_jit
     def force(self, in_seq: Array, res_state: Array, ts: Array) -> Array:
         """
         Teacher forces the reservoir.
@@ -288,6 +289,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         res_seq = sol.ys
         return res_seq
 
+    @eqx.filter_jit
     def forecast(self, ts: Array, res_state: Array) -> Array:
         """Forecast from an initial reservoir state.
 
@@ -326,6 +328,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         res_seq = sol.ys
         return eqx.filter_vmap(self.readout)(res_seq)
 
+    @eqx.filter_jit
     def forecast_from_IC(self, ts:Array,
                          spinup_data: Array,
                          spinup_ts: Array = None) -> Array:
