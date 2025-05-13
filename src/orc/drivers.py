@@ -139,7 +139,7 @@ class ESNDriver(DriverBase):
         dtype: Float = jnp.float64,
         chunks: int = 1,
         mode: str = "discrete",
-        time_const: float = None,
+        time_const: float = 50.0,
         *,
         seed: int,
         use_sparse_eigs: bool = True,
@@ -163,7 +163,7 @@ class ESNDriver(DriverBase):
         mode : str
             Mode of reservoir update, either "discrete" or "continuous".
         time_const : float
-            Time constant for continuous mode.
+            Time constant for continuous mode. Ignored in discrete mode.
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
@@ -189,6 +189,10 @@ class ESNDriver(DriverBase):
             raise ValueError("Leak rate must satisfy 0 < leak < 1.")
         if density < 0 or density > 1:
             raise ValueError("Density must satisfy 0 < density < 1.")
+        if mode not in ["discrete", "continuous"]:
+            raise ValueError("Mode must be either 'discrete' or 'continuous'.")
+        if time_const <= 0:
+            raise ValueError("Time constant must be positive.")
         subkey, wr_key = jax.random.split(key)
 
         # check res_dim size for eigensolver choice
