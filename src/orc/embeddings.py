@@ -126,7 +126,7 @@ class LinearEmbedding(EmbedBase):
     dtype: Float
     chunks: int
     locality: int
-    group_size: int
+    chunk_size: int
     periodic: bool
 
     def __init__(
@@ -162,7 +162,7 @@ class LinearEmbedding(EmbedBase):
         self.scaling = scaling
         self.dtype = dtype
         key = jax.random.key(seed)
-        self.group_size = int(in_dim / chunks)
+        self.chunk_size = int(in_dim / chunks)
 
         if in_dim % chunks:
             raise ValueError(
@@ -171,7 +171,7 @@ class LinearEmbedding(EmbedBase):
 
         self.win = jax.random.uniform(
             key,
-            (chunks, res_dim, self.group_size + 2 * locality),
+            (chunks, res_dim, self.chunk_size + 2 * locality),
             minval=-scaling,
             maxval=scaling,
             dtype=dtype,
@@ -203,7 +203,7 @@ class LinearEmbedding(EmbedBase):
         Returns
         -------
         Array
-            Parallel reservoir inputs, (shape=(chunks, group_size + 2*locality))
+            Parallel reservoir inputs, (shape=(chunks, chunk_size + 2*locality))
         """
         if len(in_state.shape) != 1:
             raise ValueError(
