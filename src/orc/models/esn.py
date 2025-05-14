@@ -364,10 +364,13 @@ def train_ESNForecaster(
         )
 
     if target_seq is None:
+        tot_seq = train_seq
         target_seq = train_seq[1:, :]
         train_seq = train_seq[:-1, :]
 
-    res_seq = model.force(train_seq, initial_res_state)
+
+    tot_res_seq = model.force(tot_seq, initial_res_state)
+    res_seq = tot_res_seq[:-1]
     if isinstance(model.readout, QuadraticReadout):
         res_seq_train = res_seq.at[:, :, ::2].set(res_seq[:, :, ::2] ** 2)
     else:
@@ -384,7 +387,7 @@ def train_ESNForecaster(
 
     model = eqx.tree_at(where, model, cmat)
 
-    return model, res_seq
+    return model, tot_res_seq
 
 
 def train_CESNForecaster(

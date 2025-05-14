@@ -136,7 +136,7 @@ def test_forecast_from_IC(dummy_problem_params):
         initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
     )
     U_pred1 = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
-    U_pred2 = esn.forecast_from_IC(fcast_len, U_train[-101:-1])
+    U_pred2 = esn.forecast_from_IC(fcast_len, U_train[-101:])
     assert jnp.allclose(U_pred1, U_pred2)
 
 
