@@ -195,8 +195,9 @@ class RCForecasterBase(eqx.Module, ABC):
             out_state = self.driver(self.embedding(self.readout(state)), state)
             return (out_state, self.readout(out_state))
 
-        _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len)
-        return state_seq
+        _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len - 1)
+        pre_append_state = self.readout(res_state)
+        return jnp.vstack([pre_append_state, state_seq])
 
     @eqx.filter_jit
     def forecast_from_IC(self, fcast_len: int, spinup_data: Array) -> Array:
