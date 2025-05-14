@@ -8,6 +8,17 @@ import orc
 import orc.data
 
 
+@pytest.fixture
+def dummy_problem_params():
+    """Set up dummy data for testing parallel ESNs."""
+    Nx = 64
+    dummy_data = jnp.repeat(jnp.sin(jnp.arange(Nx)).reshape(1,-1), 1000, axis=0)
+    key = jax.random.key(0)
+    # some noise increases robustness of ESN forecast
+    U_train = dummy_data + jax.random.normal(key=key, shape=(1000,Nx)) * 0.02
+    U_test = dummy_data
+    return Nx, U_train, U_test
+
 ####################### ESN TESTS #####################
 def test_esn_train():
     """
@@ -36,7 +47,7 @@ def test_esn_train():
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-3
 
 
-def test_periodic_par_esn():
+def test_periodic_par_esn(dummy_problem_params):
     """Test periodic parallel ESN on dummy problem."""
 
     # test params
@@ -46,13 +57,8 @@ def test_periodic_par_esn():
     fcast_len = 25
 
     # grab dummy data
-    Nx = 64
-    dummy_data = jnp.repeat(jnp.arange(Nx).reshape(1,-1), 1000, axis=0)
-    key = jax.random.key(0)
-    # some noise increases robustness of ESN forecast
-    U_train = dummy_data + jax.random.normal(key=key, shape=(1000,Nx)) * 0.02
-    U_test = dummy_data
-    # init esn
+    Nx, U_train, U_test = dummy_problem_params
+
     esn = orc.models.ESNForecaster(
         data_dim=Nx,
         res_dim=res_dim,
@@ -73,7 +79,7 @@ def test_periodic_par_esn():
     U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
 
-def test_nonperiodic_par_esn():
+def test_nonperiodic_par_esn(dummy_problem_params):
     """Test nonperiodic parallel ESN on dummy problem. """
     # test params
     res_dim = 300
@@ -81,13 +87,8 @@ def test_nonperiodic_par_esn():
     locality = 2
     fcast_len = 25
 
-    # create dummy data
-    Nx = 128
-    dummy_data = jnp.repeat(jnp.arange(Nx).reshape(1,-1), 2000, axis=0) * 2
-    key = jax.random.key(0)
-    # some noise increases robustness of ESN forecast
-    U_train = dummy_data + jax.random.normal(key=key, shape=(2000, Nx)) * 0.02
-    U_test = dummy_data
+    # grab dummy data
+    Nx, U_train, U_test = dummy_problem_params
 
     # init esn
     esn = orc.models.ESNForecaster(
@@ -110,17 +111,15 @@ def test_nonperiodic_par_esn():
     U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
 
-def test_forecast_from_IC():
+def test_forecast_from_IC(dummy_problem_params):
     """Test forecast from IC vs forecast from reservoir state."""
     res_dim = 100
     chunks = 32
     locality = 2
     fcast_len = 25
 
-    Nx = 128
-    dummy_data = jnp.repeat(jnp.arange(Nx).reshape(1,-1), 2000, axis=0) * 2
-    key = jax.random.key(0)
-    U_train = dummy_data + jax.random.normal(key=key, shape=(2000, Nx)) * 0.02
+    # grab dummy data
+    Nx, U_train, U_test = dummy_problem_params
 
     esn = orc.models.ESNForecaster(
         data_dim=Nx,
@@ -177,7 +176,7 @@ def test_cesn_train():
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
 
 
-def test_periodic_par_cesn():
+def test_periodic_par_cesn(dummy_problem_params):
     """Test periodic parallel CESN on dummy problem."""
     # test params
     res_dim = 200
@@ -186,13 +185,8 @@ def test_periodic_par_cesn():
     fcast_len = 25
 
     # grab dummy data
-    Nx = 64
-    dummy_data = jnp.repeat(jnp.sin(Nx).reshape(1,-1), 1000, axis=0)
-    key = jax.random.key(0)
-    # some noise increases robustness of ESN forecast
-    U_train = dummy_data + jax.random.normal(key=key, shape=(1000,Nx)) * 0.02
-    U_test = dummy_data
-    ts_train = jnp.linspace(0, 10, 1000)
+    Nx, U_train, U_test = dummy_problem_params
+    ts_train = jnp.linspace(0, 10, U_train.shape[0])
     dt = ts_train[1] - ts_train[0]
     ts_test = jnp.arange(0, fcast_len, dtype=jnp.float64) * dt
 
@@ -220,7 +214,7 @@ def test_periodic_par_cesn():
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
 
 
-def test_nonperiodic_par_cesn():
+def test_nonperiodic_par_cesn(dummy_problem_params):
     """Test nonperiodic parallel CESN on dummy problem."""
     # test params
     res_dim = 200
@@ -228,15 +222,9 @@ def test_nonperiodic_par_cesn():
     locality = 2
     fcast_len = 25
 
-    # create dummy data
-    Nx = 128
-    dummy_data = jnp.repeat(jnp.sin(Nx).reshape(1,-1), 2000, axis=0) * 2
-    key = jax.random.key(0)
-    # some noise increases robustness of ESN forecast
-    U_train = dummy_data + \
-        jax.random.normal(key=key, shape=(2000, Nx)) * 0.02
-    U_test = dummy_data
-    ts_train = jnp.linspace(0, 20, 2000)  # Time values for training
+    # grab dummy data
+    Nx, U_train, U_test = dummy_problem_params
+    ts_train = jnp.linspace(0, 10, U_train.shape[0])
     dt = ts_train[1] - ts_train[0]
     ts_test = jnp.arange(0, fcast_len) * dt  # Time values for testing
 
@@ -263,19 +251,16 @@ def test_nonperiodic_par_cesn():
     U_pred = cesn.forecast(ts=ts_test, res_state=R[-1])
     assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-2
 
-def test_forecast_from_IC_CESN():
+def test_forecast_from_IC_CESN(dummy_problem_params):
     """Test forecast from IC vs forecast from reservoir state."""
     res_dim = 100
     chunks = 32
     locality = 2
     fcast_len = 25
 
-    Nx = 128
-    dummy_data = jnp.repeat(jnp.sin(Nx).reshape(1,-1), 2000, axis=0) * 2
-    key = jax.random.key(0)
-    U_train = dummy_data + \
-        jax.random.normal(key=key, shape=(2000, Nx), dtype=jnp.float64) * 0.02
-    ts_train = jnp.linspace(0, 20, 2000)  # Time values for training
+    # grab dummy data
+    Nx, U_train, U_test = dummy_problem_params
+    ts_train = jnp.linspace(0, 10, U_train.shape[0])
     dt = ts_train[1] - ts_train[0]
     ts_test = jnp.arange(0, fcast_len, dtype=jnp.float64
                          ) * dt  # Time values for testing
