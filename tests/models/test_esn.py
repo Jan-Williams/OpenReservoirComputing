@@ -298,12 +298,6 @@ def test_forecast_from_IC_CESN():
     )
     U_pred1 = esn.forecast(ts=ts_test, res_state=R[-1])
     U_pred2 = esn.forecast_from_IC(ts=ts_test, spinup_data=U_train[-101:-1])
-
-    print("U_pred1 shape:", U_pred1.shape)
-    print("U_pred2 shape:", U_pred2.shape)
-
-    print("difference:", jnp.linalg.norm(U_pred1 - U_pred2))
-
     assert jnp.allclose(U_pred1, U_pred2, atol=1e-2)
 
 @pytest.mark.parametrize(
