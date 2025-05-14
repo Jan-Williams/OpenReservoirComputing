@@ -1,4 +1,4 @@
-"""Define base class for Reservoir Computers."""
+"""Defines base classes for Reservoir Computers."""
 
 from abc import ABC
 
@@ -33,6 +33,8 @@ class RCForecasterBase(eqx.Module, ABC):
         Dimension of the output data.
     res_dim : int
         Dimension of the reservoir.
+    chunks : int
+        Number of parallel reservoirs.
     dtype : type
         Data type of the reservoir computer (jnp.float64 is highly recommended).
     seed : int
@@ -47,6 +49,10 @@ class RCForecasterBase(eqx.Module, ABC):
         Replaces the readout layer of the reservoir computer.
     set_embedding(embedding)
         Replaces the embedding layer of the reservoir computer.
+    forecast(fcast_len, res_state)
+        Forecast from an initial reservoir state.
+    forecast_from_IC(fcast_len, spinup_data)
+        Forecast from a sequence of spinup data.
     """
 
     driver: DriverBase
@@ -55,10 +61,54 @@ class RCForecasterBase(eqx.Module, ABC):
     in_dim: int
     out_dim: int
     res_dim: int
-    dtype: Float = jnp.float64
     chunks: int = 1
+    dtype: Float = jnp.float64
     seed: int = 0
 
+    def __init__(
+                self,
+                driver: DriverBase,
+                readout: ReadoutBase,
+                embedding: EmbedBase,
+                in_dim: int,
+                out_dim: int,
+                res_dim: int,
+                chunks: int = 1,
+                dtype: Float = jnp.float64,
+                seed: int = 0
+                ) -> None:
+        """Initialize RCForecaster Base.
+
+        Parameters
+        ----------
+        driver : DriverBase
+            Driver layer of the reservoir computer.
+        readout : ReadoutBase
+            Readout layer of the reservoir computer.
+        embedding : EmbedBase
+            Embedding layer of the reservoir computer.
+        in_dim : int
+            Dimension of the input data.
+        out_dim : int
+            Dimension of the output data.
+        res_dim : int
+            Dimension of the reservoir.
+        chunks : int
+            Number of parallel reservoirs.
+        dtype : type
+            Data type of the reservoir computer (jnp.float64 is highly recommended).
+        seed : int
+            Random seed for generating the PRNG key for the reservoir computer.
+        """
+        self.driver = driver
+        self.readout = readout
+        self.embedding = embedding
+        self.in_dim = in_dim
+        self.out_dim = out_dim
+        self.res_dim = res_dim
+        self.chunks = chunks
+        self.dtype = dtype
+        self.seed = seed
     @eqx.filter_jit
     def force(self, in_seq: Array, res_state: Array) -> Array:
         """Teacher forces the reservoir.
@@ -73,7 +123,7 @@ class RCForecasterBase(eqx.Module, ABC):
         Returns
         -------
         Array
-            Forced reservoir sequence, (shape=(seq_len, res_dim)).
+            Forced reservoir sequence, (shape=(seq_len, chunks, res_dim)).
         """
 
         def scan_fn(state, in_vars):
@@ -133,7 +183,7 @@ class RCForecasterBase(eqx.Module, ABC):
         fcast_len : int
             Steps to forecast.
         res_state : Array
-            Initial reservoir state, (shape=(res_dim)).
+            Initial reservoir state, (shape=(chunks, res_dim)).
 
         Returns
         -------
@@ -189,6 +239,8 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         Dimension of the output data.
     res_dim : int
         Dimension of the reservoir.
+    chunks : int
+        Number of parallel reservoirs.
     dtype : type
         Data type of the reservoir computer (jnp.float64 is highly recommended).
     seed : int
@@ -206,31 +258,67 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         Replaces the readout layer of the reservoir computer.
     set_embedding(embedding)
         Replaces the embedding layer of the reservoir computer.
+    forecast(fcast_len, res_state)
+        Forecast from an initial reservoir state.
+    forecast_from_IC(fcast_len, spinup_data)
+        Forecast from a sequence of spinup data.
     """
 
     solver: diffrax.AbstractSolver
     stepsize_controller: diffrax.AbstractAdaptiveStepSizeController
 
     def __init__(self,
-                *args,
+                driver: DriverBase,
+                readout: ReadoutBase,
+                embedding: EmbedBase,
+                in_dim: int,
+                out_dim: int,
+                res_dim: int,
+                chunks: int = 1,
+                dtype: Float = jnp.float64,
+                seed: int = 0,
                 solver: diffrax.AbstractSolver = None,
                 stepsize_controller:
                     diffrax.AbstractAdaptiveStepSizeController = None,
-                **kwargs):
+                ):
         """Initialize the continuous reservoir computer.
 
         Parameters
         ----------
-        *args : tuple
-            Positional arguments to pass to the parent class RCForecasterBase.
+        driver : DriverBase
+            Driver layer of the reservoir computer.
+        readout : ReadoutBase
+            Readout layer of the reservoir computer.
+        embedding : EmbedBase
+            Embedding layer of the reservoir computer.
+        in_dim : int
+            Dimension of the input data.
+        out_dim : int
+            Dimension of the output data.
+        res_dim : int
+            Dimension of the reservoir.
+        chunks : int
+            Number of parallel reservoirs.
+        dtype : type
+            Data type of the reservoir computer (jnp.float64 is highly recommended).
+        seed : int
+            Random seed for generating the PRNG key for the reservoir computer.
         solver : diffrax.AbstractSolver
             ODE solver to use for the reservoir computer.
         stepsize_controller : diffrax.AbstractAdaptiveStepSizeController
             Stepsize controller to use for the ODE solver.
-        **kwargs : dict
-            Keyword arguments to pass to the parent class RCForecasterBase.
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(
+                        driver,
+                        readout,
+                        embedding,
+                        in_dim,
+                        out_dim,
+                        res_dim,
+                        chunks,
+                        dtype,
+                        seed
+                        )
         if solver is None:
             solver = diffrax.Tsit5()
         if stepsize_controller is None:
@@ -250,14 +338,14 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         in_seq: Array
             Input sequence to force the reservoir, (shape=(seq_len, data_dim)).
         res_state : Array
-            Initial reservoir state, (shape=(res_dim,)).
+            Initial reservoir state, (shape=(chunks, res_dim,)).
         ts: Array
             Time steps for the input sequence, (shape=(seq_len,)).
 
         Returns
         -------
         Array
-            Forced reservoir sequence, (shape=(seq_len, res_dim)).
+            Forced reservoir sequence, (shape=(seq_len, chunks, res_dim)).
         """
         # form interpolants
         coeffs = diffrax.backward_hermite_coefficients(ts, in_seq)
@@ -298,7 +386,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         ts : Array
             Time steps for the forecast, (shape=(fcast_len,)).
         res_state : Array
-            Initial reservoir state, (shape=(res_dim)).
+            Initial reservoir state, (shape=(chunks, res_dim)).
 
         Returns
         -------

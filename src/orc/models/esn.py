@@ -1,4 +1,4 @@
-"""Classic ESN implementation with tanh nonlinearity and linear readout."""
+"""Discrete and continuous ESN implementations with standard driver."""
 
 import diffrax
 import equinox as eqx
@@ -37,6 +37,8 @@ class ESNForecaster(RCForecasterBase):
         Teacher forces the reservoir with sequence in_seq and init. cond. res_state.
     forecast(fcast_len, res_state)
         Perform a forecast of fcast_len steps from res_state.
+    forecast_from_IC(fcast_len, spinup_data)
+        Forecast from a sequence of spinup data.
     set_readout(readout)
         Replace readout layer.
     set_embedding(embedding)
@@ -173,6 +175,8 @@ class CESNForecaster(CRCForecasterBase):
         Teacher forces the reservoir with sequence in_seq and init. cond. res_state.
     forecast(fcast_len, res_state)
         Perform a forecast of fcast_len steps from res_state.
+    forecast_from_IC(fcast_len, spinup_data)
+        Forecast from a sequence of spinup data.
     set_readout(readout)
         Replace readout layer.
     set_embedding(embedding)
