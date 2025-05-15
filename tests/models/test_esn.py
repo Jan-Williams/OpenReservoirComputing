@@ -38,7 +38,7 @@ def test_esn_train():
     U_test = U[split_idx:, :]
 
     # train esn
-    esn = orc.models.ESNForecaster(data_dim=3, res_dim=res_dim, seed=0)
+    esn = orc.models.ESNForecaster(data_dim=3, res_dim=res_dim, seed=0, quadratic=True)
     esn, R = orc.models.esn.train_ESNForecaster(esn, U_train)
 
     # forecast
@@ -273,6 +273,7 @@ def test_forecast_from_IC_CESN(dummy_problem_params):
         locality=locality,
         periodic=False,
         time_const = 20.0,
+        quadratic=True
     )
 
     esn, R = orc.models.esn.train_CESNForecaster(
@@ -282,7 +283,7 @@ def test_forecast_from_IC_CESN(dummy_problem_params):
         initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
     )
     U_pred1 = esn.forecast(ts=ts_test, res_state=R[-1])
-    U_pred2 = esn.forecast_from_IC(ts=ts_test, spinup_data=U_train[-101:])
+    U_pred2 = esn.forecast_from_IC(ts=ts_test, spinup_data=U_train[-400:])
     assert jnp.allclose(U_pred1, U_pred2, atol=1e-2)
 
 @pytest.mark.parametrize(
