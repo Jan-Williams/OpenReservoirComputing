@@ -96,3 +96,8 @@ max-line-length = 88
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[project.optional-dependencies]
+all = ["jax[cuda12]","ruff","pytest","coverage","pytest-cov"]
+testing = ["ruff","pytest","coverage","pytest-cov"]
+gpu = ["jax[cuda12]"]
