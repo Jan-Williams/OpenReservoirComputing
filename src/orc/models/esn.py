@@ -367,6 +367,8 @@ def train_ESNForecaster(
         tot_seq = train_seq
         target_seq = train_seq[1:, :]
         train_seq = train_seq[:-1, :]
+    else:
+        tot_seq = jnp.vstack((train_seq, target_seq[-1:]))
 
 
     tot_res_seq = model.force(tot_seq, initial_res_state)
