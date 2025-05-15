@@ -282,7 +282,7 @@ def test_forecast_from_IC_CESN(dummy_problem_params):
         initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
     )
     U_pred1 = esn.forecast(ts=ts_test, res_state=R[-1])
-    U_pred2 = esn.forecast_from_IC(ts=ts_test, spinup_data=U_train[-101:-1])
+    U_pred2 = esn.forecast_from_IC(ts=ts_test, spinup_data=U_train[-101:])
     assert jnp.allclose(U_pred1, U_pred2, atol=1e-2)
 
 @pytest.mark.parametrize(
