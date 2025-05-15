@@ -98,6 +98,7 @@ max-line-length = 88
 convention = "numpy"
 
 [project.optional-dependencies]
-all = ["jax[cuda12]","ruff","pytest","coverage","pytest-cov"]
+all = ["jax[cuda12]","ruff","pytest","coverage","pytest-cov","notebook","ipykernel"]
 testing = ["ruff","pytest","coverage","pytest-cov"]
+notebooks =["notebook","ipykernel"]
 gpu = ["jax[cuda12]"]
