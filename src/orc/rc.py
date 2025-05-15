@@ -402,7 +402,6 @@ class CRCForecasterBase(RCForecasterBase, ABC):
 
         # integrate RC
         dt0 = ts[1] - ts[0]
-        ts = ts+dt0
         term = diffrax.ODETerm(res_ode)
         save_at = diffrax.SaveAt(ts=ts)
         sol = diffrax.diffeqsolve(term,
