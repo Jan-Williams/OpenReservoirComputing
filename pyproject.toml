@@ -1,21 +1,23 @@
 [build-system]
-requires = ["setuptools>=64",
-            "wheel",
-            "setuptools_scm>=8.1",
-            "numpy",
-            "cython>=3.0"]
+requires = [
+    "setuptools>=64",
+    "wheel",
+    "setuptools_scm>=8.1",
+    "numpy",
+    "cython>=3.0",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "OpenReservoirComputing"
 authors = [
-    {name = "Dima Tretiak", email = "dtretiak@uw.edu"},
-    {name = "Jan P. Williams", email = "jmpw1@uw.edu"},
+    { name = "Dima Tretiak", email = "dtretiak@uw.edu" },
+    { name = "Jan P. Williams", email = "jmpw1@uw.edu" },
 ]
 
 maintainers = [
-    {name = "Dima Tretiak", email = "dtretiak@uw.edu"},
-    {name = "Jan P. Williams", email = "jmpw1@uw.edu"},
+    { name = "Dima Tretiak", email = "dtretiak@uw.edu" },
+    { name = "Jan P. Williams", email = "jmpw1@uw.edu" },
 ]
 
 description = "GPU accelerated implementations of common RC architectures"
@@ -24,8 +26,6 @@ dynamic = ["version"]
 dependencies = [
     "jax",
     "equinox",
-    "numpy",
-    "scipy",
     "matplotlib",
     "setuptools_scm>=8.1",
     "diffrax",
@@ -51,48 +51,36 @@ Repository = "https://github.com/dtretiak/OpenReservoirComputing"
 [tool.pytest.ini_options]
 testpaths = "tests"
 addopts = "--ignore=scripts --ignore=docs"
+env = ["MPLBACKEND=Agg"]
 
 [tool.ruff.lint]
-select = [
-    "E",
-    "W",
-    "F",
-    "D",
-    "UP",
-    "B",
-    "A",
-    "C4",
-    "N",
-    "SIM",
-    "I",
-]
+select = ["E", "W", "F", "D", "UP", "B", "A", "C4", "N", "SIM", "I"]
 
-ignore = [
-    "N806",
-    "N802",
-    "N803"
-]
+ignore = ["N806", "N802", "N803"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]
 "docs/*.py" = ["D", "A"]
 "setup.py" = ["D"]
-"*.ipynb" = [
-    "E",
-    "W",
-    "F",
-    "D",
-    "UP",
-    "B",
-    "A",
-    "C4",
-    "N",
-    "SIM",
-    "I",
-]
+"*.ipynb" = ["E", "W", "F", "D", "UP", "B", "A", "C4", "N", "SIM", "I"]
 
 [tool.ruff.lint.pycodestyle]
 max-line-length = 88
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[project.optional-dependencies]
+all = [
+    "jax[cuda12]",
+    "ruff",
+    "pytest",
+    "coverage",
+    "pytest-cov",
+    "notebook",
+    "ipykernel",
+    "pytest-env",
+]
+dev = ["ruff", "pytest", "coverage", "pytest-cov", "pytest-env"]
+notebooks = ["notebook", "ipykernel"]
+gpu = ["jax[cuda12]"]
