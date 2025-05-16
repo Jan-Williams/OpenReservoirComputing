@@ -244,7 +244,7 @@ class NonlinearReadout(ReadoutBase):
             Reservoir dimension.
         nonlin_list : list[Callable]
             List containing user specified entrywise nonlinearities. Each entry should
-            be a function mapping a scalar value to another scalar value, e.g. 
+            be a function mapping a scalar value to another scalar value, e.g.
             lambda x : x ** 2 or lambda x : jnp.sin(x).
         chunks : int
             Number of parallel reservoirs.
@@ -272,6 +272,7 @@ class NonlinearReadout(ReadoutBase):
         ...
         res_state[k, j * n + n - 1] <- f_{n-1}(res_state[k, j * n + n - 1])
         where f_i is the i-th entry of nonlin_list.
+
         Parameters
         ----------
         res_state : Array
