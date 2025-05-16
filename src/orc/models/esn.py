@@ -9,7 +9,7 @@ from jaxtyping import Array
 from orc.drivers import ESNDriver
 from orc.embeddings import LinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
-from orc.readouts import LinearReadout, QuadraticReadout
+from orc.readouts import LinearReadout, NonlinearReadout, QuadraticReadout
 
 jax.config.update("jax_enable_x64", True)
 
@@ -373,8 +373,8 @@ def train_ESNForecaster(
 
     tot_res_seq = model.force(tot_seq, initial_res_state)
     res_seq = tot_res_seq[:-1]
-    if isinstance(model.readout, QuadraticReadout):
-        res_seq_train = res_seq.at[:, :, ::2].set(res_seq[:, :, ::2] ** 2)
+    if isinstance(model.readout, NonlinearReadout):
+        res_seq_train = eqx.filter_vmap(model.readout.nonlinear_transform)(res_seq)
     else:
         res_seq_train = res_seq
 
@@ -459,8 +459,8 @@ def train_CESNForecaster(
 
     tot_res_seq = model.force(tot_seq, initial_res_state, ts=t_train)
     res_seq = tot_res_seq[:-1]
-    if isinstance(model.readout, QuadraticReadout):
-        res_seq_train = res_seq.at[:, :, ::2].set(res_seq[:, :, ::2] ** 2)
+    if isinstance(model.readout, NonlinearReadout):
+        res_seq_train = eqx.filter_vmap(model.readout.nonlinear_transform)(res_seq)
     else:
         res_seq_train = res_seq
 
