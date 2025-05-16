@@ -243,9 +243,11 @@ class NonlinearReadout(ReadoutBase):
         res_dim : int
             Reservoir dimension.
         nonlin_list : list[Callable]
-            List containing user specified entrywise nonlinearities.
+            List containing user specified entrywise nonlinearities. Each entry should
+            be a function mapping a scalar value to another scalar value, e.g. 
+            lambda x : x ** 2 or lambda x : jnp.sin(x).
         chunks : int
-            Number of parallel resrevoirs.
+            Number of parallel reservoirs.
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
@@ -262,6 +264,14 @@ class NonlinearReadout(ReadoutBase):
     def nonlinear_transform(self, res_state: Array) -> Array:
         """Perform nonlinear transformation on reservoir state.
 
+        Let tot_list be the list consisting of nonlin_list prepended by the identity
+        mapping. Let n be the length of tot_list. Then, nonlinear_transform acts such
+        that for all 0 <= k < chunks and 0 <= j < j * n:
+        res_state[k, j * n] <- res_state[k, j*n]
+        res_state[k, j * n + 1] <- f_0(res_state[k, j * n + 1])
+        ...
+        res_state[k, j * n + n - 1] <- f_{n-1}(res_state[k, j * n + n - 1])
+        where f_i is the i-th entry of nonlin_list.
         Parameters
         ----------
         res_state : Array
@@ -381,7 +391,7 @@ class QuadraticReadout(NonlinearReadout):
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
-            Not used for LinearReadout, present to maintain consistent interface.
+            Not used for QuadraticReadout, present to maintain consistent interface.
         """
         super().__init__(
             out_dim=out_dim,
