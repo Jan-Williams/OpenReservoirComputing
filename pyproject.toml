@@ -24,7 +24,7 @@ description = "GPU accelerated implementations of common RC architectures"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
-    "jax",
+    "jax==0.6.0",
     "equinox",
     "matplotlib",
     "setuptools_scm>=8.1",
@@ -72,7 +72,7 @@ convention = "numpy"
 
 [project.optional-dependencies]
 all = [
-    "jax[cuda12]",
+    "jax[cuda12]==0.6.0",
     "ruff",
     "pytest",
     "coverage",
@@ -83,4 +83,4 @@ all = [
 ]
 dev = ["ruff", "pytest", "coverage", "pytest-cov", "pytest-env"]
 notebooks = ["notebook", "ipykernel"]
-gpu = ["jax[cuda12]"]
+gpu = ["jax[cuda12]==0.6.0"]
