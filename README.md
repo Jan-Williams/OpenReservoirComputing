@@ -14,7 +14,6 @@ ORC is the one-stop-shop for performant reservoir computing in jax. Key high-lev
 - Multi-gpu training and inference (coming soon!)
 
 ## Installation
-***
 
 To install ORC, first clone the repository onto your local machine
 ```bash
@@ -37,7 +36,6 @@ pip install .[notebooks]
 ```
 
 ## Quick start example
-***
 Below is a minimal quick-start example to train your first RC with ORC. It leverages the 
 
 ```python
@@ -70,7 +68,7 @@ orc.utils.visualization.plot_time_series(
     state_var_names=["$u_1$", "$u_2$", "$u_3$"],
     time_series_labels=["True", "Predicted"],
     line_formats=["-", "r--"],
-    x_label= r"$\lambda_1 t$",
+    x_label= r"$t$",
 )
 ```
 
@@ -80,4 +78,3 @@ orc.utils.visualization.plot_time_series(
 
 
 ## Contribution guidelines
-***
