@@ -60,7 +60,7 @@ esn, R = orc.models.train_ESNForecaster(esn, U_train)
 U_pred = esn.forecast(fcast_len=U_test.shape[0], res_state=R[-1]) # feed in the last reservoir state seen in training
 ```
 
-To visualize the forecast and compare it to the test data use `orc.utils.visualization`:
+To visualize the forecast and compare it to the test data, we can use `orc.utils.visualization`:
 ```python 
 orc.utils.visualization.plot_time_series(
     [U_test, U_pred],
@@ -78,3 +78,29 @@ orc.utils.visualization.plot_time_series(
 
 
 ## Contribution guidelines
+First off, thanks for helping out! We appreciate your willingness to contribute! To get started, clone the repo and install the developer dependencies of ORC.
+
+```bash
+git clone https://github.com/dtretiak/OpenReservoirComputing.git
+```
+
+CPU:
+```bash
+pip install .[dev]
+```
+
+GPU:
+```bash
+pip install .[dev, gpu]
+```
+
+The main branch is protected from direct changes. If you would like to make a change please create a new branch and work on your new feature. After you are satisfied with your changes, please run our testing suite to ensure all is working well. We also expect new tests to be written for all changes if additions are made. The tests can be simply run with 
+```bash
+pytest
+```
+Followed by a formatting check 
+```bash
+ruff check
+```
+
+Finally, submit your changes as a pull request! When you submit the PR, please request reviews from both @dtretiak and @Jan-Williams, we will try to get back to you as soon as possible. When you submit the PR, the above tests will automatically be run on your proposed changes through Github Actions, so it is best to get everything tested first before submitting!
