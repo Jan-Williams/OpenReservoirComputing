@@ -36,7 +36,7 @@ pip install .[notebooks]
 ```
 
 ## Quick start example
-Below is a minimal quick-start example to train your first RC with ORC. It leverages the 
+Below is a minimal quick-start example to train your first RC with ORC. It leverages the built-in data library to integrate the Lorenz63 ODE before training and forecasting with ORC.
 
 ```python
 import orc
@@ -83,6 +83,7 @@ First off, thanks for helping out! We appreciate your willingness to contribute!
 ```bash
 git clone https://github.com/dtretiak/OpenReservoirComputing.git
 ```
+From the root directory of the repository, install your preferred version. 
 
 CPU:
 ```bash
@@ -94,7 +95,7 @@ GPU:
 pip install .[dev, gpu]
 ```
 
-The main branch is protected from direct changes. If you would like to make a change please create a new branch and work on your new feature. After you are satisfied with your changes, please run our testing suite to ensure all is working well. We also expect new tests to be written for all changes if additions are made. The tests can be simply run with 
+The main branch is protected from direct changes. If you would like to make a change please create a new branch and work on your new feature. After you are satisfied with your changes, please run our testing suite to ensure all is working well. We also expect new tests to be written for all changes if additions are made. The tests can be simply run from the root directory of the repository with
 ```bash
 pytest
 ```
