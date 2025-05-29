@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from jaxtyping import Array
 
 
-def ridge_regression(res_seq: Array, target_seq: Array, beta: float):
+def ridge_regression(res_seq: Array, target_seq: Array, beta: float=1e-7):
     """Solve a single matrix ridge regression problem.
 
     Parameters
