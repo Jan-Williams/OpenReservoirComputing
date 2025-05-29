@@ -70,9 +70,6 @@ class RCForecasterBase(eqx.Module, ABC):
                 driver: DriverBase,
                 readout: ReadoutBase,
                 embedding: EmbedBase,
-                in_dim: int,
-                out_dim: int,
-                res_dim: int,
                 chunks: int = 0,
                 dtype: Float = jnp.float64,
                 seed: int = 0
@@ -87,12 +84,6 @@ class RCForecasterBase(eqx.Module, ABC):
             Readout layer of the reservoir computer.
         embedding : EmbedBase
             Embedding layer of the reservoir computer.
-        in_dim : int
-            Dimension of the input data.
-        out_dim : int
-            Dimension of the output data.
-        res_dim : int
-            Dimension of the reservoir.
         chunks : int
             Number of parallel reservoirs.
         dtype : type
@@ -103,9 +94,9 @@ class RCForecasterBase(eqx.Module, ABC):
         self.driver = driver
         self.readout = readout
         self.embedding = embedding
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-        self.res_dim = res_dim
+        self.in_dim = self.embedding.in_dim
+        self.out_dim = self.readout.out_dim
+        self.res_dim = self.driver.res_dim
         self.chunks = chunks
         self.dtype = dtype
         self.seed = seed
@@ -298,9 +289,6 @@ class CRCForecasterBase(RCForecasterBase, ABC):
                 driver: DriverBase,
                 readout: ReadoutBase,
                 embedding: EmbedBase,
-                in_dim: int,
-                out_dim: int,
-                res_dim: int,
                 chunks: int = 0,
                 dtype: Float = jnp.float64,
                 seed: int = 0,
@@ -318,12 +306,6 @@ class CRCForecasterBase(RCForecasterBase, ABC):
             Readout layer of the reservoir computer.
         embedding : EmbedBase
             Embedding layer of the reservoir computer.
-        in_dim : int
-            Dimension of the input data.
-        out_dim : int
-            Dimension of the output data.
-        res_dim : int
-            Dimension of the reservoir.
         chunks : int
             Number of parallel reservoirs.
         dtype : type
@@ -339,9 +321,6 @@ class CRCForecasterBase(RCForecasterBase, ABC):
                         driver,
                         readout,
                         embedding,
-                        in_dim,
-                        out_dim,
-                        res_dim,
                         chunks,
                         dtype,
                         seed
