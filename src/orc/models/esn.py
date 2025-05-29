@@ -10,6 +10,7 @@ from orc.drivers import ESNDriver
 from orc.embeddings import LinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
 from orc.readouts import LinearReadout, NonlinearReadout, QuadraticReadout
+from orc.utils.regressions import ridge_regression
 
 jax.config.update("jax_enable_x64", True)
 
@@ -294,18 +295,8 @@ class CESNForecaster(CRCForecasterBase):
         )
         self.chunks = chunks
 
-
-def _solve_single_ridge_reg(res_seq, target_seq, beta):
-    """Solve a single matrix ridge regression problem."""
-    lhs = res_seq.T @ res_seq + beta * jnp.eye(res_seq.shape[1], dtype=res_seq.dtype)
-    rhs = res_seq.T @ target_seq
-    cmat = jax.scipy.linalg.solve(lhs, rhs, assume_a="sym").T
-    return cmat
-
-
 # vmap ridge regression solver for parallel RC cases
-_solve_all_ridge_reg = eqx.filter_vmap(_solve_single_ridge_reg, in_axes=eqx.if_array(1))
-
+_solve_all_ridge_reg = eqx.filter_vmap(ridge_regression, in_axes=eqx.if_array(1))
 
 def train_ESNForecaster(
     model: ESNForecaster,
