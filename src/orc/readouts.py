@@ -63,7 +63,7 @@ class ReadoutBase(eqx.Module, ABC):
         Array
             Output from reservoir state.
         """
-        return self.readout(res_state)
+        pass
 
     def batch_readout(
         self,
