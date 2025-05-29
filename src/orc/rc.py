@@ -61,7 +61,7 @@ class RCForecasterBase(eqx.Module, ABC):
     in_dim: int
     out_dim: int
     res_dim: int
-    chunks: int = 1
+    chunks: int = 0
     dtype: Float = jnp.float64
     seed: int = 0
 
@@ -70,10 +70,7 @@ class RCForecasterBase(eqx.Module, ABC):
                 driver: DriverBase,
                 readout: ReadoutBase,
                 embedding: EmbedBase,
-                in_dim: int,
-                out_dim: int,
-                res_dim: int,
-                chunks: int = 1,
+                chunks: int = 0,
                 dtype: Float = jnp.float64,
                 seed: int = 0
                 ) -> None:
@@ -87,12 +84,6 @@ class RCForecasterBase(eqx.Module, ABC):
             Readout layer of the reservoir computer.
         embedding : EmbedBase
             Embedding layer of the reservoir computer.
-        in_dim : int
-            Dimension of the input data.
-        out_dim : int
-            Dimension of the output data.
-        res_dim : int
-            Dimension of the reservoir.
         chunks : int
             Number of parallel reservoirs.
         dtype : type
@@ -103,12 +94,13 @@ class RCForecasterBase(eqx.Module, ABC):
         self.driver = driver
         self.readout = readout
         self.embedding = embedding
-        self.in_dim = in_dim
-        self.out_dim = out_dim
-        self.res_dim = res_dim
+        self.in_dim = self.embedding.in_dim
+        self.out_dim = self.readout.out_dim
+        self.res_dim = self.driver.res_dim
         self.chunks = chunks
         self.dtype = dtype
         self.seed = seed
+
     @eqx.filter_jit
     def force(self, in_seq: Array, res_state: Array) -> Array:
         """Teacher forces the reservoir.
@@ -133,6 +125,23 @@ class RCForecasterBase(eqx.Module, ABC):
 
         _, res_seq = jax.lax.scan(scan_fn, res_state, in_seq)
         return res_seq
+
+    def __call__(self, in_seq: Array, res_state: Array) -> Array:
+        """Teacher forces the reservoir, wrapper for `force` method.
+
+        Parameters
+        ----------
+        in_seq: Array
+            Input sequence to force the reservoir, (shape=(seq_len, data_dim)).
+        res_state : Array
+            Initial reservoir state, (shape=(chunks, res_dim,)).
+
+        Returns
+        -------
+        Array
+            Forced reservoir sequence, (shape=(seq_len, chunks, res_dim)).
+        """
+        return self.force(in_seq, res_state)
 
     def set_readout(self, readout: ReadoutBase):
         """Replace readout layer.
@@ -215,9 +224,17 @@ class RCForecasterBase(eqx.Module, ABC):
         Array
             Forecasted states, (shape=(fcast_len, data_dim)).
         """
-        res_seq = self.force(
-            spinup_data, jnp.zeros((self.chunks, self.res_dim), dtype=self.dtype)
-        )
+        if self.chunks > 0:
+            res_seq = self.force(
+                spinup_data, jnp.zeros((self.chunks, self.res_dim), dtype=self.dtype)
+            )
+        elif self.chunks == 0:
+            res_seq = self.force(
+                spinup_data, jnp.zeros((self.res_dim), dtype=self.dtype)
+            )
+        else:
+            raise ValueError(f"chunks must be >= 0, but found chunks = {self.chunks}")
+
         return self.forecast(fcast_len, res_seq[-1])
 
 class CRCForecasterBase(RCForecasterBase, ABC):
@@ -272,10 +289,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
                 driver: DriverBase,
                 readout: ReadoutBase,
                 embedding: EmbedBase,
-                in_dim: int,
-                out_dim: int,
-                res_dim: int,
-                chunks: int = 1,
+                chunks: int = 0,
                 dtype: Float = jnp.float64,
                 seed: int = 0,
                 solver: diffrax.AbstractSolver = None,
@@ -292,12 +306,6 @@ class CRCForecasterBase(RCForecasterBase, ABC):
             Readout layer of the reservoir computer.
         embedding : EmbedBase
             Embedding layer of the reservoir computer.
-        in_dim : int
-            Dimension of the input data.
-        out_dim : int
-            Dimension of the output data.
-        res_dim : int
-            Dimension of the reservoir.
         chunks : int
             Number of parallel reservoirs.
         dtype : type
@@ -313,9 +321,6 @@ class CRCForecasterBase(RCForecasterBase, ABC):
                         driver,
                         readout,
                         embedding,
-                        in_dim,
-                        out_dim,
-                        res_dim,
                         chunks,
                         dtype,
                         seed
@@ -377,6 +382,26 @@ class CRCForecasterBase(RCForecasterBase, ABC):
                                     max_steps=None)
         res_seq = sol.ys
         return res_seq
+
+    def __call__(self, in_seq: Array, res_state: Array, ts: Array) -> Array:
+        """
+        Teacher forces the reservoir, wrapper for `force` method.
+
+        Parameters
+        ----------
+        in_seq: Array
+            Input sequence to force the reservoir, (shape=(seq_len, data_dim)).
+        res_state : Array
+            Initial reservoir state, (shape=(chunks, res_dim,)).
+        ts: Array
+            Time steps for the input sequence, (shape=(seq_len,)).
+
+        Returns
+        -------
+        Array
+            Forced reservoir sequence, (shape=(seq_len, chunks, res_dim)).
+        """
+        return self.force(in_seq, res_state, ts)
 
     @eqx.filter_jit
     def forecast(self, ts: Array, res_state: Array) -> Array:
@@ -445,10 +470,19 @@ class CRCForecasterBase(RCForecasterBase, ABC):
                 0.0, spinup_data.shape[0], dtype=self.dtype
             ) * dt0
 
-        res_seq = self.force(
-            spinup_data,
-            jnp.zeros((self.chunks, self.res_dim), dtype=self.dtype),
-            spinup_ts
-        )
+        if self.chunks > 0:
+            res_seq = self.force(
+                spinup_data,
+                jnp.zeros((self.chunks, self.res_dim), dtype=self.dtype),
+                spinup_ts
+            )
+        elif self.chunks == 0:
+            res_seq = self.force(
+                spinup_data,
+                jnp.zeros((self.res_dim), dtype=self.dtype),
+                spinup_ts
+            )
+        else:
+            raise ValueError(f"chunks must be >= 0, but found chunks = {self.chunks}")
 
         return self.forecast(ts, res_seq[-1])
