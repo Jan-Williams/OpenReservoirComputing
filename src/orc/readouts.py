@@ -83,6 +83,26 @@ class ReadoutBase(eqx.Module, ABC):
         """
         return eqx.filter_vmap(self.readout)(res_state)
 
+    def __call__(
+        self,
+        res_state: Array,
+    ) -> Array:
+        """Readout from reservoir state.
+
+        If readout supports parallel reservoirs, this method needs to be overwritten
+        to accomodate shape handling.
+
+        Parameters
+        ----------
+        res_state : Array
+            Reservoir state.
+
+        Returns
+        -------
+        Array
+            Output from reservoir state.
+        """
+        return self.readout(res_state)
 
 class LinearReadout(ReadoutBase):
     """Linear readout layer.
