@@ -83,6 +83,26 @@ class DriverBase(eqx.Module, ABC):
         """
         return eqx.filter_vmap(self.advance)(proj_vars, res_state)
 
+    def __call__(self, proj_vars: Array, res_state: Array) -> Array:
+        """Advance the reservoir given projected inputs and current state.
+
+        If driver supports parallel reservoirs, this method needs to be overwritten
+        to accomodate shape handling.
+
+        Parameters
+        ----------
+        proj_vars : Array
+            Projected inputs to reservoir.
+        res_state : Array
+            Initial reservoir state.
+
+        Returns
+        -------
+        Array
+            Updated reservoir state, (shape=(res_dim,)).
+        """
+        return self.advance(proj_vars, res_state)
+
 
 class ESNDriver(DriverBase):
     """Standard implementation of ESN reservoir with tanh nonlinearity.

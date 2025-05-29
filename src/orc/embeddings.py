@@ -86,6 +86,26 @@ class EmbedBase(eqx.Module, ABC):
         """
         return eqx.filter_vmap(self.embed)(in_state)
 
+    def __call__(
+        self,
+        in_state: Array,
+    ) -> Array:
+        """Embed input signal to reservoir dimension.
+
+        If embedding supports parallel reservoirs, this method needs to be overwritten
+        to accomodate shape handling.
+
+        Parameters
+        ----------
+        in_state : Array
+            Input state, (shape=(in_dim,)).
+
+        Returns
+        -------
+        Array
+            Embedded input state to reservoir dimension.
+        """
+        return self.embed(in_state)
 
 class LinearEmbedding(EmbedBase):
     """Linear embedding layer.
