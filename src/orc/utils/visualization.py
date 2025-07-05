@@ -178,24 +178,17 @@ def imshow_1D_spatiotemp(U,
     plt.colorbar(pad = 0.01, label = r'$u$')
     plt.show()
 
-# TODO: add plot_attrator function to visualize 2D/3D attractors in state space
-
-
-
 def plot_in_3D_state_space(U_lst,
                            time_series_labels=None,
-                           line_formats=["-", "r--"],
+                           line_formats=None,
                            state_var_names=None,
                            figsize = (20,8),
                            title = None,
                            **plot_kwargs):
-    """ **STEP 1 - clear, one-line summary:** Plot time series data to visualize 3D attractors in state space.
+    """Plot time series data to visualize 3D attractors in state space.
 
     Parameters
     ----------
-    **STEP 2 - 
-    <param_name> : <type and optional?>
-        <description and shape>**
     U_lst : 2D array or list of 2D arrays
         If a 2D array, shape should be (Nt, 3) with 3 state
         variables, where Nt is the number of time points. If a list of 2D arrays,
@@ -216,8 +209,6 @@ def plot_in_3D_state_space(U_lst,
     plot_kwargs : dict, optional
         Additional arguments to pass to the plot function.
     """
-
-    # **STEP 3** 
     # Input validation
     if not isinstance(U_lst, list):
         if not isinstance(U_lst, jnp.ndarray | np.ndarray) or U_lst.ndim != 2:
@@ -230,7 +221,7 @@ def plot_in_3D_state_space(U_lst,
             raise TypeError("All elements in U_lst must be 2D JAX or NumPy arrays.")
         if not all(U.shape == U_lst[0].shape for U in U_lst):
             raise ValueError("All arrays in U_lst must have the same shape.")
-        
+
     Nu = U_lst[0].shape[1]
 
     if time_series_labels is not None:
@@ -254,27 +245,23 @@ def plot_in_3D_state_space(U_lst,
             raise ValueError(f"Length of state_var_names ({len(state_var_names)}) \
                              must match the number of state variables ({Nu}).")
 
-    # **STEP 4** 
     # defaults
     plot_kwargs.setdefault('linewidth', 2)
 
-    # **STEP 5** 
     # handle optional inputs
     if time_series_labels is None:
         time_series_labels = [None for _ in range(len(U_lst))]
     if line_formats is None:
         line_formats = ['-' for _ in range(len(U_lst))]
 
-    # **STEP 5 - CODE:** 
     # plot
-    fig, axs = plt.subplots(subplot_kw={"projection": "3d"})
+    fig, axs = plt.subplots(subplot_kw={"projection": "3d"}, figsize = figsize)
     # Ensure axs is always iterable, even if Nu=1
     if Nu == 1:
         axs = [axs]
     for j, Y in enumerate(U_lst):
-        axs.plot(Y[:, 0], Y[:, 1], Y[:, 2], line_formats[j], 
-                        label=time_series_labels[j],
-                        **plot_kwargs)
+        axs.plot(Y[:, 0], Y[:, 1], Y[:, 2], line_formats[j],
+                        label=time_series_labels[j], **plot_kwargs)
     if state_var_names is not None:
         axs.set(xlabel=state_var_names[0])
         axs.set(ylabel=state_var_names[1])
@@ -284,3 +271,7 @@ def plot_in_3D_state_space(U_lst,
     if title is not None:
         axs.set_title(title, fontsize=14)
     plt.show()
+
+
+
+# TODO: add plot_attrator function to visualize 2D attractors in state space
