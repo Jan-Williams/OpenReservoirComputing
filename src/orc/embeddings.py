@@ -125,7 +125,12 @@ class LinearEmbedding(EmbedBase):
     locality : int
         Adjacent reservoir overlap.
     periodic : bool
-        Assume periodic BCs.
+        Assume periodic BCs when decomposing the input state to parallel network
+        inputs. If False, the input is padded with boundary values at the edges
+        (i.e., edge values are extended to the locality region), which may not
+        match the true spatial dynamics. If True, the input is padded by connecting
+        smoothly the end and beginning of the signal ensuring continuity. Default is
+        True.
 
     Methods
     -------
@@ -175,8 +180,13 @@ class LinearEmbedding(EmbedBase):
             Random seed for generating the PRNG key for the reservoir computer.
         dtype : Float
             Dtype of model, jnp.float64 or jnp.float32.
-        periodi : bool
-            Assume periodic BCs.
+        periodic : bool
+            Assume periodic BCs when decomposing the input state to parallel network
+            inputs. If False, the input is padded with boundary values at the edges
+            (i.e., edge values are extended to the locality region), which may not
+            match the true spatial dynamics. If True, the input is padded by connecting
+            smoothly the end and beginning of the signal ensuring continuity. Default is
+            True.
         """
         super().__init__(in_dim=in_dim, res_dim=res_dim, dtype=dtype)
         self.scaling = scaling
