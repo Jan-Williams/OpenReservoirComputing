@@ -4,8 +4,6 @@
   <img src="imgs/ORC_logo_cropped.png" alt="ORC Logo" width="200px" />
 </div>
 
-[![CI](https://github.com/dtretiak/OpenReservoirComputing/actions/workflows/tests.yml/badge.svg?branch=mkdocs)](https://github.com/dtretiak/OpenReservoirComputing/actions/workflows/tests.yml)
-
 **ORC** is the one-stop-shop for performant reservoir computing in JAX. This package provides GPU-accelerated implementations of common reservoir computing architectures with a modular design that allows for easy experimentation and customization.
 
 ## Key Features
