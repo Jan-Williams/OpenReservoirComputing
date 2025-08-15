@@ -4,7 +4,7 @@ We welcome contributions to the OpenReservoirComputing project! This guide will 
 
 ## Development Setup
 
-1. **Fork and clone the repository**:
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/yourusername/OpenReservoirComputing.git
    cd OpenReservoirComputing
@@ -12,7 +12,7 @@ We welcome contributions to the OpenReservoirComputing project! This guide will 
 
 2. **Create a development environment**:
    ```bash
-   conda create -n orc-dev python=3.11
+   conda create -n orc-dev python=3.12
    conda activate orc-dev
    ```
 
@@ -25,13 +25,12 @@ We welcome contributions to the OpenReservoirComputing project! This guide will 
 
 We use the following tools for code quality:
 
-- **Black**: Code formatting
-- **Ruff**: Linting and import sorting
+- **Ruff**: Linting and formatting
 - **pytest**: Testing
 
 Run these before submitting:
 ```bash
-black src/ tests/
+ruff format src/ tests/
 ruff check src/ tests/
 pytest tests/
 ```
@@ -40,13 +39,11 @@ pytest tests/
 
 - Write tests for new functionality
 - Ensure all tests pass before submitting
-- Add docstring examples that can be tested
 
 ## Documentation
 
 - Update docstrings for new functions/classes
-- Add examples to the documentation
-- Update the changelog for significant changes
+- Follow numpy docstring style
 
 ## Pull Request Process
 

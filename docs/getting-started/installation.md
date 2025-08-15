@@ -59,25 +59,3 @@ print(f"ORC version: {orc.__version__}")
 U, t = orc.data.lorenz63(tN=10, dt=0.01)
 print(f"Generated Lorenz data shape: {U.shape}")
 ```
-
-## Troubleshooting
-
-### JAX Installation Issues
-
-If you encounter issues with JAX installation, particularly for GPU support, refer to the [JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html) for platform-specific instructions.
-
-### Import Errors
-
-If you encounter import errors, ensure that:
-
-1. You're using a supported Python version (3.10-3.12)
-2. All dependencies are properly installed
-3. You're in the correct conda/virtual environment
-
-### Performance Issues
-
-For optimal performance:
-
-1. Install the GPU version of JAX if you have a compatible GPU
-2. Use appropriate batch sizes for your hardware
-3. Consider using JAX's JIT compilation for repeated computations
