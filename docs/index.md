@@ -11,12 +11,12 @@
 - **Modular Design**: Mix and match layers and reservoir drivers or create your own
 - **Multiple Implementations**: Continuous, discrete, serial, and parallel implementations
 - **GPU Acceleration**: Built on JAX for high-performance computing on GPUs
-- **Hyperparameter Tuning**: Built-in support for hyperparameter optimization with Ray Tune
+- **Hyperparameter Tuning**: Built-in support for hyperparameter optimization with Ray Tune (coming soon!)
 - **Multi-GPU Support**: Training and inference across multiple GPUs (coming soon!)
 
 ## What is Reservoir Computing?
 
-Reservoir Computing (RC) is a framework for computation derived from recurrent neural network theory that maps input signals into higher dimensional computational spaces through the dynamics of a fixed, non-linear system called a reservoir. Only the readout from the reservoir is trained, making RC computationally efficient and particularly well-suited for temporal/sequential data processing.
+Reservoir Computing (RC) is a framework for computation based on the principle of generalized synchronization. Only the readout from the reservoir is trained while the reservoir dynamics are fixed, making RC computationally efficient and particularly well-suited for temporal/sequential data processing.
 
 ## Quick Example
 
@@ -33,11 +33,11 @@ U_train = U[:split_idx, :]
 U_test = U[split_idx:, :]
 
 # Create and train ESN forecaster
-forecaster = orc.ESNForecaster(res_dim=500, spectral_radius=0.9)
-forecaster = orc.train_ESNForecaster(forecaster, U_train)
+forecaster = orc.models.ESNForecaster(res_dim=500)
+forecaster, res_states = orc.models.train_ESNForecaster(forecaster, U_train)
 
 # Make predictions
-U_pred = forecaster.forecast(U_test[0], steps=len(U_test))
+U_pred = forecaster.forecast(fcast_len=len(U_test), res_state=res_states[-1])
 ```
 
 ## Getting Started
@@ -70,7 +70,7 @@ We welcome contributions! See our [Contributing Guide](contributing.md) for deta
 
 ## License
 
-This project is licensed under the BSD License - see the LICENSE file for details.
+This project is licensed under the Apache 2.0 License - see the LICENSE file for details.
 
 ## Citation
 
