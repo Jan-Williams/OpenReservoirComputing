@@ -10,7 +10,10 @@ from orc.drivers import ESNDriver
 from orc.embeddings import LinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
 from orc.readouts import LinearReadout, NonlinearReadout, QuadraticReadout
-from orc.utils.regressions import ridge_regression
+from orc.utils.regressions import (
+    _solve_all_ridge_reg,
+    _solve_all_ridge_reg_batched,
+)
 
 jax.config.update("jax_enable_x64", True)
 
@@ -280,9 +283,9 @@ class CESNForecaster(CRCForecasterBase):
         if solver is None:
             solver = diffrax.Tsit5()
         if stepsize_controller is None:
-            stepsize_controller = diffrax.PIDController(rtol=1e-3,
-                                                        atol=1e-6,
-                                                        icoeff=1.0)
+            stepsize_controller = diffrax.PIDController(
+                rtol=1e-3, atol=1e-6, icoeff=1.0
+            )
 
         super().__init__(
             driver=driver,
@@ -295,8 +298,6 @@ class CESNForecaster(CRCForecasterBase):
         )
         self.chunks = chunks
 
-# vmap ridge regression solver for parallel RC cases
-_solve_all_ridge_reg = eqx.filter_vmap(ridge_regression, in_axes=eqx.if_array(1))
 
 def train_ESNForecaster(
     model: ESNForecaster,
@@ -305,6 +306,7 @@ def train_ESNForecaster(
     spinup: int = 0,
     initial_res_state: Array = None,
     beta: float = 8e-8,
+    batch_size: int = None,
 ) -> tuple[ESNForecaster, Array]:
     """Training function for ESNForecaster.
 
@@ -322,6 +324,10 @@ def train_ESNForecaster(
         Initial transient of reservoir states to discard.
     beta : float
         Tikhonov regularization parameter.
+    batch_size : int, optional
+        Number of parallel reservoirs to process in each batch for ridge regression.
+        If None (default), processes all reservoirs at once. Use smaller values
+        to reduce memory usage for large numbers of parallel reservoirs.
 
     Returns
     -------
@@ -337,7 +343,8 @@ def train_ESNForecaster(
     # check that spinup is less than the length of the training sequence
     if spinup >= train_seq.shape[0]:
         raise ValueError(
-            "spinup must be less than the length of the training sequence.")
+            "spinup must be less than the length of the training sequence."
+        )
 
     if initial_res_state is None:
         initial_res_state = jnp.zeros(
@@ -355,7 +362,6 @@ def train_ESNForecaster(
     else:
         tot_seq = jnp.vstack((train_seq, target_seq[-1:]))
 
-
     tot_res_seq = model.force(tot_seq, initial_res_state)
     res_seq = tot_res_seq[:-1]
     if isinstance(model.readout, NonlinearReadout):
@@ -363,11 +369,23 @@ def train_ESNForecaster(
     else:
         res_seq_train = res_seq
 
-    cmat = _solve_all_ridge_reg(
-        res_seq_train[spinup:],
-        target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1),
-        beta,
-    )
+    if batch_size is None:
+        cmat = _solve_all_ridge_reg(
+            res_seq_train[spinup:],
+            target_seq[spinup:].reshape(
+                res_seq[spinup:].shape[0], res_seq.shape[1], -1
+            ),
+            beta,
+        )
+    else:
+        cmat = _solve_all_ridge_reg_batched(
+            res_seq_train[spinup:],
+            target_seq[spinup:].reshape(
+                res_seq[spinup:].shape[0], res_seq.shape[1], -1
+            ),
+            beta,
+            batch_size,
+        )
 
     def where(m):
         return m.readout.wout
@@ -385,6 +403,7 @@ def train_CESNForecaster(
     spinup: int = 0,
     initial_res_state: Array = None,
     beta: float = 8e-8,
+    batch_size: int = None,
 ) -> tuple[CESNForecaster, Array]:
     """Training function for CESNForecaster.
 
@@ -404,6 +423,10 @@ def train_CESNForecaster(
         Initial transient of reservoir states to discard.
     beta : float
         Tikhonov regularization parameter.
+    batch_size : int, optional
+        Number of parallel reservoirs to process in each batch for ridge regression.
+        If None (default), processes all reservoirs at once. Use smaller values
+        to reduce memory usage for large numbers of parallel reservoirs.
 
     Returns
     -------
@@ -423,7 +446,8 @@ def train_CESNForecaster(
     # check that spinup is less than the length of the training sequence
     if spinup >= train_seq.shape[0]:
         raise ValueError(
-            "spinup must be less than the length of the training sequence.")
+            "spinup must be less than the length of the training sequence."
+        )
 
     if initial_res_state is None:
         initial_res_state = jnp.zeros(
@@ -441,7 +465,6 @@ def train_CESNForecaster(
     else:
         tot_seq = jnp.vstack((train_seq, target_seq[-1:]))
 
-
     tot_res_seq = model.force(tot_seq, initial_res_state, ts=t_train)
     res_seq = tot_res_seq[:-1]
     if isinstance(model.readout, NonlinearReadout):
@@ -449,11 +472,23 @@ def train_CESNForecaster(
     else:
         res_seq_train = res_seq
 
-    cmat = _solve_all_ridge_reg(
-        res_seq_train[spinup:],
-        target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1),
-        beta,
-    )
+    if batch_size is None:
+        cmat = _solve_all_ridge_reg(
+            res_seq_train[spinup:],
+            target_seq[spinup:].reshape(
+                res_seq[spinup:].shape[0], res_seq.shape[1], -1
+            ),
+            beta,
+        )
+    else:
+        cmat = _solve_all_ridge_reg_batched(
+            res_seq_train[spinup:],
+            target_seq[spinup:].reshape(
+                res_seq[spinup:].shape[0], res_seq.shape[1], -1
+            ),
+            beta,
+            batch_size,
+        )
 
     def where(m):
         return m.readout.wout
