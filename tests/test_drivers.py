@@ -7,6 +7,7 @@ import orc
 
 ##################### ESN TESTS #####################
 
+
 @pytest.fixture
 def esndriver():
     return orc.drivers.ESNDriver(
@@ -126,17 +127,19 @@ def test_call_ones_esn(chunks):
         gt_outputs = gt_outputs.at[group].set(gt)
     assert jnp.allclose(gt_outputs, test_outputs)
 
+
 @pytest.mark.parametrize(
     "res_dim, spectral_radius, density, chunks",
     [
-          (100, 0.876, 0.02, 1),
-          (500, 0.546, 0.01, 1),
-          (1000, 0.432, 0.01, 1),
-          (1000, 0.1, 0.01, 1),
-          (1000, 1.3, 0.01, 1),
-          (100, 0.345, 0.02, 15),
-          (500, 0.673, 0.01, 4),
-     ])
+        (100, 0.876, 0.02, 1),
+        (500, 0.546, 0.01, 1),
+        (1000, 0.432, 0.01, 1),
+        (1000, 0.1, 0.01, 1),
+        (1000, 1.3, 0.01, 1),
+        (100, 0.345, 0.02, 15),
+        (500, 0.673, 0.01, 4),
+    ],
+)
 def test_driver_spectral_radius_sparse(res_dim, spectral_radius, density, chunks):
     """Test that the spectral radius of the reservoir update matrix is as expected."""
     driver = orc.drivers.ESNDriver(
@@ -155,18 +158,20 @@ def test_driver_spectral_radius_sparse(res_dim, spectral_radius, density, chunks
         f"Expected spectral radius {spectral_radius}, but got {wr_max_eigs}"
     )
 
+
 @pytest.mark.parametrize(
     "res_dim, spectral_radius, density, chunks",
     [
-          (10, 0.6, 0.5, 1),
-          (50, 0.6, 0.1, 1),
-          (100, 0.876, 0.01, 1),
-          (1000, 0.432, 0.01, 1),
-          (1000, 0.1, 0.01, 1),
-          (1000, 1.3, 0.01, 1),
-          (100, 0.345, 0.02, 15),
-          (500, 0.673, 0.01, 4),
-     ])
+        (10, 0.6, 0.5, 1),
+        (50, 0.6, 0.1, 1),
+        (100, 0.876, 0.01, 1),
+        (1000, 0.432, 0.01, 1),
+        (1000, 0.1, 0.01, 1),
+        (1000, 1.3, 0.01, 1),
+        (100, 0.345, 0.02, 15),
+        (500, 0.673, 0.01, 4),
+    ],
+)
 def test_driver_spectral_radius_dense(res_dim, spectral_radius, density, chunks):
     """Test that the spectral radius of the reservoir update matrix is as expected"""
     driver = orc.drivers.ESNDriver(
@@ -186,7 +191,200 @@ def test_driver_spectral_radius_dense(res_dim, spectral_radius, density, chunks)
     )
 
 
+##################### ESN BATCHED EIGENVALUE TESTS #####################
+
+
+@pytest.mark.parametrize(
+    "res_dim, spectral_radius, density, chunks, batch_size",
+    [
+        (100, 0.8, 0.1, 10, 3),
+        (150, 0.6, 0.05, 20, 5),
+        (200, 0.9, 0.02, 50, 10),
+        (100, 0.7, 0.1, 100, 25),
+    ],
+)
+def test_batched_eigenvals_sparse_equivalence(
+    res_dim, spectral_radius, density, chunks, batch_size
+):
+    """Test that batched sparse computation gives same results as non-batched."""
+    seed = 42
+
+    # Create driver without batching (default behavior)
+    driver_unbatched = orc.drivers.ESNDriver(
+        res_dim=res_dim,
+        spectral_radius=spectral_radius,
+        density=density,
+        chunks=chunks,
+        seed=seed,
+        use_sparse_eigs=True,
+    )
+
+    # Create driver with batching
+    driver_batched = orc.drivers.ESNDriver(
+        res_dim=res_dim,
+        spectral_radius=spectral_radius,
+        density=density,
+        chunks=chunks,
+        seed=seed,
+        use_sparse_eigs=True,
+        eigenval_batch_size=batch_size,
+    )
+
+    # Check that spectral radii are equivalent
+    wr_unbatched = driver_unbatched.wr
+    wr_batched = driver_batched.wr
+
+    unbatched_eigs = jnp.max(
+        jnp.abs(jnp.linalg.eigvals(wr_unbatched.todense())), axis=1
+    )
+    batched_eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(wr_batched.todense())), axis=1)
+
+    # Both should achieve the target spectral radius
+    assert jnp.allclose(unbatched_eigs, spectral_radius, atol=1e-5)
+    assert jnp.allclose(batched_eigs, spectral_radius, atol=1e-5)
+
+    # Results should be identical (same seed, same computation)
+    assert jnp.allclose(unbatched_eigs, batched_eigs, atol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "res_dim, spectral_radius, density, chunks, batch_size",
+    [
+        (150, 0.8, 0.1, 10, 3),
+        (100, 0.6, 0.05, 20, 7),
+        (200, 0.9, 0.02, 30, 8),
+    ],
+)
+def test_batched_eigenvals_dense_equivalence(
+    res_dim, spectral_radius, density, chunks, batch_size
+):
+    """Test that batched dense computation gives same results as non-batched."""
+    seed = 123
+
+    # Create driver without batching (default behavior)
+    driver_unbatched = orc.drivers.ESNDriver(
+        res_dim=res_dim,
+        spectral_radius=spectral_radius,
+        density=density,
+        chunks=chunks,
+        seed=seed,
+        use_sparse_eigs=False,
+    )
+
+    # Create driver with batching
+    driver_batched = orc.drivers.ESNDriver(
+        res_dim=res_dim,
+        spectral_radius=spectral_radius,
+        density=density,
+        chunks=chunks,
+        seed=seed,
+        use_sparse_eigs=False,
+        eigenval_batch_size=batch_size,
+    )
+
+    # Check that spectral radii are equivalent
+    wr_unbatched = driver_unbatched.wr
+    wr_batched = driver_batched.wr
+
+    unbatched_eigs = jnp.max(
+        jnp.abs(jnp.linalg.eigvals(wr_unbatched.todense())), axis=1
+    )
+    batched_eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(wr_batched.todense())), axis=1)
+
+    # Both should achieve the target spectral radius
+    assert jnp.allclose(unbatched_eigs, spectral_radius, atol=1e-5)
+    assert jnp.allclose(batched_eigs, spectral_radius, atol=1e-5)
+
+    # Results should be identical (same seed, same computation)
+    assert jnp.allclose(unbatched_eigs, batched_eigs, atol=1e-10)
+
+
+def test_batched_eigenvals_large_batch_size():
+    """Test that batch size larger than chunks works correctly."""
+    res_dim, chunks = 150, 5
+    large_batch_size = 20  # Larger than chunks
+
+    driver = orc.drivers.ESNDriver(
+        res_dim=res_dim,
+        spectral_radius=0.8,
+        density=0.1,
+        chunks=chunks,
+        seed=999,
+        eigenval_batch_size=large_batch_size,
+    )
+
+    # Should work without issues and achieve target spectral radius
+    wr = driver.wr
+    eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(wr.todense())), axis=1)
+    assert jnp.allclose(eigs, 0.8, atol=1e-5)
+
+
+def test_batched_eigenvals_single_chunk():
+    """Test batching with single chunk (edge case)."""
+    driver = orc.drivers.ESNDriver(
+        res_dim=150,
+        spectral_radius=0.7,
+        density=0.05,
+        chunks=1,
+        seed=777,
+        eigenval_batch_size=5,
+    )
+
+    # Should work correctly for single chunk
+    wr = driver.wr
+    eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(wr.todense())), axis=1)
+    assert jnp.allclose(eigs, 0.7, atol=1e-5)
+
+
+def test_batched_eigenvals_batch_size_one():
+    """Test batching with batch size of 1 (most memory efficient)."""
+    chunks = 10
+    driver = orc.drivers.ESNDriver(
+        res_dim=150,
+        spectral_radius=0.9,
+        density=0.1,
+        chunks=chunks,
+        seed=555,
+        eigenval_batch_size=1,
+    )
+
+    # Should process each matrix individually and achieve target spectral radius
+    wr = driver.wr
+    eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(wr.todense())), axis=1)
+    assert jnp.allclose(eigs, 0.9, atol=1e-5)
+    assert len(eigs) == chunks
+
+
+def test_batched_eigenvals_functionality_preserved():
+    """Test that batched drivers maintain full ESN functionality."""
+    driver = orc.drivers.ESNDriver(
+        res_dim=100,
+        spectral_radius=0.8,
+        density=0.05,
+        chunks=5,
+        seed=333,
+        eigenval_batch_size=2,
+    )
+
+    # Test basic advance functionality
+    key = jax.random.key(42)
+    proj_vars = jax.random.normal(key, shape=(5, 100))
+    res_state = jax.random.normal(key, shape=(5, 100))
+
+    # Should advance without issues
+    new_state = driver.advance(proj_vars, res_state)
+    assert new_state.shape == (5, 100)
+
+    # Test batch advance
+    batch_proj_vars = jax.random.normal(key, shape=(3, 5, 100))
+    batch_res_state = jax.random.normal(key, shape=(3, 5, 100))
+
+    batch_new_state = driver.batch_advance(batch_proj_vars, batch_res_state)
+    assert batch_new_state.shape == (3, 5, 100)
+
+
 ##################### CESN TESTS #####################
+
 
 @pytest.fixture
 def cesn_driver():
@@ -198,8 +396,9 @@ def cesn_driver():
         bias=1.6,
         dtype=jnp.float64,
         seed=0,
-        mode="continuous"  # Set continuous mode
+        mode="continuous",  # Set continuous mode
     )
+
 
 def test_cesn_driver_dims(cesn_driver):
     key = jax.random.key(999)
@@ -247,8 +446,9 @@ def test_param_types_cesn(res_dim, time_const, spectral_radius, density, bias, d
             bias=bias,
             dtype=dtype,
             seed=33,
-            mode="continuous"
+            mode="continuous",
         )
+
 
 @pytest.mark.parametrize(
     "res_dim,time_const,spectral_radius,density,bias,dtype",
@@ -268,7 +468,7 @@ def test_param_vals_cesn(res_dim, time_const, spectral_radius, density, bias, dt
             bias=bias,
             dtype=dtype,
             seed=32,
-            mode="continuous"
+            mode="continuous",
         )
 
 
@@ -283,7 +483,7 @@ def test_call_cesn(chunks):
         dtype=jnp.float64,
         seed=0,
         chunks=chunks,
-        mode="continuous"
+        mode="continuous",
     )
     key = jax.random.key(0)
     key1, key2 = jax.random.split(key)
