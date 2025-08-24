@@ -1,6 +1,14 @@
 # Data API Reference
 
-This module contains data generation functions for testing and examples.
+This subpackage contains data generation functions for testing and examples.
+
+## Data Subpackage
+
+::: orc.data
+    options:
+      show_root_heading: true
+      show_source: false
+      members_order: source
 
 ## Lorenz63 System
 
