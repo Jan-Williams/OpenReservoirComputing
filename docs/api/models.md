@@ -1,6 +1,14 @@
 # Models API Reference
 
-This module contains the main forecasting models in ORC.
+This subpackage contains the main forecasting models in ORC.
+
+## Models Subpackage
+
+::: orc.models
+    options:
+      show_root_heading: true
+      show_source: false
+      members_order: source
 
 ## ESN Forecaster
 

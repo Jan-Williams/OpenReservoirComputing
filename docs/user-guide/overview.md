@@ -12,4 +12,4 @@ The **readout layer** represents the trainable component. Options include `Linea
 
 ## Navigation
 
-New users should read [RC Basics](rc-basics.md) for theory, then [Drivers](drivers.md), [Embeddings](embeddings.md), and[Readouts](readouts.md) for details on model components. [Models](models.md) will then detail how to merge these components. The [API section](../api/) provides complete technical documentation, while examples demonstrate practical applications.
+New users should read [Drivers](drivers.md), [Embeddings](embeddings.md), and [Readouts](readouts.md) for details on model components. [Models](models.md) will then detail how to merge these components. The [API section](../api/) provides complete technical documentation, while examples demonstrate practical applications.
