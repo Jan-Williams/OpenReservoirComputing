@@ -80,7 +80,29 @@ all = [
     "notebook",
     "ipykernel",
     "pytest-env",
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-autorefs",
+    "mkdocstrings[python]",
+    "mkdocs-jupyter",
 ]
-dev = ["ruff", "pytest", "coverage", "pytest-cov", "pytest-env"]
+dev = [
+    "ruff", 
+    "pytest", 
+    "coverage", 
+    "pytest-cov", 
+    "pytest-env",
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-autorefs",
+    "mkdocstrings[python]",
+]
 notebooks = ["notebook", "ipykernel"]
 gpu = ["jax[cuda12]==0.6.0"]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-autorefs",
+    "mkdocstrings[python]",
+    "mkdocs-jupyter",
+]

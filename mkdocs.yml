@@ -50,6 +50,7 @@ plugins:
   - mkdocs-jupyter:
       execute: false
       allow_errors: false
+      include_source: true
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -106,14 +107,13 @@ nav:
   - User Guide:
     - Overview: user-guide/overview.md
     - Reservoir Computing Basics: user-guide/rc-basics.md
-    - Models: user-guide/models.md
     - Drivers: user-guide/drivers.md
     - Embeddings: user-guide/embeddings.md
     - Readouts: user-guide/readouts.md
+    - Models: user-guide/models.md
     - Data Library: user-guide/data.md
   - Examples:
     - Lorenz System: examples/lorenz.ipynb
-    - Continuous RC: examples/continuous_rc.ipynb
     - RC Background: examples/rc_background.ipynb
   - API Reference:
     - Models: api/models.md
