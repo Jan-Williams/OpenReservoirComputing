@@ -1,76 +1,15 @@
-# User Guide Overview
+## Core Architecture
 
-Welcome to the OpenReservoirComputing (ORC) user guide! This comprehensive guide will help you understand and effectively use all features of the ORC package.
+The **embedding layer** handles input-to-reservoir mapping. `LinearEmbedding` provides matrix multiplication with support for parallel reservoirs and configurable connectivity patterns.
 
-## What You'll Learn
+The **driver layer** propagates reservoir state evolution. `ESNDriver` implements Echo State Network dynamics for both discrete-time updates and continuous-time evolution using ODE solvers with adaptive step control.
 
-This user guide covers:
+The **readout layer** represents the trainable component. Options include `LinearReadout`, `QuadraticReadout`, and `NonlinearReadout`.
 
-- **[Reservoir Computing Basics](rc-basics.md)**: Fundamental concepts and theory
-- **[Models](models.md)**: ESN and CESN forecaster implementations
-- **[Drivers](drivers.md)**: Reservoir dynamics and state evolution
-- **[Embeddings](embeddings.md)**: Input embedding layers
-- **[Readouts](readouts.md)**: Output layers
-- **[Data Library](data.md)**: Built-in datasets and data generation
+## Available Models
 
-## Package Architecture
+`ESNForecaster` provides standard discrete-time implementation with configurable leak rates, spectral radii, and density. `CESNForecaster` offers continuous-time dynamics using diffrax solvers with cubic interpolation for input forcing. Both support parallel architectures and memory-efficient batched training.
 
-ORC follows a modular design with clear separation of concerns:
+## Navigation
 
-```
-src/orc/
-├── __init__.py        # Package initialization and imports
-├── rc.py              # Base classes for reservoir computing
-├── drivers.py         # Reservoir dynamics implementations  
-├── embeddings.py      # Input preprocessing layers
-├── readouts.py        # Output layers and training
-├── models/            # High-level forecaster classes
-│   ├── __init__.py
-│   └── esn.py         # ESN and CESN forecaster implementations
-├── data/              # Data generation and datasets
-│   ├── __init__.py
-│   └── integrators.py # Dynamical systems and integrators
-└── utils/             # Utility functions and helpers
-    ├── __init__.py
-    ├── numerics.py    # Numerical utilities
-    └── visualization.py # Plotting and visualization tools
-```
-
-## Design Philosophy
-
-### Modularity
-Each component can be mixed and matched or replaced with custom implementations. Want a custom reservoir driver? Just inherit from the base class and implement the required methods.
-
-### Performance
-Built on JAX for:
-- **GPU acceleration**: Automatic GPU utilization when available
-- **JIT compilation**: Fast execution through just-in-time compilation
-- **Vectorization**: Efficient batch processing
-- **Automatic differentiation**: For advanced optimization techniques
-
-## Common Workflows
-
-### Basic Forecasting
-1. Load or generate time series data
-2. Create a forecaster (ESN or CESN)
-3. Train the forecaster on historical data
-4. Generate predictions for future time steps
-
-### Custom Components
-1. Inherit from appropriate base classes
-2. Implement required abstract methods
-3. Test with existing data and models
-4. Integrate into forecasting pipeline
-
-## Best Practices
-
-TODO.
-
-## Getting Help
-
-- **Examples**: Check the [Examples](../examples/) section for Jupyter notebooks
-- **API Reference**: Detailed documentation in [API Reference](../api/)
-- **Issues**: Report bugs on [GitHub Issues](https://github.com/dtretiak/OpenReservoirComputing/issues)
-- **Discussions**: Ask questions on [GitHub Discussions](https://github.com/dtretiak/OpenReservoirComputing/discussions)
-
-Ready to dive deeper? Start with [Reservoir Computing Basics](rc-basics.md) to understand the fundamental concepts.
+New users should read [RC Basics](rc-basics.md) for theory, then [Drivers](drivers.md), [Embeddings](embeddings.md), and[Readouts](readouts.md) for details on model components. [Models](models.md) will then detail how to merge these components. The [API section](../api/) provides complete technical documentation, while examples demonstrate practical applications.

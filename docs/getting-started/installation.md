@@ -1,61 +1,102 @@
 # Installation
 
-## Requirements
+## System Requirements
 
-- Python 3.10, 3.11, or 3.12
-- JAX (for GPU acceleration)
-- NumPy, Matplotlib, and other scientific computing libraries
+- **Python**: 3.10, 3.11, or 3.12
+- **Operating System**: Linux, macOS, or Windows
+- **Hardware**: CPU or NVIDIA GPU
 
-## Basic Installation
+## Installation Options
 
-To install ORC, first clone the repository:
+### Basic CPU Installation
+
+For CPU-only usage, clone the repository and install:
 
 ```bash
 git clone https://github.com/dtretiak/OpenReservoirComputing.git
 cd OpenReservoirComputing
-```
-
-Then install using pip:
-
-```bash
 pip install .
 ```
 
-## GPU Support
+### GPU Installation
 
-If you would like to use ORC on GPU(s), install the optional GPU dependencies:
+For GPU acceleration with CUDA support:
 
 ```bash
+git clone https://github.com/dtretiak/OpenReservoirComputing.git
+cd OpenReservoirComputing
 pip install .[gpu]
 ```
 
-This will install the CUDA-enabled version of JAX for GPU acceleration.
 
-## Development Installation
+### Development Installation
 
-For development, install in editable mode with development dependencies:
+For contributors or advanced users who want to modify the code:
 
 ```bash
+git clone https://github.com/dtretiak/OpenReservoirComputing.git
+cd OpenReservoirComputing
 pip install -e .[dev]
 ```
 
-## Notebook Dependencies
+This includes additional tools for testing, formatting, and documentation.
 
-To run the example notebooks, install the optional notebook dependencies:
+### Complete Installation
+
+To install all optional dependencies (GPU, development, notebooks, documentation):
 
 ```bash
-pip install .[notebooks]
+pip install -e .[all]
 ```
 
 ## Verification
 
-To verify your installation, run:
+Test your installation with this simple script:
 
 ```python
 import orc
-print(f"ORC version: {orc.__version__}")
+import jax
 
-# Test basic functionality
+# Check JAX device (CPU or GPU)
+print(f"JAX is using: {jax.devices()}")
+
+# Test basic ORC functionality
 U, t = orc.data.lorenz63(tN=10, dt=0.01)
 print(f"Generated Lorenz data shape: {U.shape}")
+
+# Test model creation
+esn = orc.models.ESNForecaster(data_dim=3, res_dim=100)
+print("ESN created successfully!")
+print("Installation verified ✓")
 ```
+
+## Troubleshooting
+
+### Common Issues
+
+**JAX Not Found**
+```
+ModuleNotFoundError: No module named 'jax'
+```
+*Solution*: Ensure you're using Python 3.10-3.12 and install with `pip install .[gpu]` or upgrade pip.
+
+**CUDA Errors (GPU)**
+```
+CUDA_ERROR_NO_DEVICE or similar GPU errors
+```
+*Solution*: Verify NVIDIA drivers are installed and compatible with CUDA 12.x.
+
+**Import Errors**
+```
+ImportError: cannot import name 'x' from 'orc'
+```
+*Solution*: Try reinstalling: `pip uninstall OpenReservoirComputing && pip install .[gpu]`
+
+### Getting Help
+
+If you encounter issues:
+
+1. Check the [GitHub Issues](https://github.com/dtretiak/OpenReservoirComputing/issues)
+2. Ensure your Python version is supported (3.10-3.12)
+3. Try a clean virtual environment installation
+4. For GPU issues, verify CUDA installation with `nvidia-smi`

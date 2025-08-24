@@ -4,26 +4,36 @@
   <img src="imgs/ORC_logo_cropped.png" alt="ORC Logo" width="200px" />
 </div>
 
-**ORC** is the one-stop-shop for performant reservoir computing in JAX. This package provides GPU-accelerated implementations of common reservoir computing architectures with a modular design that allows for easy experimentation and customization.
+OpenReservoirComputing (ORC) provides GPU-accelerated implementations of reservoir computing architectures for time series forecasting and temporal data analysis. Built on JAX, ORC delivers high-performance computing capabilities with a modular design that supports both research experimentation and practical applications.
+
+## Overview
+
+Reservoir Computing (RC) is a computational framework for processing temporal and sequential data. The approach trains only the output layer (readout) while keeping the reservoir dynamics fixed, making it computationally efficient and particularly effective for chaotic system forecasting, time series prediction, and nonlinear system identification.
 
 ## Key Features
 
-- **Modular Design**: Mix and match layers and reservoir drivers or create your own
-- **Multiple Implementations**: Continuous, discrete, serial, and parallel implementations
-- **GPU Acceleration**: Built on JAX for high-performance computing on GPUs
-- **Hyperparameter Tuning**: Built-in support for hyperparameter optimization with Ray Tune (coming soon!)
-- **Multi-GPU Support**: Training and inference across multiple GPUs (coming soon!)
+**Modular Architecture**: Composable embedding layers, reservoir drivers, and readout functions that can be mixed, matched, or extended with custom implementations.
 
-## What is Reservoir Computing?
+**Multiple Paradigms**: Support for discrete- and continuous-time Echo State Networks (ESNs) and parallel reservoir architectures.
 
-Reservoir Computing (RC) is a framework for computation based on the principle of generalized synchronization. Only the readout from the reservoir is trained while the reservoir dynamics are fixed, making RC computationally efficient and particularly well-suited for temporal/sequential data processing.
+**Comprehensive Tooling**: Built-in chaotic dynamical systems, visualization utilities, regression solvers, and performance evaluation metrics.
+
+## Architecture
+
+ORC decomposes reservoir computing models into three core components:
+
+- **Embedding Layer**: Maps input signals to reservoir dimension through linear or nonlinear transformations
+- **Driver Layer**: Implements reservoir dynamics (ESN, continuous-time ESN, custom)
+- **Readout Layer**: Learns mappings from reservoir states to desired outputs
+
+This modular design enables systematic exploration of different architectural choices while maintaining consistent interfaces across implementations.
 
 ## Quick Example
 
 ```python
 import orc
 
-# Integrate the Lorenz system 
+# Generate Lorenz system data
 U, t = orc.data.lorenz63(tN=100, dt=0.01)
 
 # Train-test split
@@ -32,49 +42,82 @@ split_idx = int((1 - test_perc) * U.shape[0])
 U_train = U[:split_idx, :]
 U_test = U[split_idx:, :]
 
-# Create and train ESN forecaster
-forecaster = orc.models.ESNForecaster(res_dim=500)
-forecaster, res_states = orc.models.train_ESNForecaster(forecaster, U_train)
+# Create and train Echo State Network
+esn = orc.models.ESNForecaster(data_dim=3, res_dim=500, seed=42)
+esn, res_states = orc.models.train_ESNForecaster(esn, U_train)
 
-# Make predictions
-U_pred = forecaster.forecast(fcast_len=len(U_test), res_state=res_states[-1])
+# Generate forecast
+U_pred = esn.forecast(fcast_len=U_test.shape[0], res_state=res_states[-1])
+
+# Visualize results
+orc.utils.visualization.plot_time_series(
+    [U_test, U_pred],
+    t[split_idx:] - t[split_idx],
+    state_var_names=["x", "y", "z"],
+    time_series_labels=["Ground Truth", "Forecast"]
+)
 ```
 
-## Getting Started
+## Documentation
 
-- **[Installation](getting-started/installation.md)**: Install ORC and its dependencies
-- **[Quick Start](getting-started/quickstart.md)**: Get up and running with your first reservoir computer
-- **[User Guide](user-guide/overview.md)**: Comprehensive guide to ORC's features and capabilities
+### Getting Started
+- [**Installation**](getting-started/installation.md): System requirements and installation procedures for CPU and GPU configurations
+- [**Quick Start**](getting-started/quickstart.md): Step-by-step tutorial for training your first reservoir computer
 
-## API Documentation
+### User Guide
+- [**Overview**](user-guide/overview.md): Comprehensive guide to ORC's capabilities and design principles
+- [**Models**](user-guide/models.md): Available reservoir computing implementations and training procedures
+- [**Architecture Components**](user-guide/drivers.md): Detailed documentation of embedding, driver, and readout layers
 
-Explore the complete API reference:
+### API Reference
+Complete technical documentation of all classes, functions, and interfaces:
 
-- **[Models](api/models.md)**: ESN and CESN forecaster implementations
-- **[RC Base Classes](api/rc.md)**: Core reservoir computing base classes
-- **[Drivers](api/drivers.md)**: Reservoir dynamics drivers
-- **[Embeddings](api/embeddings.md)**: Input embedding layers
-- **[Readouts](api/readouts.md)**: Output readout layers
+- [**Models**](api/models.md): ESN and continuous ESN forecaster implementations
 
-## Examples
+- [**RC Base Classes**](api/rc.md): Core reservoir computing abstractions
 
-Check out our Jupyter notebook examples:
+- [**Drivers**](api/drivers.md): Driver base class and specific implementations
 
-- **[Lorenz System](examples/lorenz.ipynb)**: Classic chaotic system forecasting
-- **[Continuous RC](examples/continuous_rc.ipynb)**: Continuous-time reservoir computing
-- **[RC Background](examples/rc_background.ipynb)**: Introduction to reservoir computing concepts
+- [**Embeddings**](api/embeddings.md): Embedding base class and specific implementations
+
+- [**Readouts**](api/readouts.md): Readout base class and specific implementations
+
+- [**Utilities**](api/utils.md): Data generation, visualization, and analysis tools
+
+### Examples
+Practical demonstrations using Jupyter notebooks:
+
+- [**Lorenz System Forecasting**](examples/lorenz.ipynb): Classic chaotic system prediction benchmark
+
+- [**RC Background**](examples/rc_background.ipynb): Theoretical foundations and implementation details
+
+## Applications
+
+**Scientific Computing**: Forecasting chaotic dynamical systems, analyzing spatiotemporal phenomena, and modeling complex temporal dependencies.
+
+**Time Series Analysis**: Financial forecasting, climate modeling, sensor data processing, and anomaly detection in sequential data.
+
+**Control Systems**: State estimation, system identification, and real-time prediction for feedback control applications.
+
+**Machine Learning Research**: Investigating novel reservoir architectures, hyperparameter optimization strategies, and performance benchmarking.
+
+## Technical Specifications
+
+**Dependencies**: JAX ecosystem with Equinox for functional programming, Diffrax for ODE integration, and standard scientific Python libraries.
+
+**Performance**: Optimized for both CPU and GPU execution with support for parallel reservoirs and efficient memory management.
+
+**Precision**: x64 floating-point arithmetic enabled by default for numerical stability in chaotic system forecasting.
+
+**Compatibility**: Python 3.10-3.12 on Linux, macOS, and Windows platforms.
 
 ## Contributing
 
-We welcome contributions! See our [Contributing Guide](contributing.md) for details on how to get involved.
-
-## License
-
-This project is licensed under the Apache 2.0 License - see the LICENSE file for details.
+ORC welcomes contributions from the reservoir computing community. See the [Contributing Guide](contributing.md) for development procedures, coding standards, and submission guidelines.
 
 ## Citation
 
-If you use ORC in your research, please cite:
+When using ORC in research publications, please cite:
 
 ```bibtex
 @software{orc2024,
@@ -84,3 +127,7 @@ If you use ORC in your research, please cite:
   url={https://github.com/dtretiak/OpenReservoirComputing}
 }
 ```
+
+## License
+
+This project is distributed under the Apache License. See the LICENSE file for complete terms and conditions.

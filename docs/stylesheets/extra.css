@@ -1,0 +1,39 @@
+/* MathJax styling for proper LaTeX rendering in mkdocs */
+
+/* Ensure MathJax content is properly styled */
+.MathJax {
+  outline: 0;
+}
+
+/* Display math styling */
+.MathJax_Display {
+  text-align: center;
+  margin: 1em 0;
+}
+
+/* Inline math styling */
+.MathJax_SVG {
+  display: inline;
+  vertical-align: middle;
+}
+
+/* Ensure proper spacing around math */
+.arithmatex {
+  margin: 0.5em 0;
+}
+
+/* Fix for dark mode compatibility */
+.MathJax_SVG * {
+  fill: currentColor;
+}
+
+/* Ensure math doesn't break responsive layout */
+.MathJax_Display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Better line height for inline math */
+p .MathJax {
+  line-height: 1;
+}
