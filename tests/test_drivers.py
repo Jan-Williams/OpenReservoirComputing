@@ -1,3 +1,4 @@
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import pytest
@@ -498,3 +499,248 @@ def test_call_cesn(chunks):
 
     # Verify output values are finite
     assert jnp.all(jnp.isfinite(test_outputs))
+
+
+##################### ParGRUCell TESTS #####################
+
+
+@pytest.fixture
+def pargru_cell():
+    return orc.drivers._ParGRUCell(
+        input_size=10,
+        hidden_size=20,
+        chunks=3,
+        use_bias=True,
+        seed=42,
+        dtype=jnp.float64,
+    )
+
+
+def test_pargru_cell_initialization(pargru_cell):
+    """Test that _ParGRUCell initializes correctly."""
+    assert pargru_cell.input_size == 10
+    assert pargru_cell.hidden_size == 20
+    assert pargru_cell.chunks == 3
+    assert pargru_cell.use_bias is True
+    assert pargru_cell.dtype == jnp.float64
+
+    assert pargru_cell.weight_ih.shape == (3, 3 * 20, 10)
+    assert pargru_cell.weight_hh.shape == (3, 3 * 20, 20)
+
+    assert pargru_cell.bias.shape == (3, 3 * 20)
+    assert pargru_cell.bias_n.shape == (3, 20)
+
+
+def test_pargru_cell_no_bias():
+    """Test _ParGRUCell with bias disabled."""
+    cell = orc.drivers._ParGRUCell(
+        input_size=5,
+        hidden_size=10,
+        chunks=2,
+        use_bias=False,
+        seed=123,
+        dtype=jnp.float32,
+    )
+
+    assert cell.use_bias is False
+    assert cell.bias is None
+    assert cell.bias_n is None
+    assert cell.dtype == jnp.float32
+
+
+@pytest.mark.parametrize(
+    "input_size,hidden_size,chunks",
+    [
+        (5, 10, 1),
+        (10, 20, 2),
+        (15, 25, 4),
+        (32, 64, 8),
+    ],
+)
+def test_pargru_cell_forward_shapes(input_size, hidden_size, chunks):
+    """Test that forward pass produces correct output shapes."""
+    cell = orc.drivers._ParGRUCell(
+        input_size=input_size,
+        hidden_size=hidden_size,
+        chunks=chunks,
+        seed=42,
+    )
+
+    key = jax.random.key(999)
+    input_data = jax.random.normal(key, shape=(chunks, input_size))
+    hidden_data = jax.random.normal(key, shape=(chunks, hidden_size))
+
+    output = cell(input_data, hidden_data)
+
+    print(output)
+    assert output.shape == (chunks, hidden_size)
+    assert jnp.all(jnp.isfinite(output))
+
+
+##################### GRU DRIVER TESTS #####################
+
+
+@pytest.fixture
+def grudriver():
+    return orc.drivers.GRUDriver(
+        res_dim=212,
+        chunks=1,
+        seed=0,
+        use_bias=True,
+    )
+
+
+def test_grudriver_dims(grudriver):
+    key = jax.random.key(999)
+    res_dim = grudriver.res_dim
+    test_vec = jax.random.normal(key, shape=(1, res_dim))
+    out_vec = grudriver.advance(test_vec, test_vec)
+    assert out_vec.shape == (
+        1,
+        res_dim,
+    )
+
+
+@pytest.mark.parametrize("batch_size", [3, 12, 52])
+def test_batchapply_dims_gru(batch_size, grudriver):
+    key = jax.random.key(42)
+    res_dim = grudriver.res_dim
+    test_vec = jax.random.normal(key, shape=(batch_size, 1, res_dim))
+    out_vec = grudriver.batch_advance(test_vec, test_vec)
+
+    assert out_vec.shape == (batch_size, 1, res_dim)
+
+
+@pytest.mark.parametrize("chunks", [2, 4, 8, 9])
+def test_call_ones_gru(chunks):
+    model = orc.drivers.GRUDriver(
+        res_dim=212,
+        chunks=chunks,
+        seed=0,
+        use_bias=True,
+    )
+    key = jax.random.key(0)
+    key1, key2 = jax.random.split(key)
+    test_vec1 = jax.random.normal(key=key1, shape=(chunks, 212))
+    test_vec2 = jax.random.normal(key=key2, shape=(chunks, 212))
+    test_outputs = model(test_vec1, test_vec2)
+
+    assert test_outputs.shape == (chunks, 212)
+    assert jnp.all(jnp.isfinite(test_outputs))
+
+    gru_cell = model.gru
+    manual_output = gru_cell(test_vec2, test_vec1)
+    assert jnp.allclose(test_outputs, manual_output)
+
+
+@pytest.mark.parametrize("use_bias", [True, False])
+def test_gru_bias_handling(use_bias):
+    model = orc.drivers.GRUDriver(
+        res_dim=100,
+        chunks=2,
+        seed=42,
+        use_bias=use_bias,
+    )
+
+    key = jax.random.key(123)
+    proj_vars = jax.random.normal(key, shape=(2, 100))
+    res_state = jax.random.normal(key, shape=(2, 100))
+
+    output = model.advance(res_state, proj_vars)
+
+    assert output.shape == (2, 100)
+    assert jnp.all(jnp.isfinite(output))
+    assert model.gru.use_bias == use_bias
+
+
+@pytest.mark.parametrize("res_dim", [50, 100, 200, 512])
+def test_gru_different_dimensions(res_dim):
+    model = orc.drivers.GRUDriver(
+        res_dim=res_dim,
+        chunks=1,
+        seed=777,
+    )
+
+    key = jax.random.key(888)
+    proj_vars = jax.random.normal(key, shape=(1, res_dim))
+    res_state = jax.random.normal(key, shape=(1, res_dim))
+
+    output = model.advance(res_state, proj_vars)
+
+    assert output.shape == (1, res_dim)
+    assert jnp.all(jnp.isfinite(output))
+
+
+def test_gru_deterministic():
+    """Test that same inputs produce same outputs."""
+    model1 = orc.drivers.GRUDriver(res_dim=100, chunks=2, seed=999)
+    model2 = orc.drivers.GRUDriver(res_dim=100, chunks=2, seed=999)
+
+    key = jax.random.key(111)
+    proj_vars = jax.random.normal(key, shape=(2, 100))
+    res_state = jax.random.normal(key, shape=(2, 100))
+
+    output1 = model1.advance(res_state, proj_vars)
+    output2 = model2.advance(res_state, proj_vars)
+
+    assert jnp.allclose(output1, output2)
+
+
+def test_gru_gradient_flow():
+    """Test that gradients flow through the GRU driver correctly."""
+    model = orc.drivers.GRUDriver(res_dim=50, chunks=1, seed=42)
+
+    key = jax.random.key(123)
+    proj_vars = jax.random.normal(key, shape=(1, 50))
+    res_state = jax.random.normal(key, shape=(1, 50))
+
+    def loss_fn(model, res_state, proj_vars):
+        output = model.advance(res_state, proj_vars)
+        return jnp.sum(output**2)
+
+    grad_fn = eqx.filter_grad(loss_fn)
+    grads = grad_fn(model, res_state, proj_vars)
+
+    assert hasattr(grads, "gru")
+    assert jnp.all(jnp.isfinite(grads.gru.weight_ih))
+    assert jnp.all(jnp.isfinite(grads.gru.weight_hh))
+
+    if model.gru.use_bias:
+        assert jnp.all(jnp.isfinite(grads.gru.bias))
+        assert jnp.all(jnp.isfinite(grads.gru.bias_n))
+
+    def loss_fn(proj_vars, model, res_state):
+        output = model.advance(res_state, proj_vars)
+        return jnp.sum(output**2)
+
+    grad_fn = eqx.filter_grad(loss_fn)
+    grads = grad_fn(proj_vars, model, res_state)
+    assert grads.shape == proj_vars.shape
+
+
+@pytest.mark.parametrize("chunks", [1, 3, 5, 8])
+def test_gru_parallel_chunks_functionality(chunks):
+    """Test GRU driver functionality with different chunk sizes."""
+    model = orc.drivers.GRUDriver(
+        res_dim=64,
+        chunks=chunks,
+        seed=555,
+    )
+
+    key = jax.random.key(666)
+    proj_vars = jax.random.normal(key, shape=(chunks, 64))
+    res_state = jax.random.normal(key, shape=(chunks, 64))
+
+    output = model.advance(res_state, proj_vars)
+    assert output.shape == (chunks, 64)
+    assert jnp.all(jnp.isfinite(output))
+
+    batch_proj_vars = jax.random.normal(key, shape=(5, chunks, 64))
+    batch_res_state = jax.random.normal(key, shape=(5, chunks, 64))
+
+    batch_output = model.batch_advance(batch_res_state, batch_proj_vars)
+    assert batch_output.shape == (5, chunks, 64)
+    assert jnp.all(jnp.isfinite(batch_output))
+
+    call_output = model(batch_res_state, batch_proj_vars)
+    assert jnp.allclose(call_output, batch_output)

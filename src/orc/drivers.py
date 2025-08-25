@@ -7,6 +7,7 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random
+from equinox.nn._misc import default_init
 from jax.experimental import sparse
 from jaxtyping import Array, Float
 
@@ -22,7 +23,7 @@ class DriverBase(eqx.Module, ABC):
     Attributes
     ----------
     res_dim : int
-        Reservoir dimensionxe
+        Reservoir dimensione
     dtype : Float
         Dtype for model, jnp.float64 or jnp.float32.
 
@@ -87,7 +88,11 @@ class DriverBase(eqx.Module, ABC):
         """Advance the reservoir given projected inputs and current state.
 
         If driver supports parallel reservoirs, this method needs to be overwritten
-        to accomodate shape handling.
+        to accomodate shape handling. It can be overwritten with:
+
+        ```
+        def __call__(self, proj_vars, res_state):
+            retur self._par_call(proj_vars, res_state)
 
         Parameters
         ----------
@@ -102,6 +107,32 @@ class DriverBase(eqx.Module, ABC):
             Updated reservoir state, (shape=(res_dim,)).
         """
         return self.advance(proj_vars, res_state)
+
+    def _par_call(self, proj_vars: Array, res_state: Array) -> Array:
+        """Advance the parallel reservoir given projected inputs and current state.
+
+        Parameters
+        ----------
+        proj_vars : Array
+            Projected inputs to reservoir.
+        res_state : Array
+            Initial reservoir state.
+
+        Returns
+        -------
+        Array
+            Updated reservoir state.
+        """
+        if len(proj_vars.shape) == 2:
+            to_ret = self.advance(proj_vars, res_state)
+        elif len(proj_vars.shape) == 3:
+            to_ret = self.batch_advance(proj_vars, res_state)
+        else:
+            raise ValueError(
+                "Only 1-dimensional localization is currently supported, detected a "
+                f"{len(proj_vars.shape)}D field."
+            )
+        return to_ret
 
 
 class ESNDriver(DriverBase):
@@ -327,13 +358,186 @@ class ESNDriver(DriverBase):
             Sequence of reservoir states, (shape=(chunks, res_dim,) or
             shape=(seq_len, chunks, res_dim)).
         """
-        if len(proj_vars.shape) == 2:
-            to_ret = self.advance(proj_vars, res_state)
-        elif len(proj_vars.shape) == 3:
-            to_ret = self.batch_advance(proj_vars, res_state)
-        else:
-            raise ValueError(
-                "Only 1-dimensional localization is currently supported, detected a "
-                f"{len(proj_vars.shape)}D field."
+        return self._par_call(proj_vars, res_state)
+
+
+class _ParGRUCell(eqx.Module):
+    """Parallel GRU cell implementation for reservoir computing.
+
+    Attributes
+    ----------
+    input_size : int
+        Input dimension size.
+    hidden_size : int
+        Hidden state dimension size.
+    chunks : int
+        Number of parallel GRU cells.
+    weight_ih : Array
+        Input-to-hidden weights, (shape=(chunks, 3 * hidden_size, input_size)).
+    weight_hh : Array
+        Hidden-to-hidden weights, (shape=(chunks, 3 * hidden_size, hidden_size)).
+    bias : Array | None
+        Input gate biases, (shape=(chunks, 3 * hidden_size)).
+    bias_n : Array | None
+        New gate biases, (shape=(chunks, hidden_size)).
+    use_bias : bool
+        Whether to use bias parameters.
+    dtype : Float
+        Dtype, default jnp.float64.
+
+    Methods
+    -------
+    __call__(input, hidden)
+        Apply GRU cell computation to inputs and hidden states.
+    """
+
+    input_size: int
+    hidden_size: int
+    chunks: int
+    weight_ih: Array
+    weight_hh: Array
+    bias: Array | None
+    bias_n: Array | None
+    use_bias: bool = True
+    dtype: Float = jnp.float64
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        chunks: int,
+        use_bias: bool = True,
+        *,
+        seed: int,
+        dtype: Float = jnp.float64,
+    ):
+        key = jax.random.key(seed)
+        ihkey, hhkey, bkey, bkey2 = jax.random.split(key, 4)
+        lim = jnp.sqrt(1 / hidden_size)
+
+        ihshape = (chunks, 3 * hidden_size, input_size)
+        self.weight_ih = default_init(ihkey, ihshape, dtype, lim)
+        hhshape = (chunks, 3 * hidden_size, hidden_size)
+        self.weight_hh = default_init(hhkey, hhshape, dtype, lim)
+        if use_bias:
+            self.bias = default_init(
+                bkey,
+                (
+                    chunks,
+                    3 * hidden_size,
+                ),
+                dtype,
+                lim,
             )
-        return to_ret
+            self.bias_n = default_init(
+                bkey2,
+                (
+                    chunks,
+                    hidden_size,
+                ),
+                dtype,
+                lim,
+            )
+        else:
+            self.bias = None
+            self.bias_n = None
+
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.use_bias = use_bias
+        self.dtype = dtype
+        self.chunks = chunks
+
+    @eqx.filter_jit
+    @eqx.filter_vmap
+    def __call__(self, input_state: Array, hidden_state: Array):
+        """Logic for advancing parallel GRU states."""
+        if self.use_bias:
+            bias = self.bias
+            bias_n = self.bias_n
+        else:
+            bias = 0
+            bias_n = 0
+        igates = jnp.split(self.weight_ih @ input_state + bias, 3)
+        hgates = jnp.split(self.weight_hh @ hidden_state, 3)
+        reset = jax.nn.sigmoid(igates[0] + hgates[0])
+        inp = jax.nn.sigmoid(igates[1] + hgates[1])
+        new = jax.nn.tanh(igates[2] + reset * (hgates[2] + bias_n))
+        return new + inp * (hidden_state - new)
+
+
+class GRUDriver(DriverBase):
+    """GRU-based reservoir driver.
+
+    Attributes
+    ----------
+    res_dim : int
+        Reservoir dimension.
+    gru : _ParGRUCell
+        Parallel GRU cell module.
+    chunks : int
+        Number of parallel reservoirs.
+    dtype : Float
+        Dtype, default jnp.float64.
+
+    Methods
+    -------
+    advance(res_state, in_state)
+        Updated reservoir state using GRU dynamics.
+    __call__(res_state, in_state)
+        Batched or single update to reservoir state.
+    """
+
+    gru: _ParGRUCell
+    chunks: int
+
+    def __init__(
+        self,
+        res_dim,
+        chunks,
+        seed=0,
+        *,
+        use_bias=True,
+    ):
+        super().__init__(res_dim=res_dim)
+        self.gru = _ParGRUCell(res_dim, res_dim, chunks, use_bias=use_bias, seed=seed)
+        self.chunks = chunks
+
+    def advance(self, res_state, in_state):
+        """Advance reservoir state.
+
+        Parameters
+        ----------
+        proj_vars : Array
+            Reservoir projected inputs, (shape=(chunks, res_dim).
+        res_state : Array
+            Current reservoir state, (shape=(chunks, res_dim).
+
+        Returns
+        -------
+        Array
+            Sequence of reservoir states, (shape=(chunks, res_dim,) or
+            shape=(seq_len, chunks, res_dim)).
+        """
+        return self.gru(in_state, res_state)
+
+    @eqx.filter_jit
+    def __call__(self, proj_vars: Array, res_state: Array) -> Array:
+        """Advance reservoir state.
+
+        Parameters
+        ----------
+        proj_vars : Array
+            Reservoir projected inputs, (shape=(chunks, res_dim) or
+            shape=(seq_len, chunks, res_dim)).
+        res_state : Array
+            Current reservoir state, (shape=(chunks, res_dim) or
+            shape=(seq_len, chunks, res_dim)).
+
+        Returns
+        -------
+        Array
+            Sequence of reservoir states, (shape=(chunks, res_dim,) or
+            shape=(seq_len, chunks, res_dim)).
+        """
+        return self._par_call(proj_vars, res_state)
