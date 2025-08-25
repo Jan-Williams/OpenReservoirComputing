@@ -110,7 +110,7 @@ class ESNForecaster(RCForecasterBase):
         key_driver, key_readout, key_embedding = jax.random.split(key, 3)
 
         # init in embedding, driver and readout
-        embedding = LinearEmbedding(
+        embedding = LinearEmbedding(    ## NOA - get W_in
             in_dim=data_dim,
             res_dim=res_dim,
             seed=key_embedding[0],
@@ -119,7 +119,7 @@ class ESNForecaster(RCForecasterBase):
             locality=locality,
             periodic=periodic,
         )
-        driver = ESNDriver(
+        driver = ESNDriver(         ## NOA - get W
             res_dim=res_dim,
             seed=key_driver[0],
             leak=leak_rate,
@@ -135,7 +135,7 @@ class ESNForecaster(RCForecasterBase):
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
         else:
-            readout = LinearReadout(
+            readout = LinearReadout(    ## NOA - get init W_out (zeros)
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
 
@@ -356,14 +356,14 @@ def train_ESNForecaster(
         tot_seq = jnp.vstack((train_seq, target_seq[-1:]))
 
 
-    tot_res_seq = model.force(tot_seq, initial_res_state)
+    tot_res_seq = model.force(tot_seq, initial_res_state)       ## NOA - drive states through reservoir
     res_seq = tot_res_seq[:-1]
     if isinstance(model.readout, NonlinearReadout):
         res_seq_train = eqx.filter_vmap(model.readout.nonlinear_transform)(res_seq)
     else:
         res_seq_train = res_seq
 
-    cmat = _solve_all_ridge_reg(
+    cmat = _solve_all_ridge_reg(        ## NOA - find W_out (using Solution to ridge regression: cmat @ res_seq = target_seq)
         res_seq_train[spinup:],
         target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1),
         beta,
