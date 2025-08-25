@@ -295,8 +295,50 @@ class CESNForecaster(CRCForecasterBase):
         )
         self.chunks = chunks
 
-# vmap ridge regression solver for parallel RC cases
 _solve_all_ridge_reg = eqx.filter_vmap(ridge_regression, in_axes=eqx.if_array(1))
+
+
+def _solve_all_ridge_reg_batched(
+    res_seq_train: Array, target_seq: Array, beta: float, batch_size: int
+) -> Array:
+    """Solve ridge regression for all parallel reservoirs using batched vmap.
+
+    This function processes the parallel reservoirs in batches to reduce memory
+    usage for large numbers of parallel reservoirs.
+
+    Parameters
+    ----------
+    res_seq_train : Array
+        Training reservoir states, shape=(seq_len, chunks, res_dim).
+    target_seq : Array
+        Target sequence, shape=(seq_len, chunks, out_dim).
+    beta : float
+        Tikhonov regularization parameter.
+    batch_size : int
+        Number of parallel reservoirs to process in each batch.
+
+    Returns
+    -------
+    Array
+        Ridge regression solution for all chunks, shape=(chunks, out_dim, res_dim).
+    """
+    chunks = res_seq_train.shape[1]
+
+    if batch_size >= chunks:
+        return _solve_all_ridge_reg(res_seq_train, target_seq, beta)
+
+    results = []
+    for i in range(0, chunks, batch_size):
+        end_idx = min(i + batch_size, chunks)
+        batch_res = res_seq_train[:, i:end_idx, :]
+        batch_target = target_seq[:, i:end_idx, :]
+
+        batch_vmap = eqx.filter_vmap(ridge_regression, in_axes=eqx.if_array(1))
+        batch_result = batch_vmap(batch_res, batch_target, beta)
+        results.append(batch_result)
+
+    return jnp.concatenate(results, axis=0)
+
 
 def train_ESNForecaster(
     model: ESNForecaster,
@@ -305,6 +347,7 @@ def train_ESNForecaster(
     spinup: int = 0,
     initial_res_state: Array = None,
     beta: float = 8e-8,
+    batch_size: int = None,
 ) -> tuple[ESNForecaster, Array]:
     """Training function for ESNForecaster.
 
@@ -322,6 +365,10 @@ def train_ESNForecaster(
         Initial transient of reservoir states to discard.
     beta : float
         Tikhonov regularization parameter.
+    batch_size : int, optional
+        Number of parallel reservoirs to process in each batch for ridge regression.
+        If None (default), processes all reservoirs at once. Use smaller values
+        to reduce memory usage for large numbers of parallel reservoirs.
 
     Returns
     -------
@@ -356,14 +403,14 @@ def train_ESNForecaster(
         tot_seq = jnp.vstack((train_seq, target_seq[-1:]))
 
 
-    tot_res_seq = model.force(tot_seq, initial_res_state)       ## NOA - drive states through reservoir
+    tot_res_seq = model.force(tot_seq, initial_res_state)
     res_seq = tot_res_seq[:-1]
     if isinstance(model.readout, NonlinearReadout):
         res_seq_train = eqx.filter_vmap(model.readout.nonlinear_transform)(res_seq)
     else:
         res_seq_train = res_seq
 
-    cmat = _solve_all_ridge_reg(        ## NOA - find W_out (using Solution to ridge regression: cmat @ res_seq = target_seq)
+    cmat = _solve_all_ridge_reg(
         res_seq_train[spinup:],
         target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1),
         beta,
@@ -385,6 +432,7 @@ def train_CESNForecaster(
     spinup: int = 0,
     initial_res_state: Array = None,
     beta: float = 8e-8,
+    batch_size: int = None,
 ) -> tuple[CESNForecaster, Array]:
     """Training function for CESNForecaster.
 
@@ -404,6 +452,10 @@ def train_CESNForecaster(
         Initial transient of reservoir states to discard.
     beta : float
         Tikhonov regularization parameter.
+    batch_size : int, optional
+        Number of parallel reservoirs to process in each batch for ridge regression.
+        If None (default), processes all reservoirs at once. Use smaller values
+        to reduce memory usage for large numbers of parallel reservoirs.
 
     Returns
     -------
@@ -449,11 +501,23 @@ def train_CESNForecaster(
     else:
         res_seq_train = res_seq
 
-    cmat = _solve_all_ridge_reg(
-        res_seq_train[spinup:],
-        target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1),
-        beta,
-    )
+    if batch_size is None:
+        cmat = _solve_all_ridge_reg(
+            res_seq_train[spinup:],
+            target_seq[spinup:].reshape(
+                res_seq[spinup:].shape[0], res_seq.shape[1], -1
+            ),
+            beta,
+        )
+    else:
+        cmat = _solve_all_ridge_reg_batched(
+            res_seq_train[spinup:],
+            target_seq[spinup:].reshape(
+                res_seq[spinup:].shape[0], res_seq.shape[1], -1
+            ),
+            beta,
+            batch_size,
+        )
 
     def where(m):
         return m.readout.wout
