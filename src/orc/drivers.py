@@ -163,7 +163,6 @@ class ESNDriver(DriverBase):
         *,
         seed: int,
         use_sparse_eigs: bool = True,
-        eigenval_batch_size: int = None,
     ) -> None:
         """Initialize weight matrices.
 
@@ -193,9 +192,6 @@ class ESNDriver(DriverBase):
             Whether to use sparse eigensolver for setting the spectral radius of wr.
             Default is True, which is recommended to save memory and compute time. If
             False, will use dense eigensolver which may be more accurate.
-        eigenval_batch_size : int
-            Size of batches when batch_eigenvals. Default is None, which means no
-            batch eigenvalue computation.
         """
         super().__init__(res_dim=res_dim, dtype=dtype)
         self.res_dim = res_dim
@@ -237,33 +233,11 @@ class ESNDriver(DriverBase):
             dtype=dtype,
             generator=jax.random.normal,
         )
-
-        # Compute eigenvalues - batch if requested to avoid memory issues
-        if eigenval_batch_size is not None:
-            batch_size = min(eigenval_batch_size, chunks)
-            eigs_list = []
-
-            for i in range(0, chunks, batch_size):
-                end_idx = min(i + batch_size, chunks)
-                batch_sp_mat = sp_mat[i:end_idx]
-
-                if use_sparse_eigs:
-                    batch_eigs = jnp.abs(jax.vmap(max_eig_arnoldi)(batch_sp_mat))
-                else:
-                    batch_dense_mat = sparse.bcoo_todense(batch_sp_mat)
-                    batch_eigs = jnp.max(
-                        jnp.abs(jnp.linalg.eigvals(batch_dense_mat)), axis=1
-                    )
-
-                eigs_list.append(batch_eigs)
-
-            eigs = jnp.concatenate(eigs_list, axis=0)
+        if use_sparse_eigs:
+            eigs = jnp.abs(jax.vmap(max_eig_arnoldi)(sp_mat))
         else:
-            if use_sparse_eigs:
-                eigs = jnp.abs(jax.vmap(max_eig_arnoldi)(sp_mat))
-            else:
-                dense_mat = sparse.bcoo_todense(sp_mat)
-                eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(dense_mat)), axis=1)
+            dense_mat = sparse.bcoo_todense(sp_mat)
+            eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(dense_mat)), axis=1)
         self.wr = spectral_radius * (sp_mat / eigs[:, None, None])
         self.chunks = chunks
         self.dtype = dtype
