@@ -295,8 +295,12 @@ def test_forecast_from_IC_CESN(dummy_problem_params):
     U_pred1 = esn.forecast(ts=ts_test, res_state=R[-1])
     U_pred2 = esn.forecast_from_IC(ts=ts_test, spinup_data=U_train)
     max_diff = jnp.max(jnp.abs(U_pred1 - U_pred2))
-    # Very large tolerance comes from fact that forcing CESN on GPU is nondeterministic
-    assert jnp.allclose(U_pred1, U_pred2, atol=1e-1), (
+
+    # Very large tolerance because forcing is non-deterministic on GPU
+    from jax.lib import xla_bridge
+    tol = 1e-1 if xla_bridge.get_backend().platform == "gpu" else 1e-12
+
+    assert jnp.allclose(U_pred1, U_pred2, atol=tol), (
         f"Forecast from IC produced different values, max diff: {max_diff}"
     )
 
@@ -367,10 +371,13 @@ def test_esn_batched_vmap_equivalence(dummy_problem_params):
         esn, U_train[:100], batch_size=4
     )
 
+    # Large tolerance because forcing is non-deterministic on GPU
+    from jax.lib import xla_bridge
+    tol = 1e-5 if xla_bridge.get_backend().platform == "gpu" else 1e-12
+
     # Results should be identical
-    # Large tolerance because force is non-deterministic on GPU
-    assert jnp.allclose(esn_unbatched.readout.wout, esn_batched.readout.wout, atol=1e-5)
-    assert jnp.allclose(R_unbatched, R_batched, atol=1e-5)
+    assert jnp.allclose(esn_unbatched.readout.wout, esn_batched.readout.wout, atol=tol)
+    assert jnp.allclose(R_unbatched, R_batched, atol=tol)
 
 
 def test_cesn_batched_vmap_equivalence(dummy_problem_params):
@@ -394,12 +401,15 @@ def test_cesn_batched_vmap_equivalence(dummy_problem_params):
         cesn, U_train[:100], t_train, batch_size=3
     )
 
+    # Large tolerance because forcing is non-deterministic on GPU
+    from jax.lib import xla_bridge
+    tol = 1e-5 if xla_bridge.get_backend().platform == "gpu" else 1e-12
+
     # Results should be identical
-    # Large tolerance because force is non-deterministic on GPU
     assert jnp.allclose(
-        cesn_unbatched.readout.wout, cesn_batched.readout.wout, atol=1e-5
+        cesn_unbatched.readout.wout, cesn_batched.readout.wout, atol=tol
     )
-    assert jnp.allclose(R_unbatched, R_batched, atol=1e-5)
+    assert jnp.allclose(R_unbatched, R_batched, atol=tol)
 
 
 def test_batched_vmap_different_batch_sizes():
