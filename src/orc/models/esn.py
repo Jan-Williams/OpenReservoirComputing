@@ -10,7 +10,10 @@ from orc.drivers import ESNDriver
 from orc.embeddings import LinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
 from orc.readouts import LinearReadout, NonlinearReadout, QuadraticReadout
-from orc.utils.regressions import ridge_regression
+from orc.utils.regressions import (
+    _solve_all_ridge_reg,
+    _solve_all_ridge_reg_batched,
+)
 
 jax.config.update("jax_enable_x64", True)
 
@@ -280,9 +283,9 @@ class CESNForecaster(CRCForecasterBase):
         if solver is None:
             solver = diffrax.Tsit5()
         if stepsize_controller is None:
-            stepsize_controller = diffrax.PIDController(rtol=1e-3,
-                                                        atol=1e-6,
-                                                        icoeff=1.0)
+            stepsize_controller = diffrax.PIDController(
+                rtol=1e-3, atol=1e-6, icoeff=1.0
+            )
 
         super().__init__(
             driver=driver,
@@ -294,50 +297,6 @@ class CESNForecaster(CRCForecasterBase):
             stepsize_controller=stepsize_controller,
         )
         self.chunks = chunks
-
-_solve_all_ridge_reg = eqx.filter_vmap(ridge_regression, in_axes=eqx.if_array(1))
-
-
-def _solve_all_ridge_reg_batched(
-    res_seq_train: Array, target_seq: Array, beta: float, batch_size: int
-) -> Array:
-    """Solve ridge regression for all parallel reservoirs using batched vmap.
-
-    This function processes the parallel reservoirs in batches to reduce memory
-    usage for large numbers of parallel reservoirs.
-
-    Parameters
-    ----------
-    res_seq_train : Array
-        Training reservoir states, shape=(seq_len, chunks, res_dim).
-    target_seq : Array
-        Target sequence, shape=(seq_len, chunks, out_dim).
-    beta : float
-        Tikhonov regularization parameter.
-    batch_size : int
-        Number of parallel reservoirs to process in each batch.
-
-    Returns
-    -------
-    Array
-        Ridge regression solution for all chunks, shape=(chunks, out_dim, res_dim).
-    """
-    chunks = res_seq_train.shape[1]
-
-    if batch_size >= chunks:
-        return _solve_all_ridge_reg(res_seq_train, target_seq, beta)
-
-    results = []
-    for i in range(0, chunks, batch_size):
-        end_idx = min(i + batch_size, chunks)
-        batch_res = res_seq_train[:, i:end_idx, :]
-        batch_target = target_seq[:, i:end_idx, :]
-
-        batch_vmap = eqx.filter_vmap(ridge_regression, in_axes=eqx.if_array(1))
-        batch_result = batch_vmap(batch_res, batch_target, beta)
-        results.append(batch_result)
-
-    return jnp.concatenate(results, axis=0)
 
 
 def train_ESNForecaster(
@@ -384,7 +343,8 @@ def train_ESNForecaster(
     # check that spinup is less than the length of the training sequence
     if spinup >= train_seq.shape[0]:
         raise ValueError(
-            "spinup must be less than the length of the training sequence.")
+            "spinup must be less than the length of the training sequence."
+        )
 
     if initial_res_state is None:
         initial_res_state = jnp.zeros(
@@ -486,7 +446,8 @@ def train_CESNForecaster(
     # check that spinup is less than the length of the training sequence
     if spinup >= train_seq.shape[0]:
         raise ValueError(
-            "spinup must be less than the length of the training sequence.")
+            "spinup must be less than the length of the training sequence."
+        )
 
     if initial_res_state is None:
         initial_res_state = jnp.zeros(
@@ -503,7 +464,6 @@ def train_CESNForecaster(
         train_seq = train_seq[:-1, :]
     else:
         tot_seq = jnp.vstack((train_seq, target_seq[-1:]))
-
 
     tot_res_seq = model.force(tot_seq, initial_res_state, ts=t_train)
     res_seq = tot_res_seq[:-1]
