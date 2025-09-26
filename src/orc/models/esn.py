@@ -113,7 +113,7 @@ class ESNForecaster(RCForecasterBase):
         key_driver, key_readout, key_embedding = jax.random.split(key, 3)
 
         # init in embedding, driver and readout
-        embedding = LinearEmbedding(
+        embedding = LinearEmbedding(    ## NOA - get W_in
             in_dim=data_dim,
             res_dim=res_dim,
             seed=key_embedding[0],
@@ -122,7 +122,7 @@ class ESNForecaster(RCForecasterBase):
             locality=locality,
             periodic=periodic,
         )
-        driver = ESNDriver(
+        driver = ESNDriver(         ## NOA - get W
             res_dim=res_dim,
             seed=key_driver[0],
             leak=leak_rate,
@@ -138,7 +138,7 @@ class ESNForecaster(RCForecasterBase):
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
         else:
-            readout = LinearReadout(
+            readout = LinearReadout(    ## NOA - get init W_out (zeros)
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
 
@@ -362,6 +362,7 @@ def train_ESNForecaster(
     else:
         tot_seq = jnp.vstack((train_seq, target_seq[-1:]))
 
+
     tot_res_seq = model.force(tot_seq, initial_res_state)
     res_seq = tot_res_seq[:-1]
     if isinstance(model.readout, NonlinearReadout):
@@ -369,23 +370,11 @@ def train_ESNForecaster(
     else:
         res_seq_train = res_seq
 
-    if batch_size is None:
-        cmat = _solve_all_ridge_reg(
-            res_seq_train[spinup:],
-            target_seq[spinup:].reshape(
-                res_seq[spinup:].shape[0], res_seq.shape[1], -1
-            ),
-            beta,
-        )
-    else:
-        cmat = _solve_all_ridge_reg_batched(
-            res_seq_train[spinup:],
-            target_seq[spinup:].reshape(
-                res_seq[spinup:].shape[0], res_seq.shape[1], -1
-            ),
-            beta,
-            batch_size,
-        )
+    cmat = _solve_all_ridge_reg(
+        res_seq_train[spinup:],
+        target_seq[spinup:].reshape(res_seq[spinup:].shape[0], res_seq.shape[1], -1),
+        beta,
+    )
 
     def where(m):
         return m.readout.wout

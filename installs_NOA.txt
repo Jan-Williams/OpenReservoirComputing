@@ -1,0 +1,24 @@
+##install packages for a specific Python 3.11:
+
+python3.11 -m pip install <package_name>
+
+
+##works even if <command> isn’t on your PATH:
+
+python -m <command>
+
+
+
+##create new miniconda environment:
+
+conda create -n <env_name> python=3.11
+
+
+##activate miniconda environment:
+
+conda activate <env_name>
+
+
+##install packages in conda (after activating the environment):
+conda install <package_name>
+

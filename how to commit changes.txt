@@ -1,0 +1,58 @@
+0. activate miniconda environment ("myenv"):
+conda activate myenv
+
+
+1. go to directory:
+cd C:\Users\nk675\Documents\GitHub\OpenReservoirComputing
+
+
+2. run tests locally - in cmd:
+pytest
+ruff check <relative_path_to_file_in_OpenReservoirComputing>.py
+
+2. run tests locally - in vscode (with miniconda virtual environment):
+....
+
+
+3. repeat tests until all tests pass
+
+
+4. go to path:
+cd C:\Users\nk675\Documents\GitHub\OpenReservoirComputing
+
+
+5. switch to branch - if new branch:
+git checkout main
+git pull
+git checkout -b <new_branch_name>
+
+5. switch to branch - if existing branch:
+git checkout <existing_branch_name>
+
+
+6. stage changes - in vscode:
+ -->> Source control (Ctrl+Shift+G)
+ -->> press "+" by files with changes to commit
+ -->> in "Message" write a short summary of changes 
+ -->> press "Commit"
+
+6. stage changes - in cmd:
+git add <changed_file_name>.py
+
+
+7. push - if new branch:
+git push origin <new_branch_name>
+
+7. push - if existing branch:
+git push
+
+
+8. pull - in GitHub browser:
+ -->> go to "Pull request" tab
+ -->> press "New Pull request"
+ -->> choose the base branch to commit to (left): usually "main". choose the compare branch to commit (right): <branch_name>
+ -->> title + description of change
+ -->> press "Create pull request"
+
+
+
