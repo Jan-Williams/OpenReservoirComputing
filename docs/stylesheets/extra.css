@@ -37,3 +37,36 @@
 p .MathJax {
   line-height: 1;
 }
+
+/* Custom banner/header colors for light and dark modes */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: #82a457;
+  --md-primary-fg-color--light: #9bb56c;
+  --md-primary-fg-color--dark: #6d8a47;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #072c24;
+  --md-primary-fg-color--light: #0a3d33;
+  --md-primary-fg-color--dark: #051f1a;
+}
+
+/* Custom hyperlink colors for both light and dark modes */
+[data-md-color-scheme="default"] {
+  --md-accent-fg-color: #82a457;
+  --md-accent-fg-color--transparent: #82a45710;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-accent-fg-color: #82a457;
+  --md-accent-fg-color--transparent: #82a45710;
+}
+
+/* Additional hyperlink styling to ensure visibility */
+.md-content a {
+  color: #82a457 !important;
+}
+
+.md-content a:hover {
+  color: #9bb56c !important;
+}
