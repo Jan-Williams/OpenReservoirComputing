@@ -11,14 +11,14 @@ theme:
   palette:
     # Palette toggle for light mode
     - scheme: default
-      primary: blue
+      primary: custom
       accent: blue
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     # Palette toggle for dark mode
     - scheme: slate
-      primary: blue
+      primary: custom
       accent: blue
       toggle:
         icon: material/brightness-4
@@ -102,23 +102,23 @@ extra_files:
 nav:
   - Home: index.md
   - Getting Started:
-    - Installation: getting-started/installation.md
-    - Quick Start: getting-started/quickstart.md
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
   - User Guide:
-    - Overview: user-guide/overview.md
-    - Drivers: user-guide/drivers.md
-    - Embeddings: user-guide/embeddings.md
-    - Readouts: user-guide/readouts.md
-    - Models: user-guide/models.md
+      - Overview: user-guide/overview.md
+      - Drivers: user-guide/drivers.md
+      - Embeddings: user-guide/embeddings.md
+      - Readouts: user-guide/readouts.md
+      - Models: user-guide/models.md
   - Examples:
-    - Lorenz System: examples/lorenz.ipynb
-    - RC Background: examples/rc_background.ipynb
+      - Lorenz System: examples/lorenz.ipynb
+      - RC Background: examples/rc_background.ipynb
   - API Reference:
-    - Models: api/models.md
-    - RC Base Classes: api/rc.md
-    - Drivers: api/drivers.md
-    - Embeddings: api/embeddings.md
-    - Readouts: api/readouts.md
-    - Data: api/data.md
-    - Utils: api/utils.md
+      - Models: api/models.md
+      - RC Base Classes: api/rc.md
+      - Drivers: api/drivers.md
+      - Embeddings: api/embeddings.md
+      - Readouts: api/readouts.md
+      - Data: api/data.md
+      - Utils: api/utils.md
   - Contributing: contributing.md
