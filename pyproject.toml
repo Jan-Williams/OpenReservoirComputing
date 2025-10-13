@@ -11,13 +11,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "OpenReservoirComputing"
 authors = [
-    { name = "Dima Tretiak", email = "dtretiak@uw.edu" },
     { name = "Jan P. Williams", email = "jmpw1@uw.edu" },
+    { name = "Dima Tretiak", email = "dtretiak@uw.edu" },
 ]
 
 maintainers = [
-    { name = "Dima Tretiak", email = "dtretiak@uw.edu" },
     { name = "Jan P. Williams", email = "jmpw1@uw.edu" },
+    { name = "Dima Tretiak", email = "dtretiak@uw.edu" },
 ]
 
 description = "GPU accelerated implementations of common RC architectures"
@@ -44,7 +44,7 @@ classifiers = [
 
 
 [project.urls]
-Repository = "https://github.com/dtretiak/OpenReservoirComputing"
+Repository = "https://github.com/Jan-Williams/OpenReservoirComputing"
 
 [tool.setuptools_scm]
 
