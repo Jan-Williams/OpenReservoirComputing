@@ -298,7 +298,7 @@ def test_forecast_from_IC_CESN(dummy_problem_params):
 
     # Very large tolerance because forcing is non-deterministic on GPU
     from jax.lib import xla_bridge
-    tol = 1e-1 if xla_bridge.get_backend().platform == "gpu" else 1e-12
+    tol = 1e-1 if jax.extend.backend.get_backend().platform == "gpu" else 1e-12
 
     assert jnp.allclose(U_pred1, U_pred2, atol=tol), (
         f"Forecast from IC produced different values, max diff: {max_diff}"
@@ -373,7 +373,7 @@ def test_esn_batched_vmap_equivalence(dummy_problem_params):
 
     # Large tolerance because forcing is non-deterministic on GPU
     from jax.lib import xla_bridge
-    tol = 1e-5 if xla_bridge.get_backend().platform == "gpu" else 1e-12
+    tol = 1e-5 if jax.extend.backend.get_backend().platform == "gpu" else 1e-12
 
     # Results should be identical
     assert jnp.allclose(esn_unbatched.readout.wout, esn_batched.readout.wout, atol=tol)
@@ -403,7 +403,7 @@ def test_cesn_batched_vmap_equivalence(dummy_problem_params):
 
     # Large tolerance because forcing is non-deterministic on GPU
     from jax.lib import xla_bridge
-    tol = 1e-5 if xla_bridge.get_backend().platform == "gpu" else 1e-12
+    tol = 1e-5 if jax.extend.backend.get_backend().platform == "gpu" else 1e-12
 
     # Results should be identical
     assert jnp.allclose(
