@@ -326,6 +326,7 @@ def _spec_rad_normalization(
     use_sparse_eigs: bool = True,
     chunks: int = 1,
 ):
+    """Spectral radius normalization for jax sparse bcoo matrices with dim 0 batch."""
     if eigenval_batch_size is not None:
         batch_size = min(eigenval_batch_size, chunks)
         eigs_list = []
