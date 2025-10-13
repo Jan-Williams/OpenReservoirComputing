@@ -238,33 +238,13 @@ class ESNDriver(DriverBase):
             generator=jax.random.normal,
         )
 
-        # Compute eigenvalues - batch if requested to avoid memory issues
-        if eigenval_batch_size is not None:
-            batch_size = min(eigenval_batch_size, chunks)
-            eigs_list = []
-
-            for i in range(0, chunks, batch_size):
-                end_idx = min(i + batch_size, chunks)
-                batch_sp_mat = sp_mat[i:end_idx]
-
-                if use_sparse_eigs:
-                    batch_eigs = jnp.abs(jax.vmap(max_eig_arnoldi)(batch_sp_mat))
-                else:
-                    batch_dense_mat = sparse.bcoo_todense(batch_sp_mat)
-                    batch_eigs = jnp.max(
-                        jnp.abs(jnp.linalg.eigvals(batch_dense_mat)), axis=1
-                    )
-
-                eigs_list.append(batch_eigs)
-
-            eigs = jnp.concatenate(eigs_list, axis=0)
-        else:
-            if use_sparse_eigs:
-                eigs = jnp.abs(jax.vmap(max_eig_arnoldi)(sp_mat))
-            else:
-                dense_mat = sparse.bcoo_todense(sp_mat)
-                eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(dense_mat)), axis=1)
-        self.wr = spectral_radius * (sp_mat / eigs[:, None, None])
+        self.wr = _spec_rad_normalization(
+            sp_mat,
+            spectral_radius=spectral_radius,
+            eigenval_batch_size=eigenval_batch_size,
+            use_sparse_eigs=use_sparse_eigs,
+            chunks=chunks,
+        )
         self.chunks = chunks
         self.dtype = dtype
 
@@ -289,25 +269,18 @@ class ESNDriver(DriverBase):
         if self.mode == "continuous":
             return self.time_const * (
                 -res_state
-                + self.sparse_ops(
+                + _sparse_ops(
                     self.wr, res_state, proj_vars, self.bias * jnp.ones_like(proj_vars)
                 )
             )
         else:
             return (
                 self.leak
-                * self.sparse_ops(
+                * _sparse_ops(
                     self.wr, res_state, proj_vars, self.bias * jnp.ones_like(proj_vars)
                 )
                 + (1 - self.leak) * res_state
             )
-
-    @staticmethod
-    @sparse.sparsify
-    @jax.vmap
-    def sparse_ops(wr, res_state, proj_vars, bias):
-        """Dense operation to sparsify for advancing reservoir."""
-        return jnp.tanh(wr @ res_state + proj_vars + bias)
 
     def __call__(self, proj_vars: Array, res_state: Array) -> Array:
         """Advance reservoir state.
@@ -337,3 +310,46 @@ class ESNDriver(DriverBase):
                 f"{len(proj_vars.shape)}D field."
             )
         return to_ret
+
+
+@sparse.sparsify
+@jax.vmap
+def _sparse_ops(wr: Array, res_state: Array, proj_vars: Array, bias: Array):
+    """Dense operation to sparsify for advancing reservoir."""
+    return jnp.tanh(wr @ res_state + proj_vars + bias)
+
+
+def _spec_rad_normalization(
+    sp_mat: Array,
+    spectral_radius: float,
+    eigenval_batch_size: int | None = None,
+    use_sparse_eigs: bool = True,
+    chunks: int = 1,
+):
+    if eigenval_batch_size is not None:
+        batch_size = min(eigenval_batch_size, chunks)
+        eigs_list = []
+
+        for i in range(0, chunks, batch_size):
+            end_idx = min(i + batch_size, chunks)
+            batch_sp_mat = sp_mat[i:end_idx]
+
+            if use_sparse_eigs:
+                batch_eigs = jnp.abs(jax.vmap(max_eig_arnoldi)(batch_sp_mat))
+            else:
+                batch_dense_mat = sparse.bcoo_todense(batch_sp_mat)
+                batch_eigs = jnp.max(
+                    jnp.abs(jnp.linalg.eigvals(batch_dense_mat)), axis=1
+                )
+
+            eigs_list.append(batch_eigs)
+
+        eigs = jnp.concatenate(eigs_list, axis=0)
+    else:
+        if use_sparse_eigs:
+            eigs = jnp.abs(jax.vmap(max_eig_arnoldi)(sp_mat))
+        else:
+            dense_mat = sparse.bcoo_todense(sp_mat)
+            eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(dense_mat)), axis=1)
+    sp_mat = spectral_radius * (sp_mat / eigs[:, None, None])
+    return sp_mat
