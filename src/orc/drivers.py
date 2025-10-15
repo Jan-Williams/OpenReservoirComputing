@@ -483,7 +483,7 @@ class TaylorDriver(DriverBase):
             ],
             axis=0,
         )
-        return jnp.sum(stacked[: self.n_terms], axis=0)
+        return jnp.sum(stacked[: self.n_terms + 1], axis=0)
 
     def __call__(self, proj_vars: Array, res_state: Array) -> Array:
         """Advance reservoir state.
