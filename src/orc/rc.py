@@ -66,14 +66,14 @@ class RCForecasterBase(eqx.Module, ABC):
     seed: int = 0
 
     def __init__(
-                self,
-                driver: DriverBase,
-                readout: ReadoutBase,
-                embedding: EmbedBase,
-                chunks: int = 0,
-                dtype: Float = jnp.float64,
-                seed: int = 0
-                ) -> None:
+        self,
+        driver: DriverBase,
+        readout: ReadoutBase,
+        embedding: EmbedBase,
+        chunks: int = 0,
+        dtype: Float = jnp.float64,
+        seed: int = 0,
+    ) -> None:
         """Initialize RCForecaster Base.
 
         Parameters
@@ -237,6 +237,7 @@ class RCForecasterBase(eqx.Module, ABC):
 
         return self.forecast(fcast_len, res_seq[-1])
 
+
 class CRCForecasterBase(RCForecasterBase, ABC):
     """Base class for continuous reservoir computer forecasters.
 
@@ -285,17 +286,17 @@ class CRCForecasterBase(RCForecasterBase, ABC):
     solver: diffrax.AbstractSolver
     stepsize_controller: diffrax.AbstractAdaptiveStepSizeController
 
-    def __init__(self,
-                driver: DriverBase,
-                readout: ReadoutBase,
-                embedding: EmbedBase,
-                chunks: int = 0,
-                dtype: Float = jnp.float64,
-                seed: int = 0,
-                solver: diffrax.AbstractSolver = None,
-                stepsize_controller:
-                    diffrax.AbstractAdaptiveStepSizeController = None,
-                ):
+    def __init__(
+        self,
+        driver: DriverBase,
+        readout: ReadoutBase,
+        embedding: EmbedBase,
+        chunks: int = 0,
+        dtype: Float = jnp.float64,
+        seed: int = 0,
+        solver: diffrax.AbstractSolver = None,
+        stepsize_controller: diffrax.AbstractAdaptiveStepSizeController = None,
+    ):
         """Initialize the continuous reservoir computer.
 
         Parameters
@@ -317,20 +318,13 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         stepsize_controller : diffrax.AbstractAdaptiveStepSizeController
             Stepsize controller to use for the ODE solver.
         """
-        super().__init__(
-                        driver,
-                        readout,
-                        embedding,
-                        chunks,
-                        dtype,
-                        seed
-                        )
+        super().__init__(driver, readout, embedding, chunks, dtype, seed)
         if solver is None:
             solver = diffrax.Tsit5()
         if stepsize_controller is None:
-            stepsize_controller = diffrax.PIDController(rtol=1e-3,
-                                                        atol=1e-6,
-                                                        icoeff=1.0)
+            stepsize_controller = diffrax.PIDController(
+                rtol=1e-3, atol=1e-6, icoeff=1.0
+            )
         self.solver = solver
         self.stepsize_controller = stepsize_controller
 
@@ -359,27 +353,29 @@ class CRCForecasterBase(RCForecasterBase, ABC):
 
         # RC forced ODE definition
         @eqx.filter_jit
-        def res_ode(t,r,args):
+        def res_ode(t, r, args):
             interp = args
             proj_vars = self.embedding(interp.evaluate(t))
             return self.driver(proj_vars, r)
 
         # integrate RC
         dt0 = ts[1] - ts[0]
-        ts = ts + dt0 # roll time forward one step for targets
+        ts = ts + dt0  # roll time forward one step for targets
         term = diffrax.ODETerm(res_ode)
         args = in_seq_interp
         save_at = diffrax.SaveAt(ts=ts)
-        sol = diffrax.diffeqsolve(term,
-                                    t0=0.0,
-                                    t1=ts[-1],
-                                    dt0=dt0,
-                                    y0=res_state,
-                                    solver=self.solver,
-                                    stepsize_controller=self.stepsize_controller,
-                                    args=args,
-                                    saveat=save_at,
-                                    max_steps=None)
+        sol = diffrax.diffeqsolve(
+            term,
+            t0=0.0,
+            t1=ts[-1],
+            dt0=dt0,
+            y0=res_state,
+            solver=self.solver,
+            stepsize_controller=self.stepsize_controller,
+            args=args,
+            saveat=save_at,
+            max_steps=None,
+        )
         res_seq = sol.ys
         return res_seq
 
@@ -419,6 +415,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         Array
             Forecasted states, (shape=(fcast_len, data_dim))
         """
+
         # RC autonomous ODE definition
         @eqx.filter_jit
         def res_ode(t, r, args):
@@ -429,22 +426,24 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         dt0 = ts[1] - ts[0]
         term = diffrax.ODETerm(res_ode)
         save_at = diffrax.SaveAt(ts=ts)
-        sol = diffrax.diffeqsolve(term,
-                                    t0=0.0,
-                                    t1=ts[-1],
-                                    dt0=dt0,
-                                    y0=res_state,
-                                    solver=self.solver,
-                                    stepsize_controller=self.stepsize_controller,
-                                    saveat=save_at,
-                                    max_steps=None)
+        sol = diffrax.diffeqsolve(
+            term,
+            t0=0.0,
+            t1=ts[-1],
+            dt0=dt0,
+            y0=res_state,
+            solver=self.solver,
+            stepsize_controller=self.stepsize_controller,
+            saveat=save_at,
+            max_steps=None,
+        )
         res_seq = sol.ys
         return eqx.filter_vmap(self.readout)(res_seq)
 
     @eqx.filter_jit
-    def forecast_from_IC(self, ts:Array,
-                         spinup_data: Array,
-                         spinup_ts: Array = None) -> Array:
+    def forecast_from_IC(
+        self, ts: Array, spinup_data: Array, spinup_ts: Array = None
+    ) -> Array:
         """Forecast from a sequence of spinup data.
 
         Parameters
@@ -466,21 +465,17 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         """
         if spinup_ts is None:
             dt0 = ts[1] - ts[0]
-            spinup_ts = jnp.arange(
-                0.0, spinup_data.shape[0], dtype=self.dtype
-            ) * dt0
+            spinup_ts = jnp.arange(0.0, spinup_data.shape[0], dtype=self.dtype) * dt0
 
         if self.chunks > 0:
             res_seq = self.force(
                 spinup_data,
                 jnp.zeros((self.chunks, self.res_dim), dtype=self.dtype),
-                spinup_ts
+                spinup_ts,
             )
         elif self.chunks == 0:
             res_seq = self.force(
-                spinup_data,
-                jnp.zeros((self.res_dim), dtype=self.dtype),
-                spinup_ts
+                spinup_data, jnp.zeros((self.res_dim), dtype=self.dtype), spinup_ts
             )
         else:
             raise ValueError(f"chunks must be >= 0, but found chunks = {self.chunks}")

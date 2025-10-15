@@ -55,6 +55,7 @@ def test_param_types_linearreadout(out_dim, res_dim, dtype):
             seed=111,
         )
 
+
 def test_ravel():
     model = orc.readouts.LinearReadout(
         out_dim=3,
@@ -84,14 +85,12 @@ def test_ravel():
         == jnp.array([0, 1, 2, 10, 11, 12, 20, 21, 22, 30, 31, 32, 40, 41, 42])
     ).all()
 
+
 def test_quadratic_readout():
     readout = orc.readouts.NonlinearReadout(
-                                            out_dim=6,
-                                            res_dim=6,
-                                            nonlin_list=[lambda x: x ** 2],
-                                            chunks=1,
-                                            dtype=jnp.float64
-                                            )
+        out_dim=6, res_dim=6, nonlin_list=[lambda x: x**2], chunks=1, dtype=jnp.float64
+    )
+
     def where_mat(readout):
         return readout.wout
 
@@ -101,25 +100,19 @@ def test_quadratic_readout():
     test_out = readout(to_output)
     assert jnp.allclose(test_out, target_output)
 
+
 def test_nonlin_and_quadratic_readout():
     readout = orc.readouts.NonlinearReadout(
-                                            out_dim=6,
-                                            res_dim=6,
-                                            nonlin_list=[lambda x: x ** 2],
-                                            chunks=12,
-                                            dtype=jnp.float64
-                                            )
+        out_dim=6, res_dim=6, nonlin_list=[lambda x: x**2], chunks=12, dtype=jnp.float64
+    )
     quad_readout = orc.readouts.QuadraticReadout(
-                                                 out_dim=6,
-                                                 res_dim=6,
-                                                 chunks=12,
-                                                 dtype=jnp.float64
-                                                 )
+        out_dim=6, res_dim=6, chunks=12, dtype=jnp.float64
+    )
 
     def where_mat(readout):
         return readout.wout
 
-    random_mat = jax.random.normal(jax.random.key(0), shape=(12,6,6))
+    random_mat = jax.random.normal(jax.random.key(0), shape=(12, 6, 6))
     readout = eqx.tree_at(where_mat, readout, random_mat)
     quad_readout = eqx.tree_at(where_mat, quad_readout, random_mat)
     rand_res_state = jax.random.normal(jax.random.key(0), shape=(12, 6))

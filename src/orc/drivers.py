@@ -312,6 +312,209 @@ class ESNDriver(DriverBase):
         return to_ret
 
 
+class TaylorDriver(DriverBase):
+    """ESN driver with tanh nonlinearity, Taylor expanded.
+
+    This class defines a driver according to the Taylor series expansion of ESNDriver
+    including the first ``n_terms`` terms with the leak rate leak=0. Only discrete time
+    dynamics are supported.
+
+    Attributes
+    ----------
+    n_terms : int
+        Number of terms in Taylor series to include.
+    res_dim : int
+        Reservoir dimension.
+    wr : Array
+        Reservoir update matrix, (shape=(chunks, res_dim, res_dim,)).
+    spectral_radius : float
+        Spectral radius of wr.
+    density : float
+        Density of wr.
+    bias : float
+        Additive bias in tanh nonlinearity.
+    chunks: int
+        Number of parallel reservoirs.
+    dtype : Float
+        Dtype, default jnp.float64.
+
+    Methods
+    -------
+    advance(proj_vars, res_state)
+        Updated reservoir state.
+    advance_full(proj_vars, res_state, terms)
+        Updated reservoir state advanced according to full tanh nonlinearity.
+    __call__(proj_vars, res_state)
+        Batched or single update to reservoir state.
+    """
+
+    n_terms: int
+    res_dim: int
+    spectral_radius: float
+    density: float
+    bias: float
+    dtype: Float
+    wr: Array
+    chunks: int
+
+    def __init__(
+        self,
+        n_terms: int,
+        res_dim: int,
+        spectral_radius: float = 0.8,
+        density: float = 0.02,
+        bias: float = 1.6,
+        dtype: Float = jnp.float64,
+        chunks: int = 1,
+        *,
+        seed: int,
+        use_sparse_eigs: bool = True,
+        eigenval_batch_size: int = None,
+    ) -> None:
+        """Initialize weight matrices.
+
+        Parameters
+        ----------
+        n_terms : int
+            Number of terms to use in Taylor expansion.
+        res_dim : int
+            Reservoir dimension.
+        spectral_radius : float
+            Spectral radius of wr.
+        density : float
+            Density of wr.
+        bias : float
+            Additive bias in tanh nonlinearity.
+        chunks: int
+            Number of parallel reservoirs.
+        dtype : Float
+            Dtype, default jnp.float64.
+        seed : int
+            Random seed for generating the PRNG key for the reservoir computer.
+        use_sparse_eigs : bool
+            Whether to use sparse eigensolver for setting the spectral radius of wr.
+            Default is True, which is recommended to save memory and compute time. If
+            False, will use dense eigensolver which may be more accurate.
+        eigenval_batch_size : int
+            Size of batches when batch_eigenvals. Default is None, which means no
+            batch eigenvalue computation.
+        """
+        super().__init__(res_dim=res_dim, dtype=dtype)
+        self.n_terms = n_terms
+        self.res_dim = res_dim
+        self.spectral_radius = spectral_radius
+        self.density = density
+        self.bias = bias
+        self.dtype = dtype
+        key = jax.random.key(seed)
+        if spectral_radius <= 0:
+            raise ValueError("Spectral radius must be positive.")
+        if density < 0 or density > 1:
+            raise ValueError("Density must satisfy 0 < density < 1.")
+        if n_terms > 5:
+            raise ValueError("Taylor expansion is only supported up to 5th order.")
+        subkey, wr_key = jax.random.split(key)
+
+        # check res_dim size for eigensolver choice
+        if res_dim < 100 and use_sparse_eigs:
+            use_sparse_eigs = False
+            warnings.warn(
+                "Reservoir dimension is less than 100, using dense "
+                "eigensolver for spectral radius.",
+                stacklevel=2,
+            )
+
+        # generate all wr matricies
+        sp_mat = sparse.random_bcoo(
+            key=wr_key,
+            shape=(chunks, res_dim, res_dim),
+            n_batch=1,
+            nse=density,
+            dtype=dtype,
+            generator=jax.random.normal,
+        )
+
+        self.wr = _spec_rad_normalization(
+            sp_mat,
+            spectral_radius=spectral_radius,
+            eigenval_batch_size=eigenval_batch_size,
+            use_sparse_eigs=use_sparse_eigs,
+            chunks=chunks,
+        )
+        self.chunks = chunks
+        self.dtype = dtype
+
+    @eqx.filter_jit
+    def advance(self, proj_vars: Array, res_state: Array) -> Array:
+        """Advance the reservoir state.
+
+        Parameters
+        ----------
+        proj_vars : Array
+            Reservoir projected inputs, (shape=(chunks, res_dim,)).
+        res_state : Array
+            Reservoir state, (shape=(chunks, res_dim,)).
+
+        Returns
+        -------
+        res_next : Array
+            Reservoir state, (shape=(chunks, res_dim,)).
+        """
+        if proj_vars.shape != (self.chunks, self.res_dim):
+            raise ValueError(f"Incorrect proj_var dimension, got {proj_vars.shape}")
+
+        t = jnp.tanh(self.bias)
+        s = 1 - t**2
+        deltaz = sparse.sparsify(jax.vmap(jnp.matmul))(self.wr, res_state) + proj_vars
+        const = t * jnp.ones((self.chunks, self.res_dim), dtype=self.dtype)
+        linear_term = s * deltaz
+        quadratic_term = (t**3 - t) * deltaz**2
+        cubic_term = (-(t**4) + (4 / 3) * t**2 - (1 / 3)) * deltaz**3
+        quartic_term = (t / 3) * (3 * t**4 - 5 * t**2 + 2) * deltaz**4
+        quintic_term = (-(t**6) + 2 * t**4 - (17 / 15) * t**2 + (2 / 15)) * deltaz**5
+        stacked = jnp.stack(
+            [
+                const,
+                linear_term,
+                quadratic_term,
+                cubic_term,
+                quartic_term,
+                quintic_term,
+            ],
+            axis=0,
+        )
+        return jnp.sum(stacked[: self.n_terms], axis=0)
+
+    def __call__(self, proj_vars: Array, res_state: Array) -> Array:
+        """Advance reservoir state.
+
+        Parameters
+        ----------
+        proj_vars : Array
+            Reservoir projected inputs, (shape=(chunks, res_dim) or
+            shape=(seq_len, chunks, res_dim)).
+        res_state : Array
+            Current reservoir state, (shape=(chunks, res_dim) or
+            shape=(seq_len, chunks, res_dim)).
+
+        Returns
+        -------
+        Array
+            Sequence of reservoir states, (shape=(chunks, res_dim,) or
+            shape=(seq_len, chunks, res_dim)).
+        """
+        if len(proj_vars.shape) == 2:
+            to_ret = self.advance(proj_vars, res_state)
+        elif len(proj_vars.shape) == 3:
+            to_ret = self.batch_advance(proj_vars, res_state)
+        else:
+            raise ValueError(
+                "Only 1-dimensional localization is currently supported, detected a "
+                f"{len(proj_vars.shape)}D field."
+            )
+        return to_ret
+
+
 @sparse.sparsify
 @jax.vmap
 def _sparse_ops(wr: Array, res_state: Array, proj_vars: Array, bias: Array):
@@ -326,7 +529,7 @@ def _spec_rad_normalization(
     use_sparse_eigs: bool = True,
     chunks: int = 1,
 ):
-    """Spectral radius normalization for jax sparse bcoo matrices with dim 0 batch."""
+    """Spectral radius normalization for jax sparse.bcoo matrices with n_batch=1."""
     if eigenval_batch_size is not None:
         batch_size = min(eigenval_batch_size, chunks)
         eigs_list = []
