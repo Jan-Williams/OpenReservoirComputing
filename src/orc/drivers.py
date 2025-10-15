@@ -485,6 +485,29 @@ class TaylorDriver(DriverBase):
         )
         return jnp.sum(stacked[: self.n_terms + 1], axis=0)
 
+    @eqx.filter_jit
+    def advance_full(self, proj_vars: Array, res_state: Array) -> Array:
+        """Advance the reservoir state according to full tanh dynamics.
+
+        Parameters
+        ----------
+        proj_vars : Array
+            Reservoir projected inputs, (shape=(chunks, res_dim,)).
+        res_state : Array
+            Reservoir state, (shape=(chunks, res_dim,)).
+
+        Returns
+        -------
+        res_next : Array
+            Reservoir state, (shape=(chunks, res_dim,)).
+        """
+        if proj_vars.shape != (self.chunks, self.res_dim):
+            raise ValueError(f"Incorrect proj_var dimension, got {proj_vars.shape}")
+
+        return _sparse_ops(
+            self.wr, res_state, proj_vars, self.bias * jnp.ones_like(proj_vars)
+        )
+
     def __call__(self, proj_vars: Array, res_state: Array) -> Array:
         """Advance reservoir state.
 
