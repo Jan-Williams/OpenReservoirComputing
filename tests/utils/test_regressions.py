@@ -10,6 +10,7 @@ from orc.utils.regressions import (
 
 ATOL = 1e-5
 
+
 @pytest.fixture
 def single_regression_data():
     """Generate test data for single ridge regression."""
@@ -115,7 +116,6 @@ def test_solve_all_ridge_reg_basic(parallel_regression_data):
     expected_shape = (chunks, out_dim, res_dim)
     assert cmat_all.shape == expected_shape
 
-
     for i in range(chunks):
         cmat_single = ridge_regression(res_seq[:, i, :], target_seq[:, i, :], beta)
         assert jnp.allclose(cmat_all[i], cmat_single, atol=ATOL)
@@ -127,7 +127,6 @@ def test_solve_all_ridge_reg_accuracy(parallel_regression_data):
     beta = 1e-6
 
     cmat_all = _solve_all_ridge_reg(res_seq, target_seq, beta)
-
 
     for i in range(res_seq.shape[1]):
         reconstructed = res_seq[:, i, :] @ cmat_all[i].T
@@ -142,7 +141,6 @@ def test_batched_vs_unbatched_consistency(parallel_regression_data):
     chunks = res_seq.shape[1]
 
     cmat_unbatched = _solve_all_ridge_reg(res_seq, target_seq, beta)
-
 
     batch_sizes = [1, 3, 5, chunks // 2, chunks]
 
@@ -164,7 +162,6 @@ def test_batched_large_batch_size(parallel_regression_data):
 
     cmat_unbatched = _solve_all_ridge_reg(res_seq, target_seq, beta)
 
-
     for batch_size in [chunks, chunks + 5, chunks * 2]:
         cmat_batched = _solve_all_ridge_reg_batched(
             res_seq, target_seq, beta, batch_size
@@ -179,7 +176,6 @@ def test_batched_single_batch(parallel_regression_data):
     beta = 1e-5
 
     cmat_batched = _solve_all_ridge_reg_batched(res_seq, target_seq, beta, batch_size=1)
-
 
     for i in range(res_seq.shape[1]):
         cmat_single = ridge_regression(res_seq[:, i, :], target_seq[:, i, :], beta)
@@ -248,7 +244,6 @@ def test_high_regularization(single_regression_data):
 
     cmat = ridge_regression(res_seq, target_seq, beta)
 
-
     assert jnp.linalg.norm(cmat) < 1e-5
     assert not jnp.any(jnp.isnan(cmat))
     assert not jnp.any(jnp.isinf(cmat))
@@ -263,7 +258,6 @@ def test_ill_conditioned_matrix():
     res_seq = jnp.concatenate([base_col, base_col + noise], axis=1)
 
     target_seq = jax.random.normal(key, (100, 3))
-
 
     cmat = ridge_regression(res_seq, target_seq, beta=1e-3)
     assert not jnp.any(jnp.isnan(cmat))

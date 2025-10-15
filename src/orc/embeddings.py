@@ -107,6 +107,7 @@ class EmbedBase(eqx.Module, ABC):
         """
         return self.embed(in_state)
 
+
 class LinearEmbedding(EmbedBase):
     """Linear embedding layer.
 
