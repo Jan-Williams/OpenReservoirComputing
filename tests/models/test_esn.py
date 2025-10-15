@@ -442,5 +442,5 @@ def test_batched_vmap_different_batch_sizes():
         max_diff = jnp.max(jnp.abs(output_0 - output_i))
         assert jnp.allclose(output_0, output_i, atol=1e-8), (
             f"Batch size {batch_sizes[i]} produced different reconstruction",
-            f"max diff: {max_diff}"
+            f"max diff: {max_diff}",
         )
