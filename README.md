@@ -4,7 +4,7 @@
 
 # ORC: Open Reservoir Computing
 
-[![CI](https://github.com/dtretiak/OpenReservoirComputing/actions/workflows/tests.yml/badge.svg)](https://github.com/dtretiak/OpenReservoirComputing/actions/workflows/tests.yml)
+[![CI](https://github.com/Jan-Williams/OpenReservoirComputing/actions/workflows/tests.yml/badge.svg)](https://github.com/Jan-Williams/OpenReservoirComputing/actions/workflows/tests.yml)
 
 
 ORC is the one-stop-shop for performant reservoir computing in jax. Key high-level features include
@@ -17,7 +17,7 @@ ORC is the one-stop-shop for performant reservoir computing in jax. Key high-lev
 
 To install ORC, first clone the repository onto your local machine
 ```bash
-git clone https://github.com/dtretiak/OpenReservoirComputing.git
+git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 ```
 
 Then navigate to the cloned directory and use `pip` to install:
@@ -81,7 +81,7 @@ orc.utils.visualization.plot_time_series(
 First off, thanks for helping out! We appreciate your willingness to contribute! To get started, clone the repo and install the developer dependencies of ORC.
 
 ```bash
-git clone https://github.com/dtretiak/OpenReservoirComputing.git
+git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 ```
 
 From the root directory of the repository, create an editable install for your given hardware.
