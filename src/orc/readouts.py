@@ -104,6 +104,7 @@ class ReadoutBase(eqx.Module, ABC):
         """
         return self.readout(res_state)
 
+
 class LinearReadout(ReadoutBase):
     """Linear readout layer.
 
@@ -418,6 +419,6 @@ class QuadraticReadout(NonlinearReadout):
             out_dim=out_dim,
             res_dim=res_dim,
             dtype=dtype,
-            nonlin_list=[lambda x: x ** 2],
+            nonlin_list=[lambda x: x**2],
             chunks=chunks,
         )

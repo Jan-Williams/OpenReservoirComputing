@@ -498,3 +498,310 @@ def test_call_cesn(chunks):
 
     # Verify output values are finite
     assert jnp.all(jnp.isfinite(test_outputs))
+
+
+##################### TAYLOR DRIVER TESTS #####################
+
+
+@pytest.fixture
+def taylordriver():
+    return orc.drivers.TaylorDriver(
+        n_terms=3,
+        res_dim=212,
+        spectral_radius=0.6,
+        density=0.2,
+        bias=1.6,
+        dtype=jnp.float64,
+        seed=0,
+    )
+
+
+def test_taylordriver_dims(taylordriver):
+    key = jax.random.key(999)
+    res_dim = taylordriver.res_dim
+    test_vec = jax.random.normal(key, shape=(1, res_dim))
+    out_vec = taylordriver.advance(test_vec, test_vec)
+    assert out_vec.shape == (
+        1,
+        res_dim,
+    )
+
+    test_vec = jax.random.normal(key, shape=(1, res_dim - 1))
+    with pytest.raises(ValueError):
+        out_vec = taylordriver.advance(test_vec, test_vec)
+
+
+@pytest.mark.parametrize("batch_size", [3, 12, 52])
+def test_batchapply_dims_taylor(batch_size, taylordriver):
+    key = jax.random.key(42)
+    res_dim = taylordriver.res_dim
+    test_vec = jax.random.normal(key, shape=(batch_size, 1, res_dim))
+    out_vec = taylordriver.batch_advance(test_vec, test_vec)
+
+    assert out_vec.shape == (batch_size, 1, res_dim)
+
+    test_vec = jax.random.normal(key, shape=(batch_size, 1, res_dim - 1))
+
+    with pytest.raises(ValueError):
+        out_vec = taylordriver.batch_advance(test_vec, test_vec)
+
+
+@pytest.mark.parametrize(
+    "n_terms,res_dim,spectral_radius,density,bias,dtype",
+    [
+        (3, 22, 0.6, 0.02, 1.6, jnp.int32),
+        (2, 22.2, 0.6, 0.02, 1.6, jnp.float64),
+    ],
+)
+def test_param_types_taylor(n_terms, res_dim, spectral_radius, density, bias, dtype):
+    with pytest.raises(TypeError):
+        _ = orc.drivers.TaylorDriver(
+            n_terms=n_terms,
+            res_dim=res_dim,
+            spectral_radius=spectral_radius,
+            density=density,
+            bias=bias,
+            dtype=dtype,
+            seed=33,
+        )
+
+
+@pytest.mark.parametrize(
+    "n_terms,res_dim,spectral_radius,density,bias,dtype",
+    [
+        (3, 22, -0.5, 0.02, 1.6, jnp.float32),
+        (2, 22, 0.6, 1.3, 1.6, jnp.float64),
+        (6, 22, 0.6, 0.04, 1.6, jnp.float32),
+    ],
+)
+def test_param_vals_taylor(n_terms, res_dim, spectral_radius, density, bias, dtype):
+    with pytest.raises(ValueError):
+        _ = orc.drivers.TaylorDriver(
+            n_terms=n_terms,
+            res_dim=res_dim,
+            spectral_radius=spectral_radius,
+            density=density,
+            bias=bias,
+            dtype=dtype,
+            seed=32,
+        )
+
+
+@pytest.mark.parametrize("chunks", [2, 4, 8, 9])
+def test_call_ones_taylor(chunks):
+    model = orc.drivers.TaylorDriver(
+        n_terms=3,
+        res_dim=212,
+        spectral_radius=0.6,
+        density=0.2,
+        bias=1.6,
+        dtype=jnp.float64,
+        seed=0,
+        chunks=chunks,
+    )
+    key = jax.random.key(0)
+    key1, key2 = jax.random.split(key)
+    test_vec1 = jax.random.normal(key=key1, shape=(chunks, 212))
+    test_vec2 = jax.random.normal(key=key2, shape=(chunks, 212))
+    test_outputs = model(test_vec1, test_vec2)
+
+    # Verify output shape
+    assert test_outputs.shape == (chunks, 212)
+
+    # Verify outputs are finite
+    assert jnp.all(jnp.isfinite(test_outputs))
+
+
+@pytest.mark.parametrize(
+    "res_dim, spectral_radius, density, chunks",
+    [
+        (100, 0.876, 0.02, 1),
+        (500, 0.546, 0.01, 1),
+        (1000, 0.432, 0.01, 1),
+        (1000, 0.1, 0.01, 1),
+        (1000, 1.3, 0.01, 1),
+        (100, 0.345, 0.02, 15),
+        (500, 0.673, 0.01, 4),
+    ],
+)
+def test_taylordriver_spectral_radius_sparse(res_dim, spectral_radius, density, chunks):
+    """Test that the spectral radius of the reservoir update matrix is as expected."""
+    driver = orc.drivers.TaylorDriver(
+        n_terms=3,
+        res_dim=res_dim,
+        spectral_radius=spectral_radius,
+        density=density,
+        dtype=jnp.float64,
+        seed=0,
+        chunks=chunks,
+        use_sparse_eigs=True,
+    )
+
+    wr = driver.wr
+    wr_max_eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(wr.todense())), axis=1)
+    assert jnp.isclose(wr_max_eigs, spectral_radius, atol=1e-5).all(), (
+        f"Expected spectral radius {spectral_radius}, but got {wr_max_eigs}"
+    )
+
+
+@pytest.mark.parametrize(
+    "res_dim, spectral_radius, density, chunks",
+    [
+        (10, 0.6, 0.5, 1),
+        (50, 0.6, 0.1, 1),
+        (100, 0.876, 0.01, 1),
+        (1000, 0.432, 0.01, 1),
+        (1000, 0.1, 0.01, 1),
+        (1000, 1.3, 0.01, 1),
+        (100, 0.345, 0.02, 15),
+        (500, 0.673, 0.01, 4),
+    ],
+)
+def test_taylordriver_spectral_radius_dense(res_dim, spectral_radius, density, chunks):
+    """Test that the spectral radius of the reservoir update matrix is as expected"""
+    driver = orc.drivers.TaylorDriver(
+        n_terms=3,
+        res_dim=res_dim,
+        spectral_radius=spectral_radius,
+        density=density,
+        dtype=jnp.float64,
+        seed=0,
+        chunks=chunks,
+        use_sparse_eigs=False,
+    )
+
+    wr = driver.wr
+    wr_max_eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(wr.todense())), axis=1)
+    assert jnp.isclose(wr_max_eigs, spectral_radius, atol=1e-5).all(), (
+        f"Expected spectral radius {spectral_radius}, but got {wr_max_eigs}"
+    )
+
+
+@pytest.mark.parametrize("n_terms", [1, 2, 3, 4, 5])
+def test_taylordriver_n_terms(n_terms):
+    """Test that TaylorDriver works with different numbers of Taylor terms."""
+    driver = orc.drivers.TaylorDriver(
+        n_terms=n_terms,
+        res_dim=100,
+        spectral_radius=0.6,
+        density=0.2,
+        bias=1.6,
+        dtype=jnp.float64,
+        seed=42,
+    )
+
+    key = jax.random.key(999)
+    test_vec = jax.random.normal(key, shape=(1, 100))
+    out_vec = driver.advance(test_vec, test_vec)
+
+    assert out_vec.shape == (1, 100)
+    assert jnp.all(jnp.isfinite(out_vec))
+
+
+@pytest.mark.parametrize(
+    "res_dim, spectral_radius, density, chunks, batch_size",
+    [
+        (100, 0.8, 0.1, 10, 3),
+        (150, 0.6, 0.05, 20, 5),
+        (200, 0.9, 0.02, 50, 10),
+        (100, 0.7, 0.1, 100, 25),
+    ],
+)
+def test_taylordriver_batched_eigenvals_sparse_equivalence(
+    res_dim, spectral_radius, density, chunks, batch_size
+):
+    """Test that batched sparse computation gives same results as non-batched."""
+    seed = 42
+
+    # Create driver without batching (default behavior)
+    driver_unbatched = orc.drivers.TaylorDriver(
+        n_terms=3,
+        res_dim=res_dim,
+        spectral_radius=spectral_radius,
+        density=density,
+        chunks=chunks,
+        seed=seed,
+        use_sparse_eigs=True,
+    )
+
+    # Create driver with batching
+    driver_batched = orc.drivers.TaylorDriver(
+        n_terms=3,
+        res_dim=res_dim,
+        spectral_radius=spectral_radius,
+        density=density,
+        chunks=chunks,
+        seed=seed,
+        use_sparse_eigs=True,
+        eigenval_batch_size=batch_size,
+    )
+
+    # Check that spectral radii are equivalent
+    wr_unbatched = driver_unbatched.wr
+    wr_batched = driver_batched.wr
+
+    unbatched_eigs = jnp.max(
+        jnp.abs(jnp.linalg.eigvals(wr_unbatched.todense())), axis=1
+    )
+    batched_eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(wr_batched.todense())), axis=1)
+
+    # Both should achieve the target spectral radius
+    assert jnp.allclose(unbatched_eigs, spectral_radius, atol=1e-5)
+    assert jnp.allclose(batched_eigs, spectral_radius, atol=1e-5)
+
+    # Results should be identical (same seed, same computation)
+    assert jnp.allclose(unbatched_eigs, batched_eigs, atol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "res_dim, spectral_radius, density, chunks, batch_size",
+    [
+        (150, 0.8, 0.1, 10, 3),
+        (100, 0.6, 0.05, 20, 7),
+        (200, 0.9, 0.02, 30, 8),
+    ],
+)
+def test_taylordriver_batched_eigenvals_dense_equivalence(
+    res_dim, spectral_radius, density, chunks, batch_size
+):
+    """Test that batched dense computation gives same results as non-batched."""
+    seed = 123
+
+    # Create driver without batching (default behavior)
+    driver_unbatched = orc.drivers.TaylorDriver(
+        n_terms=3,
+        res_dim=res_dim,
+        spectral_radius=spectral_radius,
+        density=density,
+        chunks=chunks,
+        seed=seed,
+        use_sparse_eigs=False,
+    )
+
+    # Create driver with batching
+    driver_batched = orc.drivers.TaylorDriver(
+        n_terms=3,
+        res_dim=res_dim,
+        spectral_radius=spectral_radius,
+        density=density,
+        chunks=chunks,
+        seed=seed,
+        use_sparse_eigs=False,
+        eigenval_batch_size=batch_size,
+    )
+
+    # Check that spectral radii are equivalent
+    wr_unbatched = driver_unbatched.wr
+    wr_batched = driver_batched.wr
+
+    unbatched_eigs = jnp.max(
+        jnp.abs(jnp.linalg.eigvals(wr_unbatched.todense())), axis=1
+    )
+    batched_eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(wr_batched.todense())), axis=1)
+
+    # Both should achieve the target spectral radius
+    assert jnp.allclose(unbatched_eigs, spectral_radius, atol=1e-5)
+    assert jnp.allclose(batched_eigs, spectral_radius, atol=1e-5)
+
+    # Results should be identical (same seed, same computation)
+    assert jnp.allclose(unbatched_eigs, batched_eigs, atol=1e-10)
