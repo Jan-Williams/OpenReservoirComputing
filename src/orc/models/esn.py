@@ -9,7 +9,7 @@ from jaxtyping import Array
 from orc.drivers import ParallelESNDriver
 from orc.embeddings import ParallelLinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
-from orc.readouts import LinearReadout, NonlinearReadout, QuadraticReadout
+from orc.readouts import ParallelLinearReadout, NonlinearReadout, QuadraticReadout
 from orc.utils.regressions import (
     _solve_all_ridge_reg,
     _solve_all_ridge_reg_batched,
@@ -138,7 +138,7 @@ class ESNForecaster(RCForecasterBase):
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
         else:
-            readout = LinearReadout(
+            readout = ParallelLinearReadout(
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
 
@@ -276,7 +276,7 @@ class CESNForecaster(CRCForecasterBase):
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
         else:
-            readout = LinearReadout(
+            readout = ParallelLinearReadout(
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
 
