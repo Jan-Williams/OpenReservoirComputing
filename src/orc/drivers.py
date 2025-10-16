@@ -799,6 +799,7 @@ class TaylorDriver(ParallelTaylorDriver):
         res_next = jnp.squeeze(res_next)
         return res_next
 
+
 @sparse.sparsify
 @jax.vmap
 def _sparse_ops(wr: Array, res_state: Array, proj_vars: Array, bias: Array):

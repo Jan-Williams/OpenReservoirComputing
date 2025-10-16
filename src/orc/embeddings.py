@@ -294,6 +294,7 @@ class ParallelLinearEmbedding(EmbedBase):
             )
         return to_ret
 
+
 class LinearEmbedding(ParallelLinearEmbedding):
     """Linear embedding layer.
 
@@ -389,4 +390,3 @@ class LinearEmbedding(ParallelLinearEmbedding):
             shape=(seq_len, res_dim)).
         """
         return jnp.squeeze(super().__call__(in_state))
-        

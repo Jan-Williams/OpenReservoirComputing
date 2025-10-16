@@ -122,4 +122,3 @@ def test_single_linearembedding_call(single_linearembedding):
 def test_single_linearembedding_chunks_is_one(single_linearembedding):
     """Test that LinearEmbedding always has chunks=1."""
     assert single_linearembedding.chunks == 1
-
