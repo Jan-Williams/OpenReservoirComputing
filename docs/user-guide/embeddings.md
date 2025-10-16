@@ -20,18 +20,18 @@ The `EmbedBase` class defines the core interface that all embedding implementati
 - `batch_embed(in_state)`: Transform multiple input vectors efficiently
 - `__call__(in_state)`: Flexible interface supporting both single and batch inputs
 
-## LinearEmbedding
+## ParallelLinearEmbedding
 
-The `LinearEmbedding` class provides matrix multiplication-based embedding with support for parallel reservoirs to handle spatial/high-dimensional data.
+The `ParallelLinearEmbedding` class provides matrix multiplication-based embedding with support for parallel reservoirs to handle spatial/high-dimensional data.
 
 ### Basic Usage
 
 ```python
 import jax.numpy as jnp
-from orc.embeddings import LinearEmbedding
+from orc.embeddings import ParallelLinearEmbedding
 
 # Create a simple linear embedding
-embedding = LinearEmbedding(
+embedding = ParallelLinearEmbedding(
     in_dim=10,      # Input dimension
     res_dim=100,    # Reservoir dimension
     scaling=0.1,    # Input matrix values range [-0.1, 0.1]
@@ -45,11 +45,11 @@ embedded = embedding(input_vector)  # Shape: (1, 100) for single reservoir
 
 ### Parallel Reservoirs
 
-LinearEmbedding supports decomposing high-dimensional inputs into multiple (overlapping) parallel reservoirs:
+ParallelLinearEmbedding supports decomposing high-dimensional inputs into multiple (overlapping) parallel reservoirs:
 
 ```python
 # Parallel reservoirs for spatial data
-embedding = LinearEmbedding(
+embedding = ParallelLinearEmbedding(
     in_dim=1000,     # Total spatial dimension
     res_dim=200,     # Reservoir dimension per chunk
     scaling=0.1,
@@ -124,7 +124,7 @@ def embed(self, in_state):
 ```
 
 #### Parallel Reservoir Support  
-For embeddings that support parallel reservoirs like `LinearEmbedding`:
+For embeddings that support parallel reservoirs like `ParallelLinearEmbedding`:
 ```python
 def embed(self, in_state):
     # Transform input with parallel processing

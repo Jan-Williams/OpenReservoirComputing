@@ -1,6 +1,6 @@
 ## Core Architecture
 
-The **embedding layer** handles input-to-reservoir mapping. `LinearEmbedding` provides matrix multiplication with support for parallel reservoirs and configurable connectivity patterns.
+The **embedding layer** handles input-to-reservoir mapping. `ParallelLinearEmbedding` provides matrix multiplication with support for parallel reservoirs and configurable connectivity patterns.
 
 The **driver layer** propagates reservoir state evolution. `ParallelESNDriver` implements Echo State Network dynamics for both discrete-time updates and continuous-time evolution using ODE solvers with adaptive step control.
 

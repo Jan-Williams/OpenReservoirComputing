@@ -8,7 +8,7 @@ import orc
     "in_dim,chunks,locality", [(16, 8, 2), (32, 4, 1), (22, 11, 3), (14, 1, 0)]
 )
 def test_win_dims_Linear(in_dim, chunks, locality):
-    model = orc.embeddings.LinearEmbedding(
+    model = orc.embeddings.ParallelLinearEmbedding(
         in_dim=in_dim,
         res_dim=200,
         scaling=0.014,
@@ -25,7 +25,7 @@ def test_win_dims_Linear(in_dim, chunks, locality):
 )
 def test_bad_group_nums_Linear(in_dim, chunks, locality):
     with pytest.raises(ValueError):
-        _ = orc.embeddings.LinearEmbedding(
+        _ = orc.embeddings.ParallelLinearEmbedding(
             in_dim=in_dim,
             res_dim=200,
             scaling=0.014,
@@ -46,7 +46,7 @@ def test_bad_group_nums_Linear(in_dim, chunks, locality):
 )
 def test_param_types_Linear(in_dim, res_dim, scaling, dtype):
     with pytest.raises(TypeError):
-        _ = orc.embeddings.LinearEmbedding(
+        _ = orc.embeddings.ParallelLinearEmbedding(
             in_dim=in_dim,
             res_dim=res_dim,
             scaling=scaling,
@@ -64,7 +64,7 @@ def test_param_types_Linear(in_dim, res_dim, scaling, dtype):
     ],
 )
 def test_call_Linear(chunks, locality, seq_len):
-    model = orc.embeddings.LinearEmbedding(
+    model = orc.embeddings.ParallelLinearEmbedding(
         in_dim=180,
         res_dim=300,
         scaling=0.12,
