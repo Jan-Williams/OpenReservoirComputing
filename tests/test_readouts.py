@@ -8,7 +8,9 @@ import orc
 
 @pytest.fixture
 def linearreadout():
-    return orc.readouts.ParallelLinearReadout(out_dim=3, res_dim=982, dtype=jnp.float64, seed=0)
+    return orc.readouts.ParallelLinearReadout(
+        out_dim=3, res_dim=982, dtype=jnp.float64, seed=0
+    )
 
 
 def test_linearreadout_dims(linearreadout):
