@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array
 
-from orc.drivers import ESNDriver
+from orc.drivers import ParallelESNDriver
 from orc.embeddings import LinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
 from orc.readouts import LinearReadout, NonlinearReadout, QuadraticReadout
@@ -28,7 +28,7 @@ class ESNForecaster(RCForecasterBase):
         Reservoir dimension.
     data_dim : int
         Input/output dimension.
-    driver : ESNDriver
+    driver : ParallelESNDriver
         Driver implmenting the Echo State Network dynamics.
     readout : BaseReadout
         Trainable linear readout layer.
@@ -122,7 +122,7 @@ class ESNForecaster(RCForecasterBase):
             locality=locality,
             periodic=periodic,
         )
-        driver = ESNDriver(
+        driver = ParallelESNDriver(
             res_dim=res_dim,
             seed=key_driver[0],
             leak=leak_rate,
@@ -162,7 +162,7 @@ class CESNForecaster(CRCForecasterBase):
         Reservoir dimension.
     data_dim : int
         Input/output dimension.
-    driver : ESNDriver
+    driver : ParallelESNDriver
         Driver implementing the Echo State Network dynamics
         in continuous time.
     readout : BaseReadout
@@ -259,7 +259,7 @@ class CESNForecaster(CRCForecasterBase):
             locality=locality,
             periodic=periodic,
         )
-        driver = ESNDriver(
+        driver = ParallelESNDriver(
             res_dim=res_dim,
             seed=key_driver[0],
             time_const=time_const,
