@@ -383,6 +383,59 @@ def test_batched_eigenvals_functionality_preserved():
     assert batch_new_state.shape == (3, 5, 100)
 
 
+##################### SINGLE ESN DRIVER TESTS #####################
+
+
+@pytest.fixture
+def single_esndriver():
+    return orc.drivers.ESNDriver(
+        res_dim=100,
+        leak=0.3,
+        spectral_radius=0.9,
+        density=0.1,
+        bias=1.0,
+        dtype=jnp.float64,
+        seed=42,
+    )
+
+
+def test_single_esndriver_dims(single_esndriver):
+    """Test that ESNDriver works with single reservoir (no chunks dimension)."""
+    key = jax.random.key(123)
+    res_dim = single_esndriver.res_dim
+
+    # Test single state advance
+    proj_vars = jax.random.normal(key, shape=(res_dim,))
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_esndriver.advance(proj_vars, res_state)
+
+    assert out_state.shape == (res_dim,)
+    assert jnp.all(jnp.isfinite(out_state))
+
+
+def test_single_esndriver_call(single_esndriver):
+    """Test ESNDriver __call__ method handles both single and batch inputs."""
+    key = jax.random.key(456)
+    res_dim = single_esndriver.res_dim
+
+    # Test single input
+    proj_vars = jax.random.normal(key, shape=(res_dim,))
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_esndriver(proj_vars, res_state)
+    assert out_state.shape == (res_dim,)
+
+    # Test batch input
+    batch_proj_vars = jax.random.normal(key, shape=(5, res_dim))
+    batch_res_state = jax.random.normal(key, shape=(5, res_dim))
+    batch_out = single_esndriver(batch_proj_vars, batch_res_state)
+    assert batch_out.shape == (5, res_dim)
+
+
+def test_single_esndriver_chunks_is_one(single_esndriver):
+    """Test that ESNDriver always has chunks=1."""
+    assert single_esndriver.chunks == 1
+
+
 ##################### CESN TESTS #####################
 
 
