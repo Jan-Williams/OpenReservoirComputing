@@ -344,17 +344,6 @@ class ESNDriver(ParallelESNDriver):
         Batched or single update to reservoir state.
     """
 
-    res_dim: int
-    leak: float
-    spectral_radius: float
-    density: float
-    bias: float
-    dtype: Float
-    wr: Array
-    chunks: int
-    mode: str
-    time_const: float
-
     def __init__(
         self,
         res_dim: int,
@@ -683,6 +672,132 @@ class ParallelTaylorDriver(DriverBase):
             )
         return to_ret
 
+
+class TaylorDriver(ParallelTaylorDriver):
+    """ESN driver with tanh nonlinearity, Taylor expanded.
+
+    This class defines a driver according to the Taylor series expansion of
+    ParallelESNDriver including the first ``n_terms`` terms with the leak rate
+    leak=0. Only discrete time dynamics are supported.
+
+    Attributes
+    ----------
+    n_terms : int
+        Number of terms in Taylor series to include.
+    res_dim : int
+        Reservoir dimension.
+    wr : Array
+        Reservoir update matrix, (shape=(chunks, res_dim, res_dim,)).
+    spectral_radius : float
+        Spectral radius of wr.
+    density : float
+        Density of wr.
+    bias : float
+        Additive bias in tanh nonlinearity.
+    dtype : Float
+        Dtype, default jnp.float64.
+
+    Methods
+    -------
+    advance(proj_vars, res_state)
+        Updated reservoir state.
+    __call__(proj_vars, res_state)
+        Batched or single update to reservoir state.
+    """
+
+    def __init__(
+        self,
+        n_terms: int,
+        res_dim: int,
+        spectral_radius: float = 0.8,
+        density: float = 0.02,
+        bias: float = 1.6,
+        dtype: Float = jnp.float64,
+        *,
+        seed: int,
+        use_sparse_eigs: bool = True,
+        eigenval_batch_size: int = None,
+    ) -> None:
+        """Initialize weight matrices.
+
+        Parameters
+        ----------
+        n_terms : int
+            Number of terms to use in Taylor expansion.
+        res_dim : int
+            Reservoir dimension.
+        spectral_radius : float
+            Spectral radius of wr.
+        density : float
+            Density of wr.
+        bias : float
+            Additive bias in tanh nonlinearity.
+        dtype : Float
+            Dtype, default jnp.float64.
+        seed : int
+            Random seed for generating the PRNG key for the reservoir computer.
+        use_sparse_eigs : bool
+            Whether to use sparse eigensolver for setting the spectral radius of wr.
+            Default is True, which is recommended to save memory and compute time. If
+            False, will use dense eigensolver which may be more accurate.
+        eigenval_batch_size : int
+            Size of batches when batch_eigenvals. Default is None, which means no
+            batch eigenvalue computation.
+        """
+        super().__init__(
+            n_terms=n_terms,
+            res_dim=res_dim,
+            spectral_radius=spectral_radius,
+            density=density,
+            bias=bias,
+            dtype=dtype,
+            seed=seed,
+            use_sparse_eigs=use_sparse_eigs,
+            eigenval_batch_size=eigenval_batch_size,
+            chunks=1,
+        )
+
+    @eqx.filter_jit
+    def advance(self, proj_vars: Array, res_state: Array) -> Array:
+        """Advance the reservoir state.
+
+        Parameters
+        ----------
+        proj_vars : Array
+            Reservoir projected inputs, (shape=(res_dim,)).
+        res_state : Array
+            Reservoir state, (shape=(res_dim,)).
+
+        Returns
+        -------
+        res_next : Array
+            Reservoir state, (shape=(res_dim,)).
+        """
+        res_next = super().advance(proj_vars.reshape(1, -1), res_state.reshape(1, -1))
+        res_next = jnp.squeeze(res_next)
+        return res_next
+
+    def __call__(self, proj_vars: Array, res_state: Array) -> Array:
+        """Advance reservoir state.
+
+        Parameters
+        ----------
+        proj_vars : Array
+            Reservoir projected inputs, (shape=(res_dim,) or
+            shape=(seq_len, res_dim)).
+        res_state : Array
+            Current reservoir state, (shape=(res_dim,) or
+            shape=(seq_len, res_dim)).
+
+        Returns
+        -------
+        Array
+            Sequence of reservoir states, (shape=(res_dim,) or
+            shape=(seq_len, res_dim)).
+        """
+        res_next = super().__call__(proj_vars[..., None, :], res_state[..., None, :])
+        res_next = jnp.squeeze(res_next)
+        return res_next
 
 @sparse.sparsify
 @jax.vmap
