@@ -6,10 +6,14 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array
 
-from orc.drivers import ESNDriver
-from orc.embeddings import LinearEmbedding
+from orc.drivers import ParallelESNDriver
+from orc.embeddings import ParallelLinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
-from orc.readouts import LinearReadout, NonlinearReadout, QuadraticReadout
+from orc.readouts import (
+    ParallelLinearReadout,
+    ParallelNonlinearReadout,
+    ParallelQuadraticReadout,
+)
 from orc.utils.regressions import (
     _solve_all_ridge_reg,
     _solve_all_ridge_reg_batched,
@@ -28,11 +32,11 @@ class ESNForecaster(RCForecasterBase):
         Reservoir dimension.
     data_dim : int
         Input/output dimension.
-    driver : ESNDriver
+    driver : ParallelESNDriver
         Driver implmenting the Echo State Network dynamics.
     readout : BaseReadout
         Trainable linear readout layer.
-    embedding : LinearEmbedding
+    embedding : ParallelLinearEmbedding
         Untrainable linear embedding layer.
 
     Methods
@@ -113,7 +117,7 @@ class ESNForecaster(RCForecasterBase):
         key_driver, key_readout, key_embedding = jax.random.split(key, 3)
 
         # init in embedding, driver and readout
-        embedding = LinearEmbedding(
+        embedding = ParallelLinearEmbedding(
             in_dim=data_dim,
             res_dim=res_dim,
             seed=key_embedding[0],
@@ -122,7 +126,7 @@ class ESNForecaster(RCForecasterBase):
             locality=locality,
             periodic=periodic,
         )
-        driver = ESNDriver(
+        driver = ParallelESNDriver(
             res_dim=res_dim,
             seed=key_driver[0],
             leak=leak_rate,
@@ -134,11 +138,11 @@ class ESNForecaster(RCForecasterBase):
             use_sparse_eigs=use_sparse_eigs,
         )
         if quadratic:
-            readout = QuadraticReadout(
+            readout = ParallelQuadraticReadout(
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
         else:
-            readout = LinearReadout(
+            readout = ParallelLinearReadout(
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
 
@@ -162,12 +166,12 @@ class CESNForecaster(CRCForecasterBase):
         Reservoir dimension.
     data_dim : int
         Input/output dimension.
-    driver : ESNDriver
+    driver : ParallelESNDriver
         Driver implementing the Echo State Network dynamics
         in continuous time.
     readout : BaseReadout
         Trainable linear readout layer.
-    embedding : LinearEmbedding
+    embedding : ParallelLinearEmbedding
         Untrainable linear embedding layer.
 
     Methods
@@ -250,7 +254,7 @@ class CESNForecaster(CRCForecasterBase):
         key_driver, key_readout, key_embedding = jax.random.split(key, 3)
 
         # init in embedding, driver and readout
-        embedding = LinearEmbedding(
+        embedding = ParallelLinearEmbedding(
             in_dim=data_dim,
             res_dim=res_dim,
             seed=key_embedding[0],
@@ -259,7 +263,7 @@ class CESNForecaster(CRCForecasterBase):
             locality=locality,
             periodic=periodic,
         )
-        driver = ESNDriver(
+        driver = ParallelESNDriver(
             res_dim=res_dim,
             seed=key_driver[0],
             time_const=time_const,
@@ -272,11 +276,11 @@ class CESNForecaster(CRCForecasterBase):
             use_sparse_eigs=use_sparse_eigs,
         )
         if quadratic:
-            readout = QuadraticReadout(
+            readout = ParallelQuadraticReadout(
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
         else:
-            readout = LinearReadout(
+            readout = ParallelLinearReadout(
                 out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
             )
 
@@ -364,7 +368,7 @@ def train_ESNForecaster(
 
     tot_res_seq = model.force(tot_seq, initial_res_state)
     res_seq = tot_res_seq[:-1]
-    if isinstance(model.readout, NonlinearReadout):
+    if isinstance(model.readout, ParallelNonlinearReadout):
         res_seq_train = eqx.filter_vmap(model.readout.nonlinear_transform)(res_seq)
     else:
         res_seq_train = res_seq
@@ -467,7 +471,7 @@ def train_CESNForecaster(
 
     tot_res_seq = model.force(tot_seq, initial_res_state, ts=t_train)
     res_seq = tot_res_seq[:-1]
-    if isinstance(model.readout, NonlinearReadout):
+    if isinstance(model.readout, ParallelNonlinearReadout):
         res_seq_train = eqx.filter_vmap(model.readout.nonlinear_transform)(res_seq)
     else:
         res_seq_train = res_seq

@@ -19,18 +19,18 @@ The `DriverBase` class defines the core interface that all driver implementation
 - `batch_advance(proj_vars, res_state)`: Advance batch of reservoir states by one time step
 - `__call__(proj_vars, res_state)`: Flexible interface supporting both single and batch updates
 
-## ESNDriver
+## ParallelESNDriver
 
-The `ESNDriver` class implements standard Echo State Network dynamics with tanh nonlinearity and support for both discrete and continuous time modes.
+The `ParallelESNDriver` class implements standard Echo State Network dynamics with tanh nonlinearity and support for both discrete and continuous time modes.
 
 ### Basic Usage
 
 ```python
 import jax.numpy as jnp
-from orc.drivers import ESNDriver
+from orc.drivers import ParallelESNDriver
 
 # Create a basic ESN driver
-driver = ESNDriver(
+driver = ParallelESNDriver(
     res_dim=100,           # Reservoir dimension
     leak=0.6,             # Leak rate (0 < leak <= 1)
     spectral_radius=0.8,   # Spectral radius of reservoir matrix
@@ -47,11 +47,11 @@ next_state = driver(proj_input, res_state)
 
 ### Discrete vs Continuous Time Modes
 
-ESNDriver supports both discrete and continuous time dynamics:
+ParallelESNDriver supports both discrete and continuous time dynamics:
 
 #### Discrete Mode (Default)
 ```python
-driver = ESNDriver(
+driver = ParallelESNDriver(
     res_dim=100,
     mode="discrete",  # Default mode
     leak=0.6,
@@ -62,7 +62,7 @@ driver = ESNDriver(
 
 #### Continuous Mode
 ```python
-driver = ESNDriver(
+driver = ParallelESNDriver(
     res_dim=100,
     mode="continuous",
     time_const=50.0,      # Time constant τ
@@ -73,11 +73,11 @@ driver = ESNDriver(
 
 ### Parallel Reservoirs
 
-ESNDriver supports multiple parallel reservoirs for processing spatial or high-dimensional data:
+ParallelESNDriver supports multiple parallel reservoirs for processing spatial or high-dimensional data:
 
 ```python
 # Multiple parallel reservoirs
-driver = ESNDriver(
+driver = ParallelESNDriver(
     res_dim=500,           # Dimension per reservoir
     chunks=10,            # Number of parallel reservoirs
     spectral_radius=0.9,
@@ -107,7 +107,7 @@ next_state = driver(proj_input, res_state)  # Shape: (10, 500)
 
 #### Sparse Eigenvalue Computation
 ```python
-driver = ESNDriver(
+driver = ParallelESNDriver(
     res_dim=1000,
     use_sparse_eigs=True,      # Use sparse eigensolvers (default)
     eigenval_batch_size=100,   # Batch eigenvalue computation
@@ -155,7 +155,7 @@ def advance(self, proj_vars, res_state):
 ```
 
 #### Parallel Reservoir Support  
-For drivers that support parallel reservoirs like `ESNDriver`:
+For drivers that support parallel reservoirs like `ParallelESNDriver`:
 ```python
 def advance(self, proj_vars, res_state):
     # proj_vars shape: (chunks, res_dim)

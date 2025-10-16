@@ -108,7 +108,7 @@ class EmbedBase(eqx.Module, ABC):
         return self.embed(in_state)
 
 
-class LinearEmbedding(EmbedBase):
+class ParallelLinearEmbedding(EmbedBase):
     """Linear embedding layer.
 
     Attributes
@@ -293,3 +293,100 @@ class LinearEmbedding(EmbedBase):
                 f"{len(in_state.shape) - 1}D field."
             )
         return to_ret
+
+
+class LinearEmbedding(ParallelLinearEmbedding):
+    """Linear embedding layer.
+
+    Attributes
+    ----------
+    in_dim : int
+        Reservoir input dimension.
+    res_dim : int
+        Reservoir dimension.
+    scaling : float
+        Min/max values of input matrix.
+    win : Array
+        Input matrix.
+
+    Methods
+    -------
+    __call__(in_state)
+        Embed input state to reservoir dimension.
+    embed(in_state)
+        Embed single input state to reservoir dimension.
+    """
+
+    def __init__(
+        self,
+        in_dim: int,
+        res_dim: int,
+        scaling: float,
+        dtype: Float = jnp.float64,
+        *,
+        seed: int,
+    ) -> None:
+        """Instantiate linear embedding.
+
+        Parameters
+        ----------
+        in_dim : int
+            Input dimension to reservoir.
+        res_dim : int
+            Reservoir dimension.
+        scaling : float
+            Min/max values of input matrix.
+        seed : int
+            Random seed for generating the PRNG key for the reservoir computer.
+        dtype : Float
+            Dtype of model, jnp.float64 or jnp.float32.
+        periodic : bool
+            Assume periodic BCs when decomposing the input state to parallel network
+            inputs. If False, the input is padded with boundary values at the edges
+            (i.e., edge values are extended to the locality region), which may not
+            match the true spatial dynamics. If True, the input is padded by connecting
+            smoothly the end and beginning of the signal ensuring continuity. Default is
+            True.
+        """
+        super().__init__(
+            in_dim=in_dim,
+            res_dim=res_dim,
+            scaling=scaling,
+            dtype=dtype,
+            chunks=1,
+            locality=0,
+            periodic=True,
+            seed=seed,
+        )
+
+    @eqx.filter_jit
+    def embed(self, in_state: Array) -> Array:
+        """Embed single state to reservoir dimensions.
+
+        Parameters
+        ----------
+        in_state : Array
+            Input state, (shape=(in_dim,)).
+
+        Returns
+        -------
+        Array
+            Embedded input to reservoir, (shape=(res_dim,)).
+        """
+        return super().embed(in_state).reshape(-1)
+
+    def __call__(self, in_state: Array) -> Array:
+        """Embed state to reservoir dimensions.
+
+        Parameters
+        ----------
+        in_state : Array
+            Input state, (shape=(in_dim,) or shape=(seq_len, in_dim)).
+
+        Returns
+        -------
+        Array
+            Embedded input to reservoir, (shape=(res_dim,) or
+            shape=(seq_len, res_dim)).
+        """
+        return jnp.squeeze(super().__call__(in_state))
