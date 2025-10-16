@@ -679,8 +679,6 @@ class QuadraticReadout(NonlinearReadout):
             Dimension of reservoir output.
         res_dim : int
             Reservoir dimension.
-        chunks : int
-            Number of parallel resrevoirs.
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
