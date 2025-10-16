@@ -12,7 +12,7 @@ This module contains input embedding layers for preprocessing data before feedin
 
 ## Linear Embedding
 
-::: orc.embeddings.LinearEmbedding
+::: orc.embeddings.ParallelLinearEmbedding
     options:
       show_root_heading: true
       show_source: true

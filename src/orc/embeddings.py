@@ -108,7 +108,7 @@ class EmbedBase(eqx.Module, ABC):
         return self.embed(in_state)
 
 
-class LinearEmbedding(EmbedBase):
+class ParallelLinearEmbedding(EmbedBase):
     """Linear embedding layer.
 
     Attributes

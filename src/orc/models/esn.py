@@ -7,7 +7,7 @@ import jax.numpy as jnp
 from jaxtyping import Array
 
 from orc.drivers import ParallelESNDriver
-from orc.embeddings import LinearEmbedding
+from orc.embeddings import ParallelLinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
 from orc.readouts import LinearReadout, NonlinearReadout, QuadraticReadout
 from orc.utils.regressions import (
@@ -32,7 +32,7 @@ class ESNForecaster(RCForecasterBase):
         Driver implmenting the Echo State Network dynamics.
     readout : BaseReadout
         Trainable linear readout layer.
-    embedding : LinearEmbedding
+    embedding : ParallelLinearEmbedding
         Untrainable linear embedding layer.
 
     Methods
@@ -113,7 +113,7 @@ class ESNForecaster(RCForecasterBase):
         key_driver, key_readout, key_embedding = jax.random.split(key, 3)
 
         # init in embedding, driver and readout
-        embedding = LinearEmbedding(
+        embedding = ParallelLinearEmbedding(
             in_dim=data_dim,
             res_dim=res_dim,
             seed=key_embedding[0],
@@ -167,7 +167,7 @@ class CESNForecaster(CRCForecasterBase):
         in continuous time.
     readout : BaseReadout
         Trainable linear readout layer.
-    embedding : LinearEmbedding
+    embedding : ParallelLinearEmbedding
         Untrainable linear embedding layer.
 
     Methods
@@ -250,7 +250,7 @@ class CESNForecaster(CRCForecasterBase):
         key_driver, key_readout, key_embedding = jax.random.split(key, 3)
 
         # init in embedding, driver and readout
-        embedding = LinearEmbedding(
+        embedding = ParallelLinearEmbedding(
             in_dim=data_dim,
             res_dim=res_dim,
             seed=key_embedding[0],
