@@ -315,9 +315,9 @@ class ParallelESNDriver(DriverBase):
 class ParallelTaylorDriver(DriverBase):
     """ESN driver with tanh nonlinearity, Taylor expanded.
 
-    This class defines a driver according to the Taylor series expansion of ParallelESNDriver
-    including the first ``n_terms`` terms with the leak rate leak=0. Only discrete time
-    dynamics are supported.
+    This class defines a driver according to the Taylor series expansion of
+    ParallelESNDriver including the first ``n_terms`` terms with the leak rate
+    leak=0. Only discrete time dynamics are supported.
 
     Attributes
     ----------

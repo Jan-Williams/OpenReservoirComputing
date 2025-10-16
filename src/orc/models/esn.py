@@ -9,7 +9,11 @@ from jaxtyping import Array
 from orc.drivers import ParallelESNDriver
 from orc.embeddings import ParallelLinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
-from orc.readouts import ParallelLinearReadout, ParallelNonlinearReadout, ParallelQuadraticReadout
+from orc.readouts import (
+    ParallelLinearReadout,
+    ParallelNonlinearReadout,
+    ParallelQuadraticReadout,
+)
 from orc.utils.regressions import (
     _solve_all_ridge_reg,
     _solve_all_ridge_reg_batched,

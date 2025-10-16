@@ -155,7 +155,8 @@ class ParallelLinearReadout(ReadoutBase):
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
-            Not used for ParallelLinearReadout, present to maintain consistent interface.
+            Not used for ParallelLinearReadout, here to maintain consistent
+            interface.
         """
         super().__init__(out_dim=out_dim, res_dim=res_dim, dtype=dtype)
         self.out_dim = out_dim
@@ -272,7 +273,8 @@ class ParallelNonlinearReadout(ReadoutBase):
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
-            Not used for ParallelNonlinearReadout, present to maintain consistent interface.
+            Not used for ParallelNonlinearReadout, here to maintain consistent
+            interface.
         """
         super().__init__(out_dim=out_dim, res_dim=res_dim, dtype=dtype)
         self.out_dim = out_dim
@@ -413,7 +415,8 @@ class ParallelQuadraticReadout(ParallelNonlinearReadout):
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
-            Not used for ParallelQuadraticReadout, present to maintain consistent interface.
+            Not used for ParallelQuadraticReadout, here to maintain consistent
+            interface.
         """
         super().__init__(
             out_dim=out_dim,
