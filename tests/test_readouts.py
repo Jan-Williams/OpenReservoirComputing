@@ -121,3 +121,151 @@ def test_nonlin_and_quadratic_readout():
     output_1 = readout(rand_res_state)
     output_2 = quad_readout(rand_res_state)
     assert jnp.allclose(output_1, output_2)
+
+
+##################### SINGLE LINEAR READOUT TESTS #####################
+
+
+@pytest.fixture
+def single_linearreadout():
+    return orc.readouts.LinearReadout(
+        out_dim=3,
+        res_dim=100,
+        dtype=jnp.float64,
+        seed=42,
+    )
+
+
+def test_single_linearreadout_dims(single_linearreadout):
+    """Test that LinearReadout works with single reservoir (no chunks dimension)."""
+    key = jax.random.key(123)
+    out_dim = single_linearreadout.out_dim
+    res_dim = single_linearreadout.res_dim
+
+    # Test single state readout
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_linearreadout.readout(res_state)
+
+    assert out_state.shape == (out_dim,)
+    assert jnp.all(jnp.isfinite(out_state))
+
+
+def test_single_linearreadout_call(single_linearreadout):
+    """Test LinearReadout __call__ method handles both single and batch inputs."""
+    key = jax.random.key(456)
+    out_dim = single_linearreadout.out_dim
+    res_dim = single_linearreadout.res_dim
+
+    # Test single input
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_linearreadout(res_state)
+    assert out_state.shape == (out_dim,)
+
+    # Test batch input
+    batch_res_state = jax.random.normal(key, shape=(5, res_dim))
+    batch_out = single_linearreadout(batch_res_state)
+    assert batch_out.shape == (5, out_dim)
+
+
+def test_single_linearreadout_chunks_is_one(single_linearreadout):
+    """Test that LinearReadout always has chunks=1."""
+    assert single_linearreadout.chunks == 1
+
+
+##################### SINGLE NONLINEAR READOUT TESTS #####################
+
+
+@pytest.fixture
+def single_nonlinearreadout():
+    return orc.readouts.NonlinearReadout(
+        out_dim=3,
+        res_dim=100,
+        nonlin_list=[lambda x: x**2],
+        dtype=jnp.float64,
+        seed=42,
+    )
+
+
+def test_single_nonlinearreadout_dims(single_nonlinearreadout):
+    """Test that NonlinearReadout works with single reservoir (no chunks dimension)."""
+    key = jax.random.key(123)
+    out_dim = single_nonlinearreadout.out_dim
+    res_dim = single_nonlinearreadout.res_dim
+
+    # Test single state readout
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_nonlinearreadout.readout(res_state)
+
+    assert out_state.shape == (out_dim,)
+    assert jnp.all(jnp.isfinite(out_state))
+
+
+def test_single_nonlinearreadout_call(single_nonlinearreadout):
+    """Test NonlinearReadout __call__ method handles both single and batch inputs."""
+    key = jax.random.key(456)
+    out_dim = single_nonlinearreadout.out_dim
+    res_dim = single_nonlinearreadout.res_dim
+
+    # Test single input
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_nonlinearreadout(res_state)
+    assert out_state.shape == (out_dim,)
+
+    # Test batch input
+    batch_res_state = jax.random.normal(key, shape=(5, res_dim))
+    batch_out = single_nonlinearreadout(batch_res_state)
+    assert batch_out.shape == (5, out_dim)
+
+
+def test_single_nonlinearreadout_chunks_is_one(single_nonlinearreadout):
+    """Test that NonlinearReadout always has chunks=1."""
+    assert single_nonlinearreadout.chunks == 1
+
+
+##################### SINGLE QUADRATIC READOUT TESTS #####################
+
+
+@pytest.fixture
+def single_quadraticreadout():
+    return orc.readouts.QuadraticReadout(
+        out_dim=3,
+        res_dim=100,
+        dtype=jnp.float64,
+        seed=42,
+    )
+
+
+def test_single_quadraticreadout_dims(single_quadraticreadout):
+    """Test that QuadraticReadout works with single reservoir (no chunks dimension)."""
+    key = jax.random.key(123)
+    out_dim = single_quadraticreadout.out_dim
+    res_dim = single_quadraticreadout.res_dim
+
+    # Test single state readout
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_quadraticreadout.readout(res_state)
+
+    assert out_state.shape == (out_dim,)
+    assert jnp.all(jnp.isfinite(out_state))
+
+
+def test_single_quadraticreadout_call(single_quadraticreadout):
+    """Test QuadraticReadout __call__ method handles both single and batch inputs."""
+    key = jax.random.key(456)
+    out_dim = single_quadraticreadout.out_dim
+    res_dim = single_quadraticreadout.res_dim
+
+    # Test single input
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_quadraticreadout(res_state)
+    assert out_state.shape == (out_dim,)
+
+    # Test batch input
+    batch_res_state = jax.random.normal(key, shape=(5, res_dim))
+    batch_out = single_quadraticreadout(batch_res_state)
+    assert batch_out.shape == (5, out_dim)
+
+
+def test_single_quadraticreadout_chunks_is_one(single_quadraticreadout):
+    """Test that QuadraticReadout always has chunks=1."""
+    assert single_quadraticreadout.chunks == 1
