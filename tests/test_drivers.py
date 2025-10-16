@@ -10,7 +10,7 @@ import orc
 
 @pytest.fixture
 def esndriver():
-    return orc.drivers.ESNDriver(
+    return orc.drivers.ParallelESNDriver(
         res_dim=212,
         leak=0.123,
         spectral_radius=0.6,
@@ -60,7 +60,7 @@ def test_batchapply_dims_esn(batch_size, esndriver):
 )
 def test_param_types_esn(res_dim, leak, spectral_radius, density, bias, dtype):
     with pytest.raises(TypeError):
-        _ = orc.drivers.ESNDriver(
+        _ = orc.drivers.ParallelESNDriver(
             res_dim=res_dim,
             leak=leak,
             spectral_radius=spectral_radius,
@@ -81,7 +81,7 @@ def test_param_types_esn(res_dim, leak, spectral_radius, density, bias, dtype):
 )
 def test_param_vals_esn(res_dim, leak, spectral_radius, density, bias, dtype):
     with pytest.raises(ValueError):
-        _ = orc.drivers.ESNDriver(
+        _ = orc.drivers.ParallelESNDriver(
             res_dim=res_dim,
             leak=leak,
             spectral_radius=spectral_radius,
@@ -94,7 +94,7 @@ def test_param_vals_esn(res_dim, leak, spectral_radius, density, bias, dtype):
 
 @pytest.mark.parametrize("chunks", [2, 4, 8, 9])
 def test_call_ones_esn(chunks):
-    model = orc.drivers.ESNDriver(
+    model = orc.drivers.ParallelESNDriver(
         res_dim=212,
         leak=0.123,
         spectral_radius=0.6,
@@ -142,7 +142,7 @@ def test_call_ones_esn(chunks):
 )
 def test_driver_spectral_radius_sparse(res_dim, spectral_radius, density, chunks):
     """Test that the spectral radius of the reservoir update matrix is as expected."""
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -174,7 +174,7 @@ def test_driver_spectral_radius_sparse(res_dim, spectral_radius, density, chunks
 )
 def test_driver_spectral_radius_dense(res_dim, spectral_radius, density, chunks):
     """Test that the spectral radius of the reservoir update matrix is as expected"""
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -210,7 +210,7 @@ def test_batched_eigenvals_sparse_equivalence(
     seed = 42
 
     # Create driver without batching (default behavior)
-    driver_unbatched = orc.drivers.ESNDriver(
+    driver_unbatched = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -220,7 +220,7 @@ def test_batched_eigenvals_sparse_equivalence(
     )
 
     # Create driver with batching
-    driver_batched = orc.drivers.ESNDriver(
+    driver_batched = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -262,7 +262,7 @@ def test_batched_eigenvals_dense_equivalence(
     seed = 123
 
     # Create driver without batching (default behavior)
-    driver_unbatched = orc.drivers.ESNDriver(
+    driver_unbatched = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -272,7 +272,7 @@ def test_batched_eigenvals_dense_equivalence(
     )
 
     # Create driver with batching
-    driver_batched = orc.drivers.ESNDriver(
+    driver_batched = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -304,7 +304,7 @@ def test_batched_eigenvals_large_batch_size():
     res_dim, chunks = 150, 5
     large_batch_size = 20  # Larger than chunks
 
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=0.8,
         density=0.1,
@@ -321,7 +321,7 @@ def test_batched_eigenvals_large_batch_size():
 
 def test_batched_eigenvals_single_chunk():
     """Test batching with single chunk (edge case)."""
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=150,
         spectral_radius=0.7,
         density=0.05,
@@ -339,7 +339,7 @@ def test_batched_eigenvals_single_chunk():
 def test_batched_eigenvals_batch_size_one():
     """Test batching with batch size of 1 (most memory efficient)."""
     chunks = 10
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=150,
         spectral_radius=0.9,
         density=0.1,
@@ -357,7 +357,7 @@ def test_batched_eigenvals_batch_size_one():
 
 def test_batched_eigenvals_functionality_preserved():
     """Test that batched drivers maintain full ESN functionality."""
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=100,
         spectral_radius=0.8,
         density=0.05,
@@ -383,12 +383,65 @@ def test_batched_eigenvals_functionality_preserved():
     assert batch_new_state.shape == (3, 5, 100)
 
 
+##################### SINGLE ESN DRIVER TESTS #####################
+
+
+@pytest.fixture
+def single_esndriver():
+    return orc.drivers.ESNDriver(
+        res_dim=100,
+        leak=0.3,
+        spectral_radius=0.9,
+        density=0.1,
+        bias=1.0,
+        dtype=jnp.float64,
+        seed=42,
+    )
+
+
+def test_single_esndriver_dims(single_esndriver):
+    """Test that ESNDriver works with single reservoir (no chunks dimension)."""
+    key = jax.random.key(123)
+    res_dim = single_esndriver.res_dim
+
+    # Test single state advance
+    proj_vars = jax.random.normal(key, shape=(res_dim,))
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_esndriver.advance(proj_vars, res_state)
+
+    assert out_state.shape == (res_dim,)
+    assert jnp.all(jnp.isfinite(out_state))
+
+
+def test_single_esndriver_call(single_esndriver):
+    """Test ESNDriver __call__ method handles both single and batch inputs."""
+    key = jax.random.key(456)
+    res_dim = single_esndriver.res_dim
+
+    # Test single input
+    proj_vars = jax.random.normal(key, shape=(res_dim,))
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_esndriver(proj_vars, res_state)
+    assert out_state.shape == (res_dim,)
+
+    # Test batch input
+    batch_proj_vars = jax.random.normal(key, shape=(5, res_dim))
+    batch_res_state = jax.random.normal(key, shape=(5, res_dim))
+    batch_out = single_esndriver(batch_proj_vars, batch_res_state)
+    assert batch_out.shape == (5, res_dim)
+
+
+def test_single_esndriver_chunks_is_one(single_esndriver):
+    """Test that ESNDriver always has chunks=1."""
+    assert single_esndriver.chunks == 1
+
+
 ##################### CESN TESTS #####################
 
 
 @pytest.fixture
 def cesn_driver():
-    return orc.drivers.ESNDriver(
+    return orc.drivers.ParallelESNDriver(
         res_dim=200,
         time_const=50.0,  # Continuous parameter
         spectral_radius=0.7,
@@ -438,7 +491,7 @@ def test_batchapply_dims_cesn(batch_size, cesn_driver):
 )
 def test_param_types_cesn(res_dim, time_const, spectral_radius, density, bias, dtype):
     with pytest.raises(TypeError):
-        _ = orc.drivers.ESNDriver(
+        _ = orc.drivers.ParallelESNDriver(
             res_dim=res_dim,
             time_const=time_const,
             spectral_radius=spectral_radius,
@@ -460,7 +513,7 @@ def test_param_types_cesn(res_dim, time_const, spectral_radius, density, bias, d
 )
 def test_param_vals_cesn(res_dim, time_const, spectral_radius, density, bias, dtype):
     with pytest.raises(ValueError):
-        _ = orc.drivers.ESNDriver(
+        _ = orc.drivers.ParallelESNDriver(
             res_dim=res_dim,
             time_const=time_const,
             spectral_radius=spectral_radius,
@@ -474,7 +527,7 @@ def test_param_vals_cesn(res_dim, time_const, spectral_radius, density, bias, dt
 
 @pytest.mark.parametrize("chunks", [2, 4, 8])
 def test_call_cesn(chunks):
-    model = orc.drivers.ESNDriver(
+    model = orc.drivers.ParallelESNDriver(
         res_dim=150,
         time_const=50.0,
         spectral_radius=0.6,
@@ -505,7 +558,7 @@ def test_call_cesn(chunks):
 
 @pytest.fixture
 def taylordriver():
-    return orc.drivers.TaylorDriver(
+    return orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=212,
         spectral_radius=0.6,
@@ -555,7 +608,7 @@ def test_batchapply_dims_taylor(batch_size, taylordriver):
 )
 def test_param_types_taylor(n_terms, res_dim, spectral_radius, density, bias, dtype):
     with pytest.raises(TypeError):
-        _ = orc.drivers.TaylorDriver(
+        _ = orc.drivers.ParallelTaylorDriver(
             n_terms=n_terms,
             res_dim=res_dim,
             spectral_radius=spectral_radius,
@@ -576,7 +629,7 @@ def test_param_types_taylor(n_terms, res_dim, spectral_radius, density, bias, dt
 )
 def test_param_vals_taylor(n_terms, res_dim, spectral_radius, density, bias, dtype):
     with pytest.raises(ValueError):
-        _ = orc.drivers.TaylorDriver(
+        _ = orc.drivers.ParallelTaylorDriver(
             n_terms=n_terms,
             res_dim=res_dim,
             spectral_radius=spectral_radius,
@@ -589,7 +642,7 @@ def test_param_vals_taylor(n_terms, res_dim, spectral_radius, density, bias, dty
 
 @pytest.mark.parametrize("chunks", [2, 4, 8, 9])
 def test_call_ones_taylor(chunks):
-    model = orc.drivers.TaylorDriver(
+    model = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=212,
         spectral_radius=0.6,
@@ -626,7 +679,7 @@ def test_call_ones_taylor(chunks):
 )
 def test_taylordriver_spectral_radius_sparse(res_dim, spectral_radius, density, chunks):
     """Test that the spectral radius of the reservoir update matrix is as expected."""
-    driver = orc.drivers.TaylorDriver(
+    driver = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -659,7 +712,7 @@ def test_taylordriver_spectral_radius_sparse(res_dim, spectral_radius, density, 
 )
 def test_taylordriver_spectral_radius_dense(res_dim, spectral_radius, density, chunks):
     """Test that the spectral radius of the reservoir update matrix is as expected"""
-    driver = orc.drivers.TaylorDriver(
+    driver = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -679,8 +732,8 @@ def test_taylordriver_spectral_radius_dense(res_dim, spectral_radius, density, c
 
 @pytest.mark.parametrize("n_terms", [1, 2, 3, 4, 5])
 def test_taylordriver_n_terms(n_terms):
-    """Test that TaylorDriver works with different numbers of Taylor terms."""
-    driver = orc.drivers.TaylorDriver(
+    """Test that ParallelTaylorDriver works with different numbers of Taylor terms."""
+    driver = orc.drivers.ParallelTaylorDriver(
         n_terms=n_terms,
         res_dim=100,
         spectral_radius=0.6,
@@ -714,7 +767,7 @@ def test_taylordriver_batched_eigenvals_sparse_equivalence(
     seed = 42
 
     # Create driver without batching (default behavior)
-    driver_unbatched = orc.drivers.TaylorDriver(
+    driver_unbatched = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -725,7 +778,7 @@ def test_taylordriver_batched_eigenvals_sparse_equivalence(
     )
 
     # Create driver with batching
-    driver_batched = orc.drivers.TaylorDriver(
+    driver_batched = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -768,7 +821,7 @@ def test_taylordriver_batched_eigenvals_dense_equivalence(
     seed = 123
 
     # Create driver without batching (default behavior)
-    driver_unbatched = orc.drivers.TaylorDriver(
+    driver_unbatched = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -779,7 +832,7 @@ def test_taylordriver_batched_eigenvals_dense_equivalence(
     )
 
     # Create driver with batching
-    driver_batched = orc.drivers.TaylorDriver(
+    driver_batched = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -805,3 +858,56 @@ def test_taylordriver_batched_eigenvals_dense_equivalence(
 
     # Results should be identical (same seed, same computation)
     assert jnp.allclose(unbatched_eigs, batched_eigs, atol=1e-10)
+
+
+##################### SINGLE TAYLOR DRIVER TESTS #####################
+
+
+@pytest.fixture
+def single_taylordriver():
+    return orc.drivers.TaylorDriver(
+        n_terms=3,
+        res_dim=100,
+        spectral_radius=0.9,
+        density=0.1,
+        bias=1.0,
+        dtype=jnp.float64,
+        seed=42,
+    )
+
+
+def test_single_taylordriver_dims(single_taylordriver):
+    """Test that TaylorDriver works with single reservoir (no chunks dimension)."""
+    key = jax.random.key(123)
+    res_dim = single_taylordriver.res_dim
+
+    # Test single state advance
+    proj_vars = jax.random.normal(key, shape=(res_dim,))
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_taylordriver.advance(proj_vars, res_state)
+
+    assert out_state.shape == (res_dim,)
+    assert jnp.all(jnp.isfinite(out_state))
+
+
+def test_single_taylordriver_call(single_taylordriver):
+    """Test TaylorDriver __call__ method handles both single and batch inputs."""
+    key = jax.random.key(456)
+    res_dim = single_taylordriver.res_dim
+
+    # Test single input
+    proj_vars = jax.random.normal(key, shape=(res_dim,))
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_taylordriver(proj_vars, res_state)
+    assert out_state.shape == (res_dim,)
+
+    # Test batch input
+    batch_proj_vars = jax.random.normal(key, shape=(5, res_dim))
+    batch_res_state = jax.random.normal(key, shape=(5, res_dim))
+    batch_out = single_taylordriver(batch_proj_vars, batch_res_state)
+    assert batch_out.shape == (5, res_dim)
+
+
+def test_single_taylordriver_chunks_is_one(single_taylordriver):
+    """Test that TaylorDriver always has chunks=1."""
+    assert single_taylordriver.chunks == 1

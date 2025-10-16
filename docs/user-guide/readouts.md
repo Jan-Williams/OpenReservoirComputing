@@ -20,18 +20,18 @@ The `ReadoutBase` class defines the core interface that all readout implementati
 - `batch_readout(res_state)`: Map multiple reservoir states to outputs efficiently  
 - `__call__(res_state)`: Flexible interface supporting both single and batch inputs
 
-## LinearReadout Example
+## ParallelLinearReadout Example
 
-The `LinearReadout` class demonstrates a standard linear transformation from reservoir states to outputs with support for parallel reservoirs.
+The `ParallelLinearReadout` class demonstrates a standard linear transformation from reservoir states to outputs with support for parallel reservoirs.
 
 ### Basic Usage
 
 ```python
 import jax.numpy as jnp
-from orc.readouts import LinearReadout
+from orc.readouts import ParallelLinearReadout
 
 # Create a linear readout layer
-readout = LinearReadout(
+readout = ParallelLinearReadout(
     out_dim=3,      # Output dimension
     res_dim=100,    # Reservoir dimension  
     chunks=1,       # Number of parallel reservoirs
@@ -45,11 +45,11 @@ output = readout(res_state)     # Shape: (out_dim,)
 
 ### Parallel Reservoirs
 
-LinearReadout supports multiple parallel reservoirs, automatically handling the appropriate output concatenation:
+ParallelLinearReadout supports multiple parallel reservoirs, automatically handling the appropriate output concatenation:
 
 ```python
 # Parallel reservoirs readout
-readout = LinearReadout(
+readout = ParallelLinearReadout(
     out_dim=12,     # Total output dimension
     res_dim=100,    # Reservoir dimension per chunk
     chunks=4,       # Number of parallel reservoirs
