@@ -105,7 +105,7 @@ class ReadoutBase(eqx.Module, ABC):
         return self.readout(res_state)
 
 
-class LinearReadout(ReadoutBase):
+class ParallelLinearReadout(ReadoutBase):
     """Linear readout layer.
 
     Attributes
@@ -155,7 +155,7 @@ class LinearReadout(ReadoutBase):
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
-            Not used for LinearReadout, present to maintain consistent interface.
+            Not used for ParallelLinearReadout, present to maintain consistent interface.
         """
         super().__init__(out_dim=out_dim, res_dim=res_dim, dtype=dtype)
         self.out_dim = out_dim

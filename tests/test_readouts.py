@@ -8,7 +8,7 @@ import orc
 
 @pytest.fixture
 def linearreadout():
-    return orc.readouts.LinearReadout(out_dim=3, res_dim=982, dtype=jnp.float64, seed=0)
+    return orc.readouts.ParallelLinearReadout(out_dim=3, res_dim=982, dtype=jnp.float64, seed=0)
 
 
 def test_linearreadout_dims(linearreadout):
@@ -48,7 +48,7 @@ def test_batchapply_dims_linear(batch_size, linearreadout):
 )
 def test_param_types_linearreadout(out_dim, res_dim, dtype):
     with pytest.raises(TypeError):
-        _ = orc.readouts.LinearReadout(
+        _ = orc.readouts.ParallelLinearReadout(
             out_dim=out_dim,
             res_dim=res_dim,
             dtype=dtype,
@@ -57,7 +57,7 @@ def test_param_types_linearreadout(out_dim, res_dim, dtype):
 
 
 def test_ravel():
-    model = orc.readouts.LinearReadout(
+    model = orc.readouts.ParallelLinearReadout(
         out_dim=3,
         res_dim=10,
         dtype=jnp.float64,
