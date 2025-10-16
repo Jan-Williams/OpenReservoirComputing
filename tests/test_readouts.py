@@ -87,7 +87,7 @@ def test_ravel():
 
 
 def test_quadratic_readout():
-    readout = orc.readouts.NonlinearReadout(
+    readout = orc.readouts.ParallelNonlinearReadout(
         out_dim=6, res_dim=6, nonlin_list=[lambda x: x**2], chunks=1, dtype=jnp.float64
     )
 
@@ -102,7 +102,7 @@ def test_quadratic_readout():
 
 
 def test_nonlin_and_quadratic_readout():
-    readout = orc.readouts.NonlinearReadout(
+    readout = orc.readouts.ParallelNonlinearReadout(
         out_dim=6, res_dim=6, nonlin_list=[lambda x: x**2], chunks=12, dtype=jnp.float64
     )
     quad_readout = orc.readouts.QuadraticReadout(
