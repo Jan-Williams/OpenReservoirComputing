@@ -104,7 +104,7 @@ class DriverBase(eqx.Module, ABC):
         return self.advance(proj_vars, res_state)
 
 
-class ESNDriver(DriverBase):
+class ParallelESNDriver(DriverBase):
     """Standard implementation of ESN reservoir with tanh nonlinearity.
 
     Attributes
@@ -315,7 +315,7 @@ class ESNDriver(DriverBase):
 class TaylorDriver(DriverBase):
     """ESN driver with tanh nonlinearity, Taylor expanded.
 
-    This class defines a driver according to the Taylor series expansion of ESNDriver
+    This class defines a driver according to the Taylor series expansion of ParallelESNDriver
     including the first ``n_terms`` terms with the leak rate leak=0. Only discrete time
     dynamics are supported.
 

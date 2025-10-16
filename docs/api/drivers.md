@@ -12,7 +12,7 @@ This module contains reservoir drivers that define the dynamics of the reservoir
 
 ## ESN Driver
 
-::: orc.drivers.ESNDriver
+::: orc.drivers.ParallelESNDriver
     options:
       show_root_heading: true
       show_source: true

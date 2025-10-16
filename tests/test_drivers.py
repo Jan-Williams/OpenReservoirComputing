@@ -10,7 +10,7 @@ import orc
 
 @pytest.fixture
 def esndriver():
-    return orc.drivers.ESNDriver(
+    return orc.drivers.ParallelESNDriver(
         res_dim=212,
         leak=0.123,
         spectral_radius=0.6,
@@ -60,7 +60,7 @@ def test_batchapply_dims_esn(batch_size, esndriver):
 )
 def test_param_types_esn(res_dim, leak, spectral_radius, density, bias, dtype):
     with pytest.raises(TypeError):
-        _ = orc.drivers.ESNDriver(
+        _ = orc.drivers.ParallelESNDriver(
             res_dim=res_dim,
             leak=leak,
             spectral_radius=spectral_radius,
@@ -81,7 +81,7 @@ def test_param_types_esn(res_dim, leak, spectral_radius, density, bias, dtype):
 )
 def test_param_vals_esn(res_dim, leak, spectral_radius, density, bias, dtype):
     with pytest.raises(ValueError):
-        _ = orc.drivers.ESNDriver(
+        _ = orc.drivers.ParallelESNDriver(
             res_dim=res_dim,
             leak=leak,
             spectral_radius=spectral_radius,
@@ -94,7 +94,7 @@ def test_param_vals_esn(res_dim, leak, spectral_radius, density, bias, dtype):
 
 @pytest.mark.parametrize("chunks", [2, 4, 8, 9])
 def test_call_ones_esn(chunks):
-    model = orc.drivers.ESNDriver(
+    model = orc.drivers.ParallelESNDriver(
         res_dim=212,
         leak=0.123,
         spectral_radius=0.6,
@@ -142,7 +142,7 @@ def test_call_ones_esn(chunks):
 )
 def test_driver_spectral_radius_sparse(res_dim, spectral_radius, density, chunks):
     """Test that the spectral radius of the reservoir update matrix is as expected."""
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -174,7 +174,7 @@ def test_driver_spectral_radius_sparse(res_dim, spectral_radius, density, chunks
 )
 def test_driver_spectral_radius_dense(res_dim, spectral_radius, density, chunks):
     """Test that the spectral radius of the reservoir update matrix is as expected"""
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -210,7 +210,7 @@ def test_batched_eigenvals_sparse_equivalence(
     seed = 42
 
     # Create driver without batching (default behavior)
-    driver_unbatched = orc.drivers.ESNDriver(
+    driver_unbatched = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -220,7 +220,7 @@ def test_batched_eigenvals_sparse_equivalence(
     )
 
     # Create driver with batching
-    driver_batched = orc.drivers.ESNDriver(
+    driver_batched = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -262,7 +262,7 @@ def test_batched_eigenvals_dense_equivalence(
     seed = 123
 
     # Create driver without batching (default behavior)
-    driver_unbatched = orc.drivers.ESNDriver(
+    driver_unbatched = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -272,7 +272,7 @@ def test_batched_eigenvals_dense_equivalence(
     )
 
     # Create driver with batching
-    driver_batched = orc.drivers.ESNDriver(
+    driver_batched = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=spectral_radius,
         density=density,
@@ -304,7 +304,7 @@ def test_batched_eigenvals_large_batch_size():
     res_dim, chunks = 150, 5
     large_batch_size = 20  # Larger than chunks
 
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=res_dim,
         spectral_radius=0.8,
         density=0.1,
@@ -321,7 +321,7 @@ def test_batched_eigenvals_large_batch_size():
 
 def test_batched_eigenvals_single_chunk():
     """Test batching with single chunk (edge case)."""
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=150,
         spectral_radius=0.7,
         density=0.05,
@@ -339,7 +339,7 @@ def test_batched_eigenvals_single_chunk():
 def test_batched_eigenvals_batch_size_one():
     """Test batching with batch size of 1 (most memory efficient)."""
     chunks = 10
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=150,
         spectral_radius=0.9,
         density=0.1,
@@ -357,7 +357,7 @@ def test_batched_eigenvals_batch_size_one():
 
 def test_batched_eigenvals_functionality_preserved():
     """Test that batched drivers maintain full ESN functionality."""
-    driver = orc.drivers.ESNDriver(
+    driver = orc.drivers.ParallelESNDriver(
         res_dim=100,
         spectral_radius=0.8,
         density=0.05,
@@ -388,7 +388,7 @@ def test_batched_eigenvals_functionality_preserved():
 
 @pytest.fixture
 def cesn_driver():
-    return orc.drivers.ESNDriver(
+    return orc.drivers.ParallelESNDriver(
         res_dim=200,
         time_const=50.0,  # Continuous parameter
         spectral_radius=0.7,
@@ -438,7 +438,7 @@ def test_batchapply_dims_cesn(batch_size, cesn_driver):
 )
 def test_param_types_cesn(res_dim, time_const, spectral_radius, density, bias, dtype):
     with pytest.raises(TypeError):
-        _ = orc.drivers.ESNDriver(
+        _ = orc.drivers.ParallelESNDriver(
             res_dim=res_dim,
             time_const=time_const,
             spectral_radius=spectral_radius,
@@ -460,7 +460,7 @@ def test_param_types_cesn(res_dim, time_const, spectral_radius, density, bias, d
 )
 def test_param_vals_cesn(res_dim, time_const, spectral_radius, density, bias, dtype):
     with pytest.raises(ValueError):
-        _ = orc.drivers.ESNDriver(
+        _ = orc.drivers.ParallelESNDriver(
             res_dim=res_dim,
             time_const=time_const,
             spectral_radius=spectral_radius,
@@ -474,7 +474,7 @@ def test_param_vals_cesn(res_dim, time_const, spectral_radius, density, bias, dt
 
 @pytest.mark.parametrize("chunks", [2, 4, 8])
 def test_call_cesn(chunks):
-    model = orc.drivers.ESNDriver(
+    model = orc.drivers.ParallelESNDriver(
         res_dim=150,
         time_const=50.0,
         spectral_radius=0.6,
