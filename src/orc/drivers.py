@@ -401,7 +401,7 @@ class ESNDriver(ParallelESNDriver):
             seed=seed,
             use_sparse_eigs=use_sparse_eigs,
             eigenval_batch_size=eigenval_batch_size,
-            chunks=1,
+            chunks=0,
         )
 
     @eqx.filter_jit
@@ -754,7 +754,7 @@ class TaylorDriver(ParallelTaylorDriver):
             seed=seed,
             use_sparse_eigs=use_sparse_eigs,
             eigenval_batch_size=eigenval_batch_size,
-            chunks=1,
+            chunks=0,
         )
 
     @eqx.filter_jit
