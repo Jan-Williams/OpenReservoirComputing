@@ -210,7 +210,7 @@ class ParallelLinearReadout(ReadoutBase):
         return to_ret
 
 
-class NonlinearReadout(ReadoutBase):
+class ParallelNonlinearReadout(ReadoutBase):
     """Readout layer with user specified nonlinearities.
 
     Attributes
@@ -272,7 +272,7 @@ class NonlinearReadout(ReadoutBase):
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
-            Not used for NonlinearReadout, present to maintain consistent interface.
+            Not used for ParallelNonlinearReadout, present to maintain consistent interface.
         """
         super().__init__(out_dim=out_dim, res_dim=res_dim, dtype=dtype)
         self.out_dim = out_dim
@@ -358,7 +358,7 @@ class NonlinearReadout(ReadoutBase):
         return to_ret
 
 
-class QuadraticReadout(NonlinearReadout):
+class QuadraticReadout(ParallelNonlinearReadout):
     """Quadratic readout layer.
 
     Attributes

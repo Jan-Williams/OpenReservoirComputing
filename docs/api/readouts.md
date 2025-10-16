@@ -20,7 +20,7 @@ This module contains readout layers that map reservoir states to outputs.
 
 ## Nonlinear Readout
 
-::: orc.readouts.NonlinearReadout
+::: orc.readouts.ParallelNonlinearReadout
     options:
       show_root_heading: true
       show_source: true

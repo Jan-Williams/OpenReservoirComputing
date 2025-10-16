@@ -9,7 +9,7 @@ from jaxtyping import Array
 from orc.drivers import ParallelESNDriver
 from orc.embeddings import ParallelLinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
-from orc.readouts import ParallelLinearReadout, NonlinearReadout, QuadraticReadout
+from orc.readouts import ParallelLinearReadout, ParallelNonlinearReadout, QuadraticReadout
 from orc.utils.regressions import (
     _solve_all_ridge_reg,
     _solve_all_ridge_reg_batched,
@@ -364,7 +364,7 @@ def train_ESNForecaster(
 
     tot_res_seq = model.force(tot_seq, initial_res_state)
     res_seq = tot_res_seq[:-1]
-    if isinstance(model.readout, NonlinearReadout):
+    if isinstance(model.readout, ParallelNonlinearReadout):
         res_seq_train = eqx.filter_vmap(model.readout.nonlinear_transform)(res_seq)
     else:
         res_seq_train = res_seq
@@ -467,7 +467,7 @@ def train_CESNForecaster(
 
     tot_res_seq = model.force(tot_seq, initial_res_state, ts=t_train)
     res_seq = tot_res_seq[:-1]
-    if isinstance(model.readout, NonlinearReadout):
+    if isinstance(model.readout, ParallelNonlinearReadout):
         res_seq_train = eqx.filter_vmap(model.readout.nonlinear_transform)(res_seq)
     else:
         res_seq_train = res_seq
