@@ -505,7 +505,7 @@ def test_call_cesn(chunks):
 
 @pytest.fixture
 def taylordriver():
-    return orc.drivers.TaylorDriver(
+    return orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=212,
         spectral_radius=0.6,
@@ -555,7 +555,7 @@ def test_batchapply_dims_taylor(batch_size, taylordriver):
 )
 def test_param_types_taylor(n_terms, res_dim, spectral_radius, density, bias, dtype):
     with pytest.raises(TypeError):
-        _ = orc.drivers.TaylorDriver(
+        _ = orc.drivers.ParallelTaylorDriver(
             n_terms=n_terms,
             res_dim=res_dim,
             spectral_radius=spectral_radius,
@@ -576,7 +576,7 @@ def test_param_types_taylor(n_terms, res_dim, spectral_radius, density, bias, dt
 )
 def test_param_vals_taylor(n_terms, res_dim, spectral_radius, density, bias, dtype):
     with pytest.raises(ValueError):
-        _ = orc.drivers.TaylorDriver(
+        _ = orc.drivers.ParallelTaylorDriver(
             n_terms=n_terms,
             res_dim=res_dim,
             spectral_radius=spectral_radius,
@@ -589,7 +589,7 @@ def test_param_vals_taylor(n_terms, res_dim, spectral_radius, density, bias, dty
 
 @pytest.mark.parametrize("chunks", [2, 4, 8, 9])
 def test_call_ones_taylor(chunks):
-    model = orc.drivers.TaylorDriver(
+    model = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=212,
         spectral_radius=0.6,
@@ -626,7 +626,7 @@ def test_call_ones_taylor(chunks):
 )
 def test_taylordriver_spectral_radius_sparse(res_dim, spectral_radius, density, chunks):
     """Test that the spectral radius of the reservoir update matrix is as expected."""
-    driver = orc.drivers.TaylorDriver(
+    driver = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -659,7 +659,7 @@ def test_taylordriver_spectral_radius_sparse(res_dim, spectral_radius, density, 
 )
 def test_taylordriver_spectral_radius_dense(res_dim, spectral_radius, density, chunks):
     """Test that the spectral radius of the reservoir update matrix is as expected"""
-    driver = orc.drivers.TaylorDriver(
+    driver = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -679,8 +679,8 @@ def test_taylordriver_spectral_radius_dense(res_dim, spectral_radius, density, c
 
 @pytest.mark.parametrize("n_terms", [1, 2, 3, 4, 5])
 def test_taylordriver_n_terms(n_terms):
-    """Test that TaylorDriver works with different numbers of Taylor terms."""
-    driver = orc.drivers.TaylorDriver(
+    """Test that ParallelTaylorDriver works with different numbers of Taylor terms."""
+    driver = orc.drivers.ParallelTaylorDriver(
         n_terms=n_terms,
         res_dim=100,
         spectral_radius=0.6,
@@ -714,7 +714,7 @@ def test_taylordriver_batched_eigenvals_sparse_equivalence(
     seed = 42
 
     # Create driver without batching (default behavior)
-    driver_unbatched = orc.drivers.TaylorDriver(
+    driver_unbatched = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -725,7 +725,7 @@ def test_taylordriver_batched_eigenvals_sparse_equivalence(
     )
 
     # Create driver with batching
-    driver_batched = orc.drivers.TaylorDriver(
+    driver_batched = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -768,7 +768,7 @@ def test_taylordriver_batched_eigenvals_dense_equivalence(
     seed = 123
 
     # Create driver without batching (default behavior)
-    driver_unbatched = orc.drivers.TaylorDriver(
+    driver_unbatched = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
@@ -779,7 +779,7 @@ def test_taylordriver_batched_eigenvals_dense_equivalence(
     )
 
     # Create driver with batching
-    driver_batched = orc.drivers.TaylorDriver(
+    driver_batched = orc.drivers.ParallelTaylorDriver(
         n_terms=3,
         res_dim=res_dim,
         spectral_radius=spectral_radius,
