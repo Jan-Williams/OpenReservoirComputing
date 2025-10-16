@@ -911,4 +911,3 @@ def test_single_taylordriver_call(single_taylordriver):
 def test_single_taylordriver_chunks_is_one(single_taylordriver):
     """Test that TaylorDriver always has chunks=1."""
     assert single_taylordriver.chunks == 1
-

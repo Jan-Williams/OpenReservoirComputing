@@ -256,11 +256,11 @@ class LinearReadout(ParallelLinearReadout):
             interface.
         """
         super().__init__(
-        out_dim=out_dim,
-        res_dim=res_dim,
-        chunks=1,
-        dtype=dtype,
-        seed=seed,
+            out_dim=out_dim,
+            res_dim=res_dim,
+            chunks=1,
+            dtype=dtype,
+            seed=seed,
         )
 
     @eqx.filter_jit
@@ -569,7 +569,6 @@ class NonlinearReadout(ParallelNonlinearReadout):
             Output state, (out_dim,) or shape=(seq_len, out_dim)).
         """
         return jnp.squeeze(super().__call__(res_state[..., None, :]))
-
 
 
 class ParallelQuadraticReadout(ParallelNonlinearReadout):
