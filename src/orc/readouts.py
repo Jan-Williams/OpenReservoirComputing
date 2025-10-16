@@ -667,7 +667,6 @@ class QuadraticReadout(NonlinearReadout):
         self,
         out_dim: int,
         res_dim: int,
-        chunks: int = 1,
         dtype: Float = jnp.float64,
         *,
         seed: int = 0,
