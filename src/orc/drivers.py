@@ -312,7 +312,7 @@ class ParallelESNDriver(DriverBase):
         return to_ret
 
 
-class TaylorDriver(DriverBase):
+class ParallelTaylorDriver(DriverBase):
     """ESN driver with tanh nonlinearity, Taylor expanded.
 
     This class defines a driver according to the Taylor series expansion of ParallelESNDriver
