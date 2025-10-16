@@ -4,7 +4,7 @@ The **embedding layer** handles input-to-reservoir mapping. `ParallelLinearEmbed
 
 The **driver layer** propagates reservoir state evolution. `ParallelESNDriver` implements Echo State Network dynamics for both discrete-time updates and continuous-time evolution using ODE solvers with adaptive step control.
 
-The **readout layer** represents the trainable component. Options include `ParallelLinearReadout`, `QuadraticReadout`, and `ParallelNonlinearReadout`.
+The **readout layer** represents the trainable component. Options include `ParallelLinearReadout`, `ParallelQuadraticReadout`, and `ParallelNonlinearReadout`.
 
 ## Available Models
 

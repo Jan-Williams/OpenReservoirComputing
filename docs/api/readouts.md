@@ -28,7 +28,7 @@ This module contains readout layers that map reservoir states to outputs.
 
 ## Quadratic Readout
 
-::: orc.readouts.QuadraticReadout
+::: orc.readouts.ParallelQuadraticReadout
     options:
       show_root_heading: true
       show_source: true
