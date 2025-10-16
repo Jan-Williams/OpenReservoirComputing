@@ -858,3 +858,57 @@ def test_taylordriver_batched_eigenvals_dense_equivalence(
 
     # Results should be identical (same seed, same computation)
     assert jnp.allclose(unbatched_eigs, batched_eigs, atol=1e-10)
+
+
+##################### SINGLE TAYLOR DRIVER TESTS #####################
+
+
+@pytest.fixture
+def single_taylordriver():
+    return orc.drivers.TaylorDriver(
+        n_terms=3,
+        res_dim=100,
+        spectral_radius=0.9,
+        density=0.1,
+        bias=1.0,
+        dtype=jnp.float64,
+        seed=42,
+    )
+
+
+def test_single_taylordriver_dims(single_taylordriver):
+    """Test that TaylorDriver works with single reservoir (no chunks dimension)."""
+    key = jax.random.key(123)
+    res_dim = single_taylordriver.res_dim
+
+    # Test single state advance
+    proj_vars = jax.random.normal(key, shape=(res_dim,))
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_taylordriver.advance(proj_vars, res_state)
+
+    assert out_state.shape == (res_dim,)
+    assert jnp.all(jnp.isfinite(out_state))
+
+
+def test_single_taylordriver_call(single_taylordriver):
+    """Test TaylorDriver __call__ method handles both single and batch inputs."""
+    key = jax.random.key(456)
+    res_dim = single_taylordriver.res_dim
+
+    # Test single input
+    proj_vars = jax.random.normal(key, shape=(res_dim,))
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = single_taylordriver(proj_vars, res_state)
+    assert out_state.shape == (res_dim,)
+
+    # Test batch input
+    batch_proj_vars = jax.random.normal(key, shape=(5, res_dim))
+    batch_res_state = jax.random.normal(key, shape=(5, res_dim))
+    batch_out = single_taylordriver(batch_proj_vars, batch_res_state)
+    assert batch_out.shape == (5, res_dim)
+
+
+def test_single_taylordriver_chunks_is_one(single_taylordriver):
+    """Test that TaylorDriver always has chunks=1."""
+    assert single_taylordriver.chunks == 1
+
