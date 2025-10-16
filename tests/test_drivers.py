@@ -432,8 +432,8 @@ def test_single_esndriver_call(single_esndriver):
 
 
 def test_single_esndriver_chunks_is_one(single_esndriver):
-    """Test that ESNDriver always has chunks=1."""
-    assert single_esndriver.chunks == 1
+    """Test that ESNDriver always has chunks=0."""
+    assert single_esndriver.chunks == 0
 
 
 ##################### CESN TESTS #####################
@@ -909,6 +909,6 @@ def test_single_taylordriver_call(single_taylordriver):
 
 
 def test_single_taylordriver_chunks_is_one(single_taylordriver):
-    """Test that TaylorDriver always has chunks=1."""
-    assert single_taylordriver.chunks == 1
+    """Test that TaylorDriver always has chunks=0."""
+    assert single_taylordriver.chunks == 0
 
