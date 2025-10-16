@@ -358,7 +358,7 @@ class ParallelNonlinearReadout(ReadoutBase):
         return to_ret
 
 
-class QuadraticReadout(ParallelNonlinearReadout):
+class ParallelQuadraticReadout(ParallelNonlinearReadout):
     """Quadratic readout layer.
 
     Attributes
@@ -413,7 +413,7 @@ class QuadraticReadout(ParallelNonlinearReadout):
         dtype : Float
             Dtype, default jnp.float64.
         seed : int
-            Not used for QuadraticReadout, present to maintain consistent interface.
+            Not used for ParallelQuadraticReadout, present to maintain consistent interface.
         """
         super().__init__(
             out_dim=out_dim,
