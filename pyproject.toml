@@ -24,14 +24,14 @@ description = "GPU accelerated implementations of common RC architectures"
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
-    "jax==0.6.0",
+    "jax",
     "equinox",
     "matplotlib",
     "setuptools_scm>=8.1",
     "diffrax",
 ]
 
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.10, <3.14"
 keywords = ["reservoir computing", ""]
 classifiers = [
     "License :: OSI Approved :: BSD License",
@@ -39,6 +39,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Data Science",
 ]
 
@@ -72,7 +73,7 @@ convention = "numpy"
 
 [project.optional-dependencies]
 all = [
-    "jax[cuda12]==0.6.0",
+    "jax[cuda12]",
     "ruff",
     "pytest",
     "coverage",
@@ -98,7 +99,7 @@ dev = [
     "mkdocstrings[python]",
 ]
 notebooks = ["notebook", "ipykernel"]
-gpu = ["jax[cuda12]==0.6.0"]
+gpu = ["jax[cuda12]"]
 docs = [
     "mkdocs",
     "mkdocs-material",
@@ -106,3 +107,4 @@ docs = [
     "mkdocstrings[python]",
     "mkdocs-jupyter",
 ]
+
