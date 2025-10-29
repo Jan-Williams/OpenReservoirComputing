@@ -1012,7 +1012,7 @@ def test_grudriver_call_batch(grudriver):
 
     in_states = jax.random.normal(key, shape=(batch_size, res_dim))
     res_states = jax.random.normal(key, shape=(batch_size, res_dim))
-    out_states = grudriver(res_states, in_states)
+    out_states = grudriver.batch_advance(res_states, in_states)
 
     assert out_states.shape == (batch_size, res_dim)
     assert jnp.all(jnp.isfinite(out_states))
