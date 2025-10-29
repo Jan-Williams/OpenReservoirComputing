@@ -843,6 +843,7 @@ def _spec_rad_normalization(
     sp_mat = spectral_radius * (sp_mat / eigs[:, None, None])
     return sp_mat
 
+
 class GRUDriver(DriverBase):
     """Gated Recurrent Unit (GRU) based reservoir driver.
 
