@@ -1,10 +1,10 @@
 site_name: OpenReservoirComputing Documentation
 site_description: GPU accelerated implementations of common RC architectures
 site_author: Dima Tretiak, Jan P. Williams
-site_url: https://dtretiak.github.io/OpenReservoirComputing/
+site_url: https://Jan-Williams.github.io/OpenReservoirComputing/
 
-repo_name: dtretiak/OpenReservoirComputing
-repo_url: https://github.com/dtretiak/OpenReservoirComputing
+repo_name: Jan-Williams/OpenReservoirComputing
+repo_url: https://github.com/Jan-Williams/OpenReservoirComputing
 
 theme:
   name: material
@@ -89,7 +89,7 @@ extra_javascript:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/dtretiak/OpenReservoirComputing
+      link: https://github.com/Jan-Williams/OpenReservoirComputing
 
 # Include additional directories
 docs_dir: docs
