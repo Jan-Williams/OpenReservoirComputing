@@ -842,3 +842,57 @@ def _spec_rad_normalization(
             eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(dense_mat)), axis=1)
     sp_mat = spectral_radius * (sp_mat / eigs[:, None, None])
     return sp_mat
+
+
+class GRUDriver(DriverBase):
+    """Gated Recurrent Unit (GRU) based reservoir driver.
+
+    This driver uses an Equinox GRUCell as the reservoir dynamics.
+
+    Attributes
+    ----------
+    res_dim : int
+        Reservoir dimension.
+    gru : eqx.Module
+        Equinox GRUCell module for reservoir updates.
+    dtype : Float
+        Dtype for model, jnp.float64 or jnp.float32.
+
+    Methods
+    -------
+    advance(res_state, in_state)
+        Advance reservoir state using GRU dynamics.
+    """
+
+    gru: eqx.Module
+
+    def __init__(self, res_dim, seed=0):
+        """Initialize GRU-based reservoir driver.
+
+        Parameters
+        ----------
+        res_dim : int
+            Reservoir dimension.
+        seed : int
+            Random seed for initializing GRU weights. Default is 0.
+        """
+        super().__init__(res_dim=res_dim)
+        key = jax.random.key(seed)
+        self.gru = eqx.nn.GRUCell(res_dim, res_dim, key=key)
+
+    def advance(self, res_state, in_state):
+        """Advance the reservoir state using GRU dynamics.
+
+        Parameters
+        ----------
+        res_state : Array
+            Current reservoir state, (shape=(res_dim,)).
+        in_state : Array
+            Projected inputs to reservoir, (shape=(res_dim,)).
+
+        Returns
+        -------
+        Array
+            Updated reservoir state, (shape=(res_dim,)).
+        """
+        return self.gru(in_state, res_state)
