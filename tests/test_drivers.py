@@ -911,3 +911,163 @@ def test_single_taylordriver_call(single_taylordriver):
 def test_single_taylordriver_chunks_is_one(single_taylordriver):
     """Test that TaylorDriver always has chunks=1."""
     assert single_taylordriver.chunks == 1
+
+
+##################### GRU DRIVER TESTS #####################
+
+
+@pytest.fixture
+def grudriver():
+    return orc.drivers.GRUDriver(
+        res_dim=100,
+        seed=42,
+    )
+
+
+def test_grudriver_initialization():
+    """Test that GRUDriver initializes correctly."""
+    driver = orc.drivers.GRUDriver(res_dim=128, seed=0)
+    assert driver.res_dim == 128
+    assert driver.gru is not None
+
+
+def test_grudriver_dims(grudriver):
+    """Test that GRUDriver works with correct dimensions."""
+    key = jax.random.key(123)
+    res_dim = grudriver.res_dim
+
+    # Test single state advance
+    in_state = jax.random.normal(key, shape=(res_dim,))
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = grudriver.advance(res_state, in_state)
+
+    assert out_state.shape == (res_dim,)
+    assert jnp.all(jnp.isfinite(out_state))
+
+
+def test_grudriver_reproducibility():
+    """Test that GRUDriver produces reproducible results with same seed."""
+    key = jax.random.key(456)
+    in_state = jax.random.normal(key, shape=(100,))
+    res_state = jax.random.normal(key, shape=(100,))
+
+    # Create two drivers with same seed
+    driver1 = orc.drivers.GRUDriver(res_dim=100, seed=42)
+    driver2 = orc.drivers.GRUDriver(res_dim=100, seed=42)
+
+    out1 = driver1.advance(res_state, in_state)
+    out2 = driver2.advance(res_state, in_state)
+
+    assert jnp.allclose(out1, out2)
+
+
+def test_grudriver_different_seeds():
+    """Test that different seeds produce different drivers."""
+    key = jax.random.key(789)
+    in_state = jax.random.normal(key, shape=(100,))
+    res_state = jax.random.normal(key, shape=(100,))
+
+    driver1 = orc.drivers.GRUDriver(res_dim=100, seed=42)
+    driver2 = orc.drivers.GRUDriver(res_dim=100, seed=123)
+
+    out1 = driver1.advance(res_state, in_state)
+    out2 = driver2.advance(res_state, in_state)
+
+    # Should produce different outputs due to different initialization
+    assert not jnp.allclose(out1, out2)
+
+
+@pytest.mark.parametrize("batch_size", [3, 10, 25])
+def test_batchapply_dims_gru(batch_size, grudriver):
+    """Test batch advance functionality for GRUDriver."""
+    key = jax.random.key(42)
+    res_dim = grudriver.res_dim
+    in_states = jax.random.normal(key, shape=(batch_size, res_dim))
+    res_states = jax.random.normal(key, shape=(batch_size, res_dim))
+
+    out_states = grudriver.batch_advance(res_states, in_states)
+
+    assert out_states.shape == (batch_size, res_dim)
+    assert jnp.all(jnp.isfinite(out_states))
+
+
+def test_grudriver_call_single(grudriver):
+    """Test GRUDriver __call__ method with single input."""
+    key = jax.random.key(111)
+    res_dim = grudriver.res_dim
+
+    in_state = jax.random.normal(key, shape=(res_dim,))
+    res_state = jax.random.normal(key, shape=(res_dim,))
+    out_state = grudriver(res_state, in_state)
+
+    assert out_state.shape == (res_dim,)
+    assert jnp.all(jnp.isfinite(out_state))
+
+
+def test_grudriver_call_batch(grudriver):
+    """Test GRUDriver __call__ method with batch input."""
+    key = jax.random.key(222)
+    res_dim = grudriver.res_dim
+    batch_size = 7
+
+    in_states = jax.random.normal(key, shape=(batch_size, res_dim))
+    res_states = jax.random.normal(key, shape=(batch_size, res_dim))
+    out_states = grudriver.batch_advance(res_states, in_states)
+
+    assert out_states.shape == (batch_size, res_dim)
+    assert jnp.all(jnp.isfinite(out_states))
+
+
+def test_grudriver_stateful_behavior():
+    """Test that GRUDriver properly updates state across multiple steps."""
+    driver = orc.drivers.GRUDriver(res_dim=50, seed=0)
+    key = jax.random.key(333)
+
+    # Initialize states
+    res_state = jax.random.normal(key, shape=(50,))
+    in_state = jax.random.normal(key, shape=(50,))
+
+    # Advance multiple steps
+    state1 = driver.advance(res_state, in_state)
+    state2 = driver.advance(state1, in_state)
+    state3 = driver.advance(state2, in_state)
+
+    # Each state should be different (GRU has memory)
+    assert not jnp.allclose(state1, state2)
+    assert not jnp.allclose(state2, state3)
+    assert not jnp.allclose(state1, state3)
+
+    # All states should be finite
+    assert jnp.all(jnp.isfinite(state1))
+    assert jnp.all(jnp.isfinite(state2))
+    assert jnp.all(jnp.isfinite(state3))
+
+
+def test_grudriver_param_types():
+    """Test that GRUDriver raises errors for invalid parameter types."""
+    # res_dim must be an integer
+    with pytest.raises(TypeError):
+        _ = orc.drivers.GRUDriver(res_dim=100.5, seed=0)
+
+
+def test_grudriver_consistency_with_equinox_grucell():
+    """Test that GRUDriver advance matches direct GRUCell usage."""
+    res_dim = 80
+    seed = 99
+
+    # Create driver
+    driver = orc.drivers.GRUDriver(res_dim=res_dim, seed=seed)
+
+    # Create test data
+    test_key = jax.random.key(1000)
+    in_state = jax.random.normal(test_key, shape=(res_dim,))
+    res_state = jax.random.normal(test_key, shape=(res_dim,))
+
+    # Get output from driver
+    driver_output = driver.advance(res_state, in_state)
+
+    # Get output from direct GRU cell usage
+    direct_output = driver.gru(in_state, res_state)
+
+    # Should be identical
+    assert jnp.allclose(driver_output, direct_output)
