@@ -90,22 +90,29 @@ class EmbedBase(eqx.Module, ABC):
         self,
         in_state: Array,
     ) -> Array:
-        """Embed input signal to reservoir dimension.
-
-        If embedding supports parallel reservoirs, this method needs to be overwritten
-        to accomodate shape handling.
+        """Embed state to reservoir dimensions.
 
         Parameters
         ----------
         in_state : Array
-            Input state, (shape=(in_dim,)).
+            Input state, (shape=(in_dim,) or shape=(seq_len, in_dim)).
 
         Returns
         -------
         Array
-            Embedded input state to reservoir dimension.
+            Embedded input to reservoir, (shape=(chunks, res_dim,) or
+            shape=(seq_len, chunks, res_dim)).
         """
-        return self.embed(in_state)
+        if len(in_state.shape) == 1:
+            to_ret = self.embed(in_state)
+        elif len(in_state.shape) == 2:
+            to_ret = self.batch_embed(in_state)
+        else:
+            raise ValueError(
+                "Only 1-dimensional localization is currently supported, detected a "
+                f"{len(in_state.shape) - 1}D field."
+            )
+        return to_ret
 
 
 class ParallelLinearEmbedding(EmbedBase):
@@ -268,31 +275,6 @@ class ParallelLinearEmbedding(EmbedBase):
         localized_states = self.localize(in_state)
 
         return eqx.filter_vmap(jnp.matmul)(self.win, localized_states)
-
-    def __call__(self, in_state: Array) -> Array:
-        """Embed state to reservoir dimensions.
-
-        Parameters
-        ----------
-        in_state : Array
-            Input state, (shape=(in_dim,) or shape=(seq_len, in_dim)).
-
-        Returns
-        -------
-        Array
-            Embedded input to reservoir, (shape=(chunks, res_dim,) or
-            shape=(seq_len, chunks, res_dim)).
-        """
-        if len(in_state.shape) == 1:
-            to_ret = self.embed(in_state)
-        elif len(in_state.shape) == 2:
-            to_ret = self.batch_embed(in_state)
-        else:
-            raise ValueError(
-                "Only 1-dimensional localization is currently supported, detected a "
-                f"{len(in_state.shape) - 1}D field."
-            )
-        return to_ret
 
 
 class LinearEmbedding(ParallelLinearEmbedding):
@@ -480,28 +462,3 @@ class EnsembleLinearEmbedding(EmbedBase):
             raise ValueError("Incorrect dimension for input state.")
 
         return self.win @ in_state
-
-    def __call__(self, in_state: Array) -> Array:
-        """Embed state to reservoir dimensions.
-
-        Parameters
-        ----------
-        in_state : Array
-            Input state, (shape=(in_dim,) or shape=(seq_len, in_dim)).
-
-        Returns
-        -------
-        Array
-            Embedded input to reservoir, (shape=(chunks, res_dim,) or
-            shape=(seq_len, chunks, res_dim)).
-        """
-        if len(in_state.shape) == 1:
-            to_ret = self.embed(in_state)
-        elif len(in_state.shape) == 2:
-            to_ret = self.batch_embed(in_state)
-        else:
-            raise ValueError(
-                "Only 1-dimensional localization is currently supported, detected a "
-                f"{len(in_state.shape) - 1}D field."
-            )
-        return to_ret
