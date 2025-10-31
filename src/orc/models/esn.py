@@ -304,7 +304,6 @@ class CESNForecaster(CRCForecasterBase):
         self.chunks = chunks
 
 
-# TODO: EnsembleESNForecaster
 class EnsembleESNForecaster(RCForecasterBase):
     """
     Ensembled ESNs for forecasting.
