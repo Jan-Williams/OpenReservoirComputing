@@ -107,11 +107,6 @@ class EmbedBase(eqx.Module, ABC):
             to_ret = self.embed(in_state)
         elif len(in_state.shape) == 2:
             to_ret = self.batch_embed(in_state)
-        else:
-            raise ValueError(
-                "Only 1-dimensional localization is currently supported, detected a "
-                f"{len(in_state.shape) - 1}D field."
-            )
         return to_ret
 
 

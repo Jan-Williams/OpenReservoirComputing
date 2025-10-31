@@ -119,8 +119,8 @@ class RCForecasterBase(eqx.Module, ABC):
         """
 
         def scan_fn(state, in_vars):
-            proj_vars = self.embedding(in_vars)
-            res_state = self.driver(proj_vars, state)
+            proj_vars = self.embedding.embed(in_vars)
+            res_state = self.driver.advance(proj_vars, state)
             return (res_state, res_state)
 
         _, res_seq = jax.lax.scan(scan_fn, res_state, in_seq)
@@ -201,11 +201,11 @@ class RCForecasterBase(eqx.Module, ABC):
         """
 
         def scan_fn(state, _):
-            out_state = self.driver(self.embedding(self.readout(state)), state)
-            return (out_state, self.readout(out_state))
+            out_state = self.driver.advance(self.embedding.embed(self.readout.readout(state)), state)
+            return (out_state, self.readout.readout(out_state))
 
         _, state_seq = jax.lax.scan(scan_fn, res_state, None, length=fcast_len - 1)
-        pre_append_state = self.readout(res_state)
+        pre_append_state = self.readout.readout(res_state)
         return jnp.vstack([pre_append_state, state_seq])
 
     @eqx.filter_jit
@@ -355,8 +355,8 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         @eqx.filter_jit
         def res_ode(t, r, args):
             interp = args
-            proj_vars = self.embedding(interp.evaluate(t))
-            return self.driver(proj_vars, r)
+            proj_vars = self.embedding.embed(interp.evaluate(t))
+            return self.driver.advance(proj_vars, r)
 
         # integrate RC
         dt0 = ts[1] - ts[0]
@@ -419,7 +419,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         # RC autonomous ODE definition
         @eqx.filter_jit
         def res_ode(t, r, args):
-            out_state = self.driver(self.embedding(self.readout(r)), r)
+            out_state = self.driver.advance(self.embedding.embed(self.readout.readout(r)), r)
             return out_state
 
         # integrate RC
@@ -438,7 +438,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
             max_steps=None,
         )
         res_seq = sol.ys
-        return eqx.filter_vmap(self.readout)(res_seq)
+        return eqx.filter_vmap(self.readout.readout)(res_seq)
 
     @eqx.filter_jit
     def forecast_from_IC(
