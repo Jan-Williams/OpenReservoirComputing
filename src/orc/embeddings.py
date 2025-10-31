@@ -390,3 +390,121 @@ class LinearEmbedding(ParallelLinearEmbedding):
             shape=(seq_len, res_dim)).
         """
         return jnp.squeeze(super().__call__(in_state))
+
+
+class EnsembleLinearEmbedding(EmbedBase):
+    """Ensemble linear embedding layer.
+
+    Attributes
+    ----------
+    in_dim : int
+        Reservoir input dimension.
+    res_dim : int
+        Reservoir dimension.
+    scaling : float
+        Min/max values of input matrix.
+    win : Array
+        Input matrix.
+    chunks : int
+        Number of parallel reservoirs.
+
+    Methods
+    -------
+    __call__(in_state)
+        Embed input state to reservoir dimension.
+    embed(in_state)
+        Embed single input state to reservoir dimension.
+    """
+
+    in_dim: int
+    res_dim: int
+    scaling: float
+    win: Array
+    dtype: Float
+    chunks: int
+
+
+    def __init__(
+        self,
+        in_dim: int,
+        res_dim: int,
+        scaling: float,
+        chunks: int = 5,
+        dtype: Float = jnp.float64,
+        *,
+        seed: int,
+    ) -> None:
+        """Instantiate linear embedding.
+
+        Parameters
+        ----------
+        in_dim : int
+            Input dimension to reservoir.
+        res_dim : int
+            Reservoir dimension.
+        scaling : float
+            Min/max values of input matrix.
+        seed : int
+            Random seed for generating the PRNG key for the reservoir computer.
+        dtype : Float
+            Dtype of model, jnp.float64 or jnp.float32.
+        """
+        super().__init__(in_dim=in_dim, res_dim=res_dim, dtype=dtype)
+        self.scaling = scaling
+        self.dtype = dtype
+        key = jax.random.key(seed)
+
+        self.win = jax.random.uniform(
+            key,
+            (chunks, res_dim, in_dim),
+            minval=-scaling,
+            maxval=scaling,
+            dtype=dtype,
+        )
+        self.chunks = chunks
+
+
+    @eqx.filter_jit
+    def embed(self, in_state: Array) -> Array:
+        """Embed single state to reservoir dimensions.
+
+        Parameters
+        ----------
+        in_state : Array
+            Input state, (shape=(in_dim,)).
+
+        Returns
+        -------
+        Array
+            Embedded input to reservoir, (shape=(chunks, res_dim,)).
+        """
+        if in_state.shape != (self.in_dim,):
+            raise ValueError("Incorrect dimension for input state.")
+
+
+        return self.win @ in_state
+
+    def __call__(self, in_state: Array) -> Array:
+        """Embed state to reservoir dimensions.
+
+        Parameters
+        ----------
+        in_state : Array
+            Input state, (shape=(in_dim,) or shape=(seq_len, in_dim)).
+
+        Returns
+        -------
+        Array
+            Embedded input to reservoir, (shape=(chunks, res_dim,) or
+            shape=(seq_len, chunks, res_dim)).
+        """
+        if len(in_state.shape) == 1:
+            to_ret = self.embed(in_state)
+        elif len(in_state.shape) == 2:
+            to_ret = self.batch_embed(in_state)
+        else:
+            raise ValueError(
+                "Only 1-dimensional localization is currently supported, detected a "
+                f"{len(in_state.shape) - 1}D field."
+            )
+        return to_ret
