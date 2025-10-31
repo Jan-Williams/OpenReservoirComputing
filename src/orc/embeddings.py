@@ -423,7 +423,6 @@ class EnsembleLinearEmbedding(EmbedBase):
     dtype: Float
     chunks: int
 
-
     def __init__(
         self,
         in_dim: int,
@@ -463,7 +462,6 @@ class EnsembleLinearEmbedding(EmbedBase):
         )
         self.chunks = chunks
 
-
     @eqx.filter_jit
     def embed(self, in_state: Array) -> Array:
         """Embed single state to reservoir dimensions.
@@ -480,7 +478,6 @@ class EnsembleLinearEmbedding(EmbedBase):
         """
         if in_state.shape != (self.in_dim,):
             raise ValueError("Incorrect dimension for input state.")
-
 
         return self.win @ in_state
 

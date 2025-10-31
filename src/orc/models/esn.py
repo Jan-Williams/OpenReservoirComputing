@@ -7,9 +7,10 @@ import jax.numpy as jnp
 from jaxtyping import Array
 
 from orc.drivers import ParallelESNDriver
-from orc.embeddings import ParallelLinearEmbedding
+from orc.embeddings import EnsembleLinearEmbedding, ParallelLinearEmbedding
 from orc.rc import CRCForecasterBase, RCForecasterBase
 from orc.readouts import (
+    EnsembleLinearReadout,
     ParallelLinearReadout,
     ParallelNonlinearReadout,
     ParallelQuadraticReadout,
@@ -301,6 +302,216 @@ class CESNForecaster(CRCForecasterBase):
             stepsize_controller=stepsize_controller,
         )
         self.chunks = chunks
+
+
+# TODO: EnsembleESNForecaster
+class EnsembleESNForecaster(RCForecasterBase):
+    """
+    Ensembled ESNs for forecasting.
+
+    Attributes
+    ----------
+    res_dim : int
+        Reservoir dimension.
+    data_dim : int
+        Input/output dimension.
+    driver : ParallelESNDriver
+        Driver implmenting the Echo State Network dynamics.
+    readout : EnsembleLinearReadout
+        Trainable linear readout layer.
+    embedding : EnsembleLinearEmbedding
+        Untrainable linear embedding layer.
+
+    Methods
+    -------
+    force(in_seq, res_state)
+        Teacher forces the reservoir with sequence in_seq and init. cond. res_state.
+    forecast(fcast_len, res_state)
+        Perform a forecast of fcast_len steps from res_state.
+    forecast_from_IC(fcast_len, spinup_data)
+        Forecast from a sequence of spinup data.
+    set_readout(readout)
+        Replace readout layer.
+    set_embedding(embedding)
+        Replace embedding layer.
+    """
+
+    res_dim: int
+    data_dim: int
+
+    def __init__(
+        self,
+        data_dim: int,
+        res_dim: int,
+        leak_rate: float = 0.6,
+        bias: float = 1.6,
+        embedding_scaling: float = 0.08,
+        Wr_density: float = 0.02,
+        Wr_spectral_radius: float = 0.8,
+        dtype: type = jnp.float64,
+        seed: int = 0,
+        chunks: int = 1,
+        use_sparse_eigs: bool = True,
+    ) -> None:
+        """
+        Initialize the ESN model.
+
+        Parameters
+        ----------
+        data_dim : int
+            Dimension of the input data.
+        res_dim : int
+            Dimension of the reservoir adjacency matrix Wr.
+        leak_rate : float
+            Integration leak rate of the reservoir dynamics.
+        bias : float
+            Bias term for the reservoir dynamics.
+        embedding_scaling : float
+            Scaling factor for the embedding layer.
+        Wr_density : float
+            Density of the reservoir adjacency matrix Wr.
+        Wr_spectral_radius : float
+            Largest eigenvalue of the reservoir adjacency matrix Wr.
+        dtype : type
+            Data type of the model (jnp.float64 is highly recommended).
+        seed : int
+            Random seed for generating the PRNG key for the reservoir computer.
+        chunks : int
+            Number of parallel reservoirs, must evenly divide data_dim.
+        use_sparse_eigs : bool
+            Whether to use sparse eigensolver for setting the spectral radius of wr.
+            Default is True, which is recommended to save memory and compute time. If
+            False, will use dense eigensolver which may be more accurate.
+        """
+        # Initialize the random key and reservoir dimension
+        self.res_dim = res_dim
+        self.seed = seed
+        self.data_dim = data_dim
+        key = jax.random.PRNGKey(seed)
+        key_driver, key_readout, key_embedding = jax.random.split(key, 3)
+
+        # init in embedding, driver and readout
+        embedding = EnsembleLinearEmbedding(
+            in_dim=data_dim,
+            res_dim=res_dim,
+            seed=key_embedding[0],
+            scaling=embedding_scaling,
+            chunks=chunks,
+        )
+        driver = ParallelESNDriver(
+            res_dim=res_dim,
+            seed=key_driver[0],
+            leak=leak_rate,
+            bias=bias,
+            density=Wr_density,
+            spectral_radius=Wr_spectral_radius,
+            chunks=chunks,
+            dtype=dtype,
+            use_sparse_eigs=use_sparse_eigs,
+        )
+
+        readout = EnsembleLinearReadout(
+            out_dim=data_dim, res_dim=res_dim, seed=key_readout[0], chunks=chunks
+        )
+
+        super().__init__(
+            driver=driver,
+            readout=readout,
+            embedding=embedding,
+            dtype=dtype,
+            seed=seed,
+        )
+        self.chunks = chunks
+
+
+def train_EnsembleESNForecaster(
+    model: EnsembleESNForecaster,
+    train_seq: Array,
+    target_seq: Array | None = None,
+    spinup: int = 0,
+    initial_res_state: Array | None = None,
+    beta: float = 8e-8,
+    batch_size: int | None = None,
+) -> tuple[ESNForecaster, Array]:
+    """Training function for ESNForecaster.
+
+    Parameters
+    ----------
+    model : ESNForecaster
+        ESNForecaster model to train.
+    train_seq : Array
+        Training input sequence for reservoir, (shape=(seq_len, data_dim)).
+    target_seq : Array
+        Target sequence for training reservoir, (shape=(seq_len, data_dim)).
+    initial_res_state : Array
+        Initial reservoir state, (shape=(chunks, res_dim,)).
+    spinup : int
+        Initial transient of reservoir states to discard.
+    beta : float
+        Tikhonov regularization parameter.
+    batch_size : int, optional
+        Number of parallel reservoirs to process in each batch for ridge regression.
+        If None (default), processes all reservoirs at once. Use smaller values
+        to reduce memory usage for large numbers of parallel reservoirs.
+
+    Returns
+    -------
+    model : ESNForecaster
+        Trained ESN model.
+    res_seq : Array
+        Training sequence of reservoir states.
+    """
+    # Check that model is an ESN
+    if not isinstance(model, EnsembleESNForecaster):
+        raise TypeError("Model must be an EnsembleESNForecaster.")
+
+    # check that spinup is less than the length of the training sequence
+    if spinup >= train_seq.shape[0]:
+        raise ValueError(
+            "spinup must be less than the length of the training sequence."
+        )
+
+    if initial_res_state is None:
+        initial_res_state = jnp.zeros(
+            (
+                model.embedding.chunks,
+                model.res_dim,
+            ),
+            dtype=model.dtype,
+        )
+
+    if target_seq is None:
+        tot_seq = train_seq
+        target_seq = train_seq[1:, :]
+        train_seq = train_seq[:-1, :]
+    else:
+        tot_seq = jnp.vstack((train_seq, target_seq[-1:]))
+
+    tot_res_seq = model.force(tot_seq, initial_res_state)
+    res_seq = tot_res_seq[:-1]
+    res_seq_train = res_seq
+
+    repeated_target_seq = jnp.repeat(target_seq[:, None, :], model.chunks, axis=1)
+    if batch_size is None:
+        cmat = _solve_all_ridge_reg(
+            res_seq_train[spinup:],
+            repeated_target_seq,
+            beta,
+        )
+    else:
+        cmat = _solve_all_ridge_reg_batched(
+            res_seq_train[spinup:],
+            repeated_target_seq,
+            beta,
+            batch_size,
+        )
+
+    def where(m):
+        return m.readout.wout
+
+    model = eqx.tree_at(where, model, cmat)
+
+    return model, tot_res_seq
 
 
 def train_ESNForecaster(
