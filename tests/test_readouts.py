@@ -269,3 +269,30 @@ def test_single_quadraticreadout_call(single_quadraticreadout):
 def test_single_quadraticreadout_chunks_is_one(single_quadraticreadout):
     """Test that QuadraticReadout always has chunks=1."""
     assert single_quadraticreadout.chunks == 1
+
+
+##################### ENSEMBLE LINEAR READOUT TESTS #####################
+
+
+@pytest.mark.parametrize(
+    "chunks,batch_size,out_dim",
+    [
+        (5, 32, 3),
+        (3, 16, 4),
+        (15, 17, 5),
+    ],
+)
+def test_ensemble_readout_shapes(chunks, batch_size, out_dim):
+    res_dim = 747
+    readout = orc.readouts.EnsembleLinearReadout(out_dim, res_dim, chunks)
+
+    inputs = jnp.ones((batch_size, chunks, res_dim))
+    outputs = readout(inputs)
+    assert outputs.shape == (
+        batch_size,
+        out_dim,
+    )
+
+    inputs = jnp.ones((chunks, res_dim))
+    outputs = readout(inputs)
+    assert outputs.shape == (out_dim,)
