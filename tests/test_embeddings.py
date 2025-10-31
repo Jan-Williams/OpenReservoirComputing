@@ -146,6 +146,6 @@ def test_ensemble_embed_shapes(chunks, batch_size, in_dim):
     outputs = embedding(inputs)
     assert outputs.shape == (batch_size, chunks, res_dim)
 
-    inputs = jnp.ones((in_dim))
+    inputs = jnp.ones(in_dim)
     outputs = embedding(inputs)
     assert outputs.shape == (chunks, res_dim)
