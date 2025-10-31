@@ -730,4 +730,3 @@ class EnsembleLinearReadout(ReadoutBase):
                 "Incorrect reservoir dimension for instantiated output map."
             )
         return jnp.mean(eqx.filter_vmap(jnp.matmul)(self.wout, res_state), axis=0)
-
