@@ -122,3 +122,30 @@ def test_single_linearembedding_call(single_linearembedding):
 def test_single_linearembedding_chunks_is_one(single_linearembedding):
     """Test that LinearEmbedding always has chunks=1."""
     assert single_linearembedding.chunks == 1
+
+
+##################### ENSEMBLE LINEAR EMBEDDING TESTS #####################
+
+
+@pytest.mark.parametrize(
+    "chunks,batch_size,in_dim",
+    [
+        (5, 32, 3),
+        (3, 16, 4),
+        (15, 17, 5),
+    ],
+)
+def test_ensemble_embed_shapes(chunks, batch_size, in_dim):
+    res_dim = 312
+    in_dim = 5
+    scaling = 0.084
+    embedding = orc.embeddings.EnsembleLinearEmbedding(
+        in_dim, res_dim, scaling, chunks, seed=0
+    )
+    inputs = jnp.ones((batch_size, in_dim))
+    outputs = embedding(inputs)
+    assert outputs.shape == (batch_size, chunks, res_dim)
+
+    inputs = jnp.ones(in_dim)
+    outputs = embedding(inputs)
+    assert outputs.shape == (chunks, res_dim)

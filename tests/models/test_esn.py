@@ -444,3 +444,63 @@ def test_batched_vmap_different_batch_sizes():
             f"Batch size {batch_sizes[i]} produced different reconstruction",
             f"max diff: {max_diff}",
         )
+
+
+####################### ESN TESTS #####################
+def test_ensemble_esn_train():
+    """
+    Test forecast on Lorenz system. Passes if forecast is accurate for 100 steps.
+    """
+    res_dim = 1000
+    chunks = 6
+    tN = 100
+    dt = 0.01
+    u0 = np.array([0.05, 1, 1.05])
+    test_perc = 0.2
+    fcast_len = 100
+
+    # get data
+    U, _ = orc.data.lorenz63(tN=tN, dt=dt, u0=u0)
+    split_idx = int((1 - test_perc) * U.shape[0])
+    U_train = U[:split_idx, :]
+    U_test = U[split_idx:, :]
+
+    # train esn
+    esn = orc.models.EnsembleESNForecaster(
+        data_dim=3, res_dim=res_dim, seed=0, chunks=chunks
+    )
+    esn, R = orc.models.esn.train_EnsembleESNForecaster(esn, U_train)
+
+    # forecast
+    U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
+
+    assert (jnp.linalg.norm(U_pred - U_test[:fcast_len, :]) / fcast_len) < 1e-3
+
+
+def test_ensemble_forecast_from_IC(dummy_problem_params):
+    """Test forecast from IC vs forecast from reservoir state."""
+    res_dim = 100
+    chunks = 32
+    locality = 2
+    fcast_len = 25
+
+    # grab dummy data
+    Nx, U_train, U_test = dummy_problem_params
+
+    esn = orc.models.ESNForecaster(
+        data_dim=Nx,
+        res_dim=res_dim,
+        seed=0,
+        chunks=chunks,
+        locality=locality,
+        periodic=False,
+    )
+
+    esn, R = orc.models.esn.train_ESNForecaster(
+        esn,
+        U_train,
+        initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
+    )
+    U_pred1 = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
+    U_pred2 = esn.forecast_from_IC(fcast_len, U_train[-101:])
+    assert jnp.allclose(U_pred1, U_pred2)
