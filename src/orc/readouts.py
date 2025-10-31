@@ -87,22 +87,30 @@ class ReadoutBase(eqx.Module, ABC):
         self,
         res_state: Array,
     ) -> Array:
-        """Readout from reservoir state.
-
-        If readout supports parallel reservoirs, this method needs to be overwritten
-        to accomodate shape handling.
+        """Call either readout or batch_readout depending on dimensions.
 
         Parameters
         ----------
         res_state : Array
-            Reservoir state.
+            Reservoir state, (shape=(chunks, res_dim) or
+            shape=(seq_len, chunks, res_dim)).
 
         Returns
         -------
         Array
-            Output from reservoir state.
+            Output state, (out_dim,) or shape=(seq_len, out_dim)).
         """
-        return self.readout(res_state)
+        if self.chunks > 0:
+            if len(res_state.shape) == 2:
+                to_ret = self.readout(res_state)
+            elif len(res_state.shape) == 3:
+                to_ret = self.batch_readout(res_state)
+        else:
+            if len(res_state.shape) == 1:
+                to_ret = self.readout(res_state)
+            elif len(res_state.shape) == 2:
+                to_ret = self.batch_readout(res_state)
+        return to_ret
 
 
 class ParallelLinearReadout(ReadoutBase):
@@ -184,31 +192,6 @@ class ParallelLinearReadout(ReadoutBase):
                 "Incorrect reservoir dimension for instantiated output map."
             )
         return jnp.ravel(eqx.filter_vmap(jnp.matmul)(self.wout, res_state))
-
-    def __call__(self, res_state: Array) -> Array:
-        """Call either readout or batch_readout depending on dimensions.
-
-        Parameters
-        ----------
-        res_state : Array
-            Reservoir state, (shape=(chunks, res_dim) or
-            shape=(seq_len, chunks, res_dim)).
-
-        Returns
-        -------
-        Array
-            Output state, (out_dim,) or shape=(seq_len, out_dim)).
-        """
-        if len(res_state.shape) == 2:
-            to_ret = self.readout(res_state)
-        elif len(res_state.shape) == 3:
-            to_ret = self.batch_readout(res_state)
-        else:
-            raise ValueError(
-                "Only 1-dimensional localization is currently supported, detected a "
-                f"{len(res_state.shape)}D field."
-            )
-        return to_ret
 
 
 class LinearReadout(ParallelLinearReadout):
@@ -418,31 +401,6 @@ class ParallelNonlinearReadout(ReadoutBase):
             )
         transformed_res_state = self.nonlinear_transform(res_state)
         return jnp.ravel(eqx.filter_vmap(jnp.matmul)(self.wout, transformed_res_state))
-
-    def __call__(self, res_state: Array) -> Array:
-        """Call either readout or batch_readout depending on dimensions.
-
-        Parameters
-        ----------
-        res_state : Array
-            Reservoir state, (shape=(chunks, res_dim) or
-            shape=(seq_len, chunks, res_dim)).
-
-        Returns
-        -------
-        Array
-            Output state, (out_dim,) or shape=(seq_len, out_dim)).
-        """
-        if len(res_state.shape) == 2:
-            to_ret = self.readout(res_state)
-        elif len(res_state.shape) == 3:
-            to_ret = self.batch_readout(res_state)
-        else:
-            raise ValueError(
-                "Only 1-dimensional localization is currently supported, detected a "
-                f"{len(res_state.shape)}D field."
-            )
-        return to_ret
 
 
 class NonlinearReadout(ParallelNonlinearReadout):
@@ -772,29 +730,3 @@ class EnsembleLinearReadout(ReadoutBase):
                 "Incorrect reservoir dimension for instantiated output map."
             )
         return jnp.mean(eqx.filter_vmap(jnp.matmul)(self.wout, res_state), axis=0)
-
-    @eqx.filter_jit
-    def __call__(self, res_state: Array) -> Array:
-        """Call either readout or batch_readout depending on dimensions.
-
-        Parameters
-        ----------
-        res_state : Array
-            Reservoir state, (shape=(chunks, res_dim) or
-            shape=(seq_len, chunks, res_dim)).
-
-        Returns
-        -------
-        Array
-            Output state, (out_dim,) or shape=(seq_len, out_dim)).
-        """
-        if len(res_state.shape) == 2:
-            to_ret = self.readout(res_state)
-        elif len(res_state.shape) == 3:
-            to_ret = self.batch_readout(res_state)
-        else:
-            raise ValueError(
-                "Only 1-dimensional localization is currently supported, detected a "
-                f"{len(res_state.shape)}D field."
-            )
-        return to_ret

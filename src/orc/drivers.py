@@ -84,24 +84,34 @@ class DriverBase(eqx.Module, ABC):
         return eqx.filter_vmap(self.advance)(proj_vars, res_state)
 
     def __call__(self, proj_vars: Array, res_state: Array) -> Array:
-        """Advance the reservoir given projected inputs and current state.
-
-        If driver supports parallel reservoirs, this method needs to be overwritten
-        to accomodate shape handling.
+        """Advance reservoir state.
 
         Parameters
         ----------
         proj_vars : Array
-            Projected inputs to reservoir.
+            Reservoir projected inputs, (shape=(chunks, res_dim) or
+            shape=(seq_len, chunks, res_dim)).
         res_state : Array
-            Initial reservoir state.
+            Current reservoir state, (shape=(chunks, res_dim) or
+            shape=(seq_len, chunks, res_dim)).
 
         Returns
         -------
         Array
-            Updated reservoir state, (shape=(res_dim,)).
+            Sequence of reservoir states, (shape=(chunks, res_dim,) or
+            shape=(seq_len, chunks, res_dim)).
         """
-        return self.advance(proj_vars, res_state)
+        if self.chunks > 0:
+            if len(proj_vars.shape) == 2:
+                to_ret = self.advance(proj_vars, res_state)
+            elif len(proj_vars.shape) == 3:
+                to_ret = self.batch_advance(proj_vars, res_state)
+        else:
+            if len(proj_vars.shape) == 1:
+                to_ret = self.advance(proj_vars, res_state)
+            elif len(proj_vars.shape) == 2:
+                to_ret = self.batch_advance(proj_vars, res_state)
+        return to_ret
 
 
 class ParallelESNDriver(DriverBase):
@@ -281,35 +291,6 @@ class ParallelESNDriver(DriverBase):
                 )
                 + (1 - self.leak) * res_state
             )
-
-    def __call__(self, proj_vars: Array, res_state: Array) -> Array:
-        """Advance reservoir state.
-
-        Parameters
-        ----------
-        proj_vars : Array
-            Reservoir projected inputs, (shape=(chunks, res_dim) or
-            shape=(seq_len, chunks, res_dim)).
-        res_state : Array
-            Current reservoir state, (shape=(chunks, res_dim) or
-            shape=(seq_len, chunks, res_dim)).
-
-        Returns
-        -------
-        Array
-            Sequence of reservoir states, (shape=(chunks, res_dim,) or
-            shape=(seq_len, chunks, res_dim)).
-        """
-        if len(proj_vars.shape) == 2:
-            to_ret = self.advance(proj_vars, res_state)
-        elif len(proj_vars.shape) == 3:
-            to_ret = self.batch_advance(proj_vars, res_state)
-        else:
-            raise ValueError(
-                "Only 1-dimensional localization is currently supported, detected a "
-                f"{len(proj_vars.shape)}D field."
-            )
-        return to_ret
 
 
 class ESNDriver(ParallelESNDriver):
@@ -643,35 +624,6 @@ class ParallelTaylorDriver(DriverBase):
             self.wr, res_state, proj_vars, self.bias * jnp.ones_like(proj_vars)
         )
 
-    def __call__(self, proj_vars: Array, res_state: Array) -> Array:
-        """Advance reservoir state.
-
-        Parameters
-        ----------
-        proj_vars : Array
-            Reservoir projected inputs, (shape=(chunks, res_dim) or
-            shape=(seq_len, chunks, res_dim)).
-        res_state : Array
-            Current reservoir state, (shape=(chunks, res_dim) or
-            shape=(seq_len, chunks, res_dim)).
-
-        Returns
-        -------
-        Array
-            Sequence of reservoir states, (shape=(chunks, res_dim,) or
-            shape=(seq_len, chunks, res_dim)).
-        """
-        if len(proj_vars.shape) == 2:
-            to_ret = self.advance(proj_vars, res_state)
-        elif len(proj_vars.shape) == 3:
-            to_ret = self.batch_advance(proj_vars, res_state)
-        else:
-            raise ValueError(
-                "Only 1-dimensional localization is currently supported, detected a "
-                f"{len(proj_vars.shape)}D field."
-            )
-        return to_ret
-
 
 class TaylorDriver(ParallelTaylorDriver):
     """ESN driver with tanh nonlinearity, Taylor expanded.
@@ -865,8 +817,9 @@ class GRUDriver(DriverBase):
     """
 
     gru: eqx.Module
+    chunks: int = 0
 
-    def __init__(self, res_dim, seed=0):
+    def __init__(self, res_dim, *, seed):
         """Initialize GRU-based reservoir driver.
 
         Parameters
