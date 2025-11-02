@@ -3,7 +3,7 @@
 </div>
 
 # ORC: Open Reservoir Computing
-
+### Warning: ORC is currently under development, many things may be (are definitely) broken and not all functionality is documented
 [![CI](https://github.com/Jan-Williams/OpenReservoirComputing/actions/workflows/tests.yml/badge.svg)](https://github.com/Jan-Williams/OpenReservoirComputing/actions/workflows/tests.yml)
 
 
