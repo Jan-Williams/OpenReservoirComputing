@@ -2,8 +2,28 @@
 
 import jax
 
-from orc import data, drivers, embeddings, models, rc, readouts, utils
+from orc import (
+    classifier,
+    control,
+    data,
+    drivers,
+    embeddings,
+    forecaster,
+    readouts,
+    tuning,
+    utils,
+)
 
 jax.config.update("jax_enable_x64", True)
 
-__all__ = ["drivers", "embeddings", "models", "readouts", "utils", "rc", "data"]
+__all__ = [
+    "forecaster",
+    "classifier",
+    "control",
+    "tuning",
+    "drivers",
+    "embeddings",
+    "readouts",
+    "data",
+    "utils",
+]
