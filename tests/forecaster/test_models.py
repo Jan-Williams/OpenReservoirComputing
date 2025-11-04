@@ -40,7 +40,9 @@ def test_esn_train():
     U_test = U[split_idx:, :]
 
     # train esn
-    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=res_dim, seed=0, quadratic=True)
+    esn = orc.forecaster.ESNForecaster(
+        data_dim=3, res_dim=res_dim, seed=0, quadratic=True
+    )
     esn, R = orc.forecaster.train_ESNForecaster(esn, U_train)
 
     # forecast
@@ -358,7 +360,9 @@ def test_esn_batched_vmap_equivalence(dummy_problem_params):
     res_dim = 500
 
     # Create ESN model
-    esn = orc.forecaster.ESNForecaster(data_dim=Nx, res_dim=res_dim, chunks=chunks, seed=42)
+    esn = orc.forecaster.ESNForecaster(
+        data_dim=Nx, res_dim=res_dim, chunks=chunks, seed=42
+    )
 
     # Train without batching (default)
     esn_unbatched, R_unbatched = orc.forecaster.train_ESNForecaster(
