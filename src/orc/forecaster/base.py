@@ -1,4 +1,4 @@
-"""Defines base classes for Reservoir Computers."""
+"""Defines base classes for Reservoir Computer Forecasters."""
 
 from abc import ABC
 
