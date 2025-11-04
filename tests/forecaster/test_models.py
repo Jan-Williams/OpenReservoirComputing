@@ -40,8 +40,8 @@ def test_esn_train():
     U_test = U[split_idx:, :]
 
     # train esn
-    esn = orc.models.ESNForecaster(data_dim=3, res_dim=res_dim, seed=0, quadratic=True)
-    esn, R = orc.models.esn.train_ESNForecaster(esn, U_train)
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=res_dim, seed=0, quadratic=True)
+    esn, R = orc.forecaster.train_ESNForecaster(esn, U_train)
 
     # forecast
     U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
@@ -61,7 +61,7 @@ def test_periodic_par_esn(dummy_problem_params):
     # grab dummy data
     Nx, U_train, U_test = dummy_problem_params
 
-    esn = orc.models.ESNForecaster(
+    esn = orc.forecaster.ESNForecaster(
         data_dim=Nx,
         res_dim=res_dim,
         seed=0,
@@ -71,7 +71,7 @@ def test_periodic_par_esn(dummy_problem_params):
     )
 
     # train esn
-    esn, R = orc.models.esn.train_ESNForecaster(
+    esn, R = orc.forecaster.train_ESNForecaster(
         esn,
         U_train,
         initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
@@ -94,7 +94,7 @@ def test_nonperiodic_par_esn(dummy_problem_params):
     Nx, U_train, U_test = dummy_problem_params
 
     # init esn
-    esn = orc.models.ESNForecaster(
+    esn = orc.forecaster.ESNForecaster(
         data_dim=Nx,
         res_dim=res_dim,
         seed=0,
@@ -104,7 +104,7 @@ def test_nonperiodic_par_esn(dummy_problem_params):
     )
 
     # train esn
-    esn, R = orc.models.esn.train_ESNForecaster(
+    esn, R = orc.forecaster.train_ESNForecaster(
         esn,
         U_train,
         initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
@@ -125,7 +125,7 @@ def test_forecast_from_IC(dummy_problem_params):
     # grab dummy data
     Nx, U_train, U_test = dummy_problem_params
 
-    esn = orc.models.ESNForecaster(
+    esn = orc.forecaster.ESNForecaster(
         data_dim=Nx,
         res_dim=res_dim,
         seed=0,
@@ -134,7 +134,7 @@ def test_forecast_from_IC(dummy_problem_params):
         periodic=False,
     )
 
-    esn, R = orc.models.esn.train_ESNForecaster(
+    esn, R = orc.forecaster.train_ESNForecaster(
         esn,
         U_train,
         initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
@@ -169,14 +169,14 @@ def test_cesn_train():
     # train cesn
     solver = diffrax.Euler()
     stepsize_controller = diffrax.ConstantStepSize()  # faster for testing
-    cesn = orc.models.CESNForecaster(
+    cesn = orc.forecaster.CESNForecaster(
         data_dim=3,
         res_dim=res_dim,
         seed=0,
         stepsize_controller=stepsize_controller,
         solver=solver,
     )
-    cesn, R = orc.models.esn.train_CESNForecaster(cesn, U_train, ts_train)
+    cesn, R = orc.forecaster.train_CESNForecaster(cesn, U_train, ts_train)
 
     # forecast
     U_pred = cesn.forecast(ts=ts_test, res_state=R[-1])
@@ -199,7 +199,7 @@ def test_periodic_par_cesn(dummy_problem_params):
     ts_test = jnp.arange(0, fcast_len, dtype=jnp.float64) * dt
 
     # init cesn
-    cesn = orc.models.CESNForecaster(
+    cesn = orc.forecaster.CESNForecaster(
         data_dim=Nx,
         res_dim=res_dim,
         seed=0,
@@ -210,7 +210,7 @@ def test_periodic_par_cesn(dummy_problem_params):
     )
 
     # train cesn
-    cesn, R = orc.models.esn.train_CESNForecaster(
+    cesn, R = orc.forecaster.train_CESNForecaster(
         cesn,
         U_train,
         ts_train,
@@ -237,7 +237,7 @@ def test_nonperiodic_par_cesn(dummy_problem_params):
     ts_test = jnp.arange(0, fcast_len) * dt  # Time values for testing
 
     # init cesn
-    cesn = orc.models.CESNForecaster(
+    cesn = orc.forecaster.CESNForecaster(
         data_dim=Nx,
         res_dim=res_dim,
         seed=0,
@@ -248,7 +248,7 @@ def test_nonperiodic_par_cesn(dummy_problem_params):
     )
 
     # train cesn
-    cesn, R = orc.models.esn.train_CESNForecaster(
+    cesn, R = orc.forecaster.train_CESNForecaster(
         cesn,
         U_train,
         ts_train,
@@ -275,7 +275,7 @@ def test_forecast_from_IC_CESN(dummy_problem_params):
         jnp.arange(0, fcast_len, dtype=jnp.float64) * dt
     )  # Time values for testing
 
-    esn = orc.models.CESNForecaster(
+    esn = orc.forecaster.CESNForecaster(
         data_dim=Nx,
         res_dim=res_dim,
         seed=0,
@@ -286,7 +286,7 @@ def test_forecast_from_IC_CESN(dummy_problem_params):
         quadratic=True,
     )
 
-    esn, R = orc.models.esn.train_CESNForecaster(
+    esn, R = orc.forecaster.train_CESNForecaster(
         esn,
         U_train,
         ts_train,
@@ -330,7 +330,7 @@ def test_cesn_different_solvers(solver, controller):
     ts_train = ts[:split_idx]
     ts_test = jnp.arange(0, fcast_len) * dt
 
-    cesn = orc.models.CESNForecaster(
+    cesn = orc.forecaster.CESNForecaster(
         data_dim=data_dim,
         res_dim=res_dim,
         seed=0,
@@ -339,7 +339,7 @@ def test_cesn_different_solvers(solver, controller):
     )
 
     # Train the model
-    cesn, R = orc.models.esn.train_CESNForecaster(cesn, U_train, ts_train, beta=1e-6)
+    cesn, R = orc.forecaster.train_CESNForecaster(cesn, U_train, ts_train, beta=1e-6)
 
     # Test forecasting ability
     U_pred = cesn.forecast(ts=ts_test, res_state=R[-1])
@@ -358,15 +358,15 @@ def test_esn_batched_vmap_equivalence(dummy_problem_params):
     res_dim = 500
 
     # Create ESN model
-    esn = orc.models.ESNForecaster(data_dim=Nx, res_dim=res_dim, chunks=chunks, seed=42)
+    esn = orc.forecaster.ESNForecaster(data_dim=Nx, res_dim=res_dim, chunks=chunks, seed=42)
 
     # Train without batching (default)
-    esn_unbatched, R_unbatched = orc.models.esn.train_ESNForecaster(
+    esn_unbatched, R_unbatched = orc.forecaster.train_ESNForecaster(
         esn, U_train[:100], batch_size=None
     )
 
     # Train with batching
-    esn_batched, R_batched = orc.models.esn.train_ESNForecaster(
+    esn_batched, R_batched = orc.forecaster.train_ESNForecaster(
         esn, U_train[:100], batch_size=4
     )
 
@@ -387,15 +387,15 @@ def test_cesn_batched_vmap_equivalence(dummy_problem_params):
     dt = 0.01
     t_train = jnp.arange(100) * dt
 
-    cesn = orc.models.CESNForecaster(
+    cesn = orc.forecaster.CESNForecaster(
         data_dim=Nx, res_dim=res_dim, chunks=chunks, seed=42
     )
 
-    cesn_unbatched, R_unbatched = orc.models.esn.train_CESNForecaster(
+    cesn_unbatched, R_unbatched = orc.forecaster.train_CESNForecaster(
         cesn, U_train[:100], t_train, batch_size=None
     )
 
-    cesn_batched, R_batched = orc.models.esn.train_CESNForecaster(
+    cesn_batched, R_batched = orc.forecaster.train_CESNForecaster(
         cesn, U_train[:100], t_train, batch_size=3
     )
 
@@ -420,7 +420,7 @@ def test_batched_vmap_different_batch_sizes():
     time = jnp.arange(time_steps).reshape(-1, 1)
     dummy_data = jnp.sin(2 * jnp.pi * frequencies * time / time_steps)
 
-    esn = orc.models.ESNForecaster(
+    esn = orc.forecaster.ESNForecaster(
         data_dim=Nx, res_dim=res_dim, chunks=chunks, seed=123
     )
 
@@ -429,7 +429,7 @@ def test_batched_vmap_different_batch_sizes():
     batch_sizes = [None, 1, 2, 4, 6]
 
     for batch_size in batch_sizes:
-        esn_trained, R = orc.models.esn.train_ESNForecaster(
+        esn_trained, R = orc.forecaster.train_ESNForecaster(
             esn, dummy_data, batch_size=batch_size
         )
         trained_models.append(esn_trained)
@@ -466,10 +466,10 @@ def test_ensemble_esn_train():
     U_test = U[split_idx:, :]
 
     # train esn
-    esn = orc.models.EnsembleESNForecaster(
+    esn = orc.forecaster.EnsembleESNForecaster(
         data_dim=3, res_dim=res_dim, seed=0, chunks=chunks
     )
-    esn, R = orc.models.esn.train_EnsembleESNForecaster(esn, U_train)
+    esn, R = orc.forecaster.train_EnsembleESNForecaster(esn, U_train)
 
     # forecast
     U_pred = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
@@ -487,7 +487,7 @@ def test_ensemble_forecast_from_IC(dummy_problem_params):
     # grab dummy data
     Nx, U_train, U_test = dummy_problem_params
 
-    esn = orc.models.ESNForecaster(
+    esn = orc.forecaster.ESNForecaster(
         data_dim=Nx,
         res_dim=res_dim,
         seed=0,
@@ -496,7 +496,7 @@ def test_ensemble_forecast_from_IC(dummy_problem_params):
         periodic=False,
     )
 
-    esn, R = orc.models.esn.train_ESNForecaster(
+    esn, R = orc.forecaster.train_ESNForecaster(
         esn,
         U_train,
         initial_res_state=jax.numpy.zeros((chunks, res_dim), dtype=jnp.float64),
