@@ -367,7 +367,7 @@ class ParallelNonlinearReadout(ReadoutBase):
         Parameters
         ----------
         res_state : Array
-            Reservoir state, (shape=(chunks, res_dim,)).
+            Reservoir state, (shape=(..., res_dim,)).
 
         Returns
         -------
@@ -375,9 +375,14 @@ class ParallelNonlinearReadout(ReadoutBase):
             Transformed reservoir state.
         """
         num_nonlins = len(self.nonlin_list)
+        transformed_res_state = res_state
         for idx in range(num_nonlins):
-            transformed_res_state = res_state.at[:, idx + 1 :: num_nonlins + 1].set(
-                self.nonlin_list[idx](res_state[:, idx + 1 :: num_nonlins + 1])
+            transformed_res_state = transformed_res_state.at[
+                ..., idx + 1 :: num_nonlins + 1
+            ].set(
+                self.nonlin_list[idx](
+                    transformed_res_state[..., idx + 1 :: num_nonlins + 1]
+                )
             )
         return transformed_res_state
 
@@ -482,7 +487,7 @@ class NonlinearReadout(ParallelNonlinearReadout):
         Parameters
         ----------
         res_state : Array
-            Reservoir state, (shape=(chunks, res_dim,)).
+            Reservoir state, (shape=(..., res_dim,)).
 
         Returns
         -------
@@ -490,9 +495,14 @@ class NonlinearReadout(ParallelNonlinearReadout):
             Transformed reservoir state.
         """
         num_nonlins = len(self.nonlin_list)
+        transformed_res_state = res_state
         for idx in range(num_nonlins):
-            transformed_res_state = res_state.at[:, idx + 1 :: num_nonlins + 1].set(
-                self.nonlin_list[idx](res_state[:, idx + 1 :: num_nonlins + 1])
+            transformed_res_state = transformed_res_state.at[
+                ..., idx + 1 :: num_nonlins + 1
+            ].set(
+                self.nonlin_list[idx](
+                    transformed_res_state[..., idx + 1 :: num_nonlins + 1]
+                )
             )
         return transformed_res_state
 
