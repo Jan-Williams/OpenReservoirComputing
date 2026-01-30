@@ -78,7 +78,7 @@ def train_ESNForecaster(
     tot_res_seq = model.force(tot_seq, initial_res_state)
     res_seq = tot_res_seq[:-1]
     if isinstance(model.readout, ParallelNonlinearReadout):
-        res_seq_train = eqx.filter_vmap(model.readout.nonlinear_transform)(res_seq)
+        res_seq_train = model.readout.nonlinear_transform(res_seq)
     else:
         res_seq_train = res_seq
 
