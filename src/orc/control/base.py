@@ -188,7 +188,7 @@ class RCControllerBase(eqx.Module, ABC):
             next_res_state = self.driver(proj_vars, state)
             return (next_res_state, self.readout(next_res_state))
 
-        _, state_seq = jax.lax.scan(scan_fn, res_state, control_seq[1:])
+        _, state_seq = jax.lax.scan(scan_fn, res_state, control_seq[0:-1])
         # Prepend the initial state output
         pre_append_state = self.readout(res_state)
         return jnp.vstack([pre_append_state, state_seq])
