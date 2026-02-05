@@ -5,7 +5,9 @@ from abc import ABC
 import equinox as eqx
 import jax
 import jax.numpy as jnp
+import jax.scipy.optimize
 from jaxtyping import Array, Float
+import optax
 
 from orc.drivers import DriverBase
 from orc.embeddings import EmbedBase
@@ -38,6 +40,12 @@ class RCControllerBase(eqx.Module, ABC):
         Dimension of the reservoir.
     dtype : type
         Data type of the reservoir computer (jnp.float64 is highly recommended).
+    alpha_1 : float
+        Weight for trajectory deviation penalty in control optimization.
+    alpha_2 : float
+        Weight for control magnitude penalty in control optimization.
+    alpha_3 : float
+        Weight for control derivative penalty in control optimization.
     seed : int
         Random seed for generating the PRNG key for the reservoir computer.
 
@@ -46,12 +54,16 @@ class RCControllerBase(eqx.Module, ABC):
     -------
     force(in_seq, control_seq, res_state)
         Teacher forces the reservoir with input and control sequences.
-    apply_control(control_seq, fcast_len, res_state)
+    apply_control(control_seq, res_state)
         Apply a predefined control sequence in closed-loop.
     set_readout(readout)
         Replaces the readout layer of the reservoir computer.
     set_embedding(embedding)
         Replaces the embedding layer of the reservoir computer.
+    compute_penalty(control_seq, res_state, ref_traj)
+        Compute the control penalty for a given control sequence.
+    compute_control(control_seq, res_state, ref_traj)
+        Compute optimal control sequence to track a reference trajectory.
     """
 
     driver: DriverBase
@@ -62,6 +74,9 @@ class RCControllerBase(eqx.Module, ABC):
     out_dim: int
     res_dim: int
     dtype: Float = jnp.float64
+    alpha_1: float = 100
+    alpha_2: float = 1
+    alpha_3: float = 5
     seed: int = 0
 
     def __init__(
@@ -72,6 +87,9 @@ class RCControllerBase(eqx.Module, ABC):
         in_dim: int,
         control_dim: int,
         dtype: Float = jnp.float64,
+        alpha_1: float = 100,
+        alpha_2: float = 1,
+        alpha_3: float = 5,
         seed: int = 0,
     ) -> None:
         """Initialize RCController Base.
@@ -90,6 +108,12 @@ class RCControllerBase(eqx.Module, ABC):
             Dimension of the control input.
         dtype : type
             Data type of the reservoir computer (jnp.float64 is highly recommended).
+        alpha_1 : float
+            Weight for trajectory deviation penalty in control optimization.
+        alpha_2 : float
+            Weight for control magnitude penalty in control optimization.
+        alpha_3 : float
+            Weight for control derivative penalty in control optimization.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
         """
@@ -101,6 +125,9 @@ class RCControllerBase(eqx.Module, ABC):
         self.out_dim = self.readout.out_dim
         self.res_dim = self.driver.res_dim
         self.dtype = dtype
+        self.alpha_1 = alpha_1
+        self.alpha_2 = alpha_2
+        self.alpha_3 = alpha_3
         self.seed = seed
 
     @eqx.filter_jit
@@ -156,8 +183,8 @@ class RCControllerBase(eqx.Module, ABC):
 
     @eqx.filter_jit
     def apply_control(
-        self, control_seq: Array, fcast_len: int, res_state: Array
-    ) -> Array:
+        self, control_seq: Array, res_state: Array
+    ) -> tuple[Array, Array]:
         """Apply a predefined control sequence in closed-loop.
 
         The readout feeds back as the next input: u(t+1) = readout(x(t)).
@@ -167,15 +194,14 @@ class RCControllerBase(eqx.Module, ABC):
         ----------
         control_seq : Array
             Control sequence to apply, (shape=(fcast_len, control_dim)).
-        fcast_len : int
-            Number of steps to apply control.
         res_state : Array
             Initial reservoir state, (shape=(res_dim,)).
 
         Returns
         -------
-        Array
-            Controlled output trajectory, (shape=(fcast_len, out_dim)).
+        tuple[Array, Array]
+            Tuple of (controlled output trajectory, final reservoir state),
+            with shapes (shape=(fcast_len, out_dim)) and (shape=(res_dim,)).
         """
 
         def scan_fn(state, control_vars):
@@ -187,13 +213,10 @@ class RCControllerBase(eqx.Module, ABC):
             proj_vars = self.embedding(combined_input)
             next_res_state = self.driver(proj_vars, state)
             return (next_res_state, self.readout(next_res_state))
+        res_state, state_seq = jax.lax.scan(scan_fn, res_state, control_seq)
+        return state_seq, res_state
 
-        _, state_seq = jax.lax.scan(scan_fn, res_state, control_seq[0:-1])
-        # Prepend the initial state output
-        pre_append_state = self.readout(res_state)
-        return jnp.vstack([pre_append_state, state_seq])
-
-    def set_readout(self, readout: ReadoutBase):
+    def set_readout(self, readout: ReadoutBase) -> "RCControllerBase":
         """Replace readout layer.
 
         Parameters
@@ -213,7 +236,7 @@ class RCControllerBase(eqx.Module, ABC):
         new_model = eqx.tree_at(where, self, readout)
         return new_model
 
-    def set_embedding(self, embedding: EmbedBase):
+    def set_embedding(self, embedding: EmbedBase) -> "RCControllerBase":
         """Replace embedding layer.
 
         Parameters
@@ -232,3 +255,101 @@ class RCControllerBase(eqx.Module, ABC):
 
         new_model = eqx.tree_at(where, self, embedding)
         return new_model
+    
+    def compute_penalty(
+        self,
+        control_seq: Array,
+        res_state: Array,
+        ref_traj: Array,
+    ) -> Float:
+        """Compute the control penalty for a given control sequence.
+
+        The penalty consists of three terms:
+        - Deviation penalty: squared error between forecast and reference trajectory
+        - Magnitude penalty: squared norm of control inputs
+        - Derivative penalty: squared norm of control input differences
+
+        Parameters
+        ----------
+        control_seq : Array
+            Control sequence to evaluate, (shape=(fcast_len, control_dim)).
+        res_state : Array
+            Initial reservoir state, (shape=(res_dim,)).
+        ref_traj : Array
+            Reference trajectory to track, (shape=(fcast_len, out_dim)).
+
+        Returns
+        -------
+        Float
+            Total penalty value (scalar).
+        """
+        fcast, _ = self.apply_control(control_seq, res_state)
+        deviation = fcast - ref_traj
+        dev_penalty = jnp.sum(deviation ** 2) * self.alpha_1
+        mag_penalty = jnp.sum(control_seq ** 2) * self.alpha_2
+        deriv_penalty = jnp.sum(jnp.diff(control_seq, axis=0) ** 2) * self.alpha_3
+        return dev_penalty + mag_penalty + deriv_penalty
+    
+    @eqx.filter_jit
+    def compute_control(
+        self,
+        control_seq: Array,
+        res_state: Array,
+        ref_traj: Array,
+    ) -> Array:
+        """Compute optimal control sequence to track a reference trajectory.
+
+        Uses BFGS optimization to find a control sequence that minimizes the
+        penalty function (deviation from reference + control magnitude + control
+        smoothness).
+
+        Parameters
+        ----------
+        control_seq : Array
+            Initial guess for control sequence, (shape=(fcast_len, control_dim)).
+        res_state : Array
+            Initial reservoir state, (shape=(res_dim,)).
+        ref_traj : Array
+            Reference trajectory to track, (shape=(fcast_len, out_dim)).
+
+        Returns
+        -------
+        Array
+            Optimized control sequence, (shape=(fcast_len, control_dim)).
+        """
+
+        def loss_fn(control_seq):
+            control_seq = control_seq.reshape(-1, self.control_dim)
+            return self.compute_penalty(control_seq, res_state, ref_traj)
+
+        # TODO: Implement optimization to allow finer grained control of latency tolerances
+        # linesearch = optax.scale_by_backtracking_linesearch(
+        #     max_backtracking_steps=30,
+        #     decrease_factor=0.5,
+        # )
+        # solver = optax.lbfgs(linesearch=linesearch)
+
+        # if not use_builtin_solver:
+        #     solver = optax.lbfgs()
+
+        #     @jax.jit
+        #     def run_lbfgs(x0):
+        #         value_and_grad_fn = jax.value_and_grad(loss_fn)
+
+        #         def step(carry, _):
+        #             x, state = carry
+        #             value, grad = value_and_grad_fn(x)
+        #             updates, state = solver.update(grad, state, x, value=value, grad=grad, value_fn=loss_fn)
+        #             x = optax.apply_updates(x, updates)
+        #             return (x, state), None
+
+        #         init_state = solver.init(x0)
+        #         (x_final, final_state), _ = jax.lax.scan(step, (x0, init_state), None, length=max_iter)
+        #         return x_final, final_state
+
+        #     control_opt, state = run_lbfgs(control_seq)
+
+        optimize_results = jax.scipy.optimize.minimize(loss_fn, control_seq.reshape(-1), method='BFGS')
+        control_opt = optimize_results.x.reshape(-1, self.control_dim)
+        
+        return control_opt
