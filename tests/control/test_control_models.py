@@ -216,7 +216,6 @@ def test_lorenz_control_basic():
         control_seq=C_test[:fcast_len], res_state=R[-1]
     )
 
-    # Basic checks - output should be finite and reasonable
     assert U_controlled.shape == (fcast_len, data_dim)
     assert jnp.all(jnp.isfinite(U_controlled))
     # Check that the output is in a reasonable range for Lorenz system
@@ -288,6 +287,8 @@ def test_compute_control(dummy_control_problem_params):
         beta=1e-6,
     )
 
-    U_controlled = controller_trained.compute_control(
+    control = controller_trained.compute_control(
         jnp.zeros((fcast_len, control_dim)), R[-1], jnp.zeros((fcast_len, Nx))
     )
+
+    assert control.shape == (fcast_len, control_dim)
