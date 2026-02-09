@@ -280,7 +280,7 @@ class RCControllerBase(eqx.Module, ABC):
         Float
             Total penalty value (scalar).
         """
-        fcast, _ = self.apply_control(control_seq, res_state)
+        fcast = self.apply_control(control_seq, res_state)
         deviation = fcast - ref_traj
         dev_penalty = jnp.sum(deviation**2) * self.alpha_1
         mag_penalty = jnp.sum(control_seq**2) * self.alpha_2

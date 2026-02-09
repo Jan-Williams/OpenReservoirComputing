@@ -20,7 +20,9 @@ def dummy_control_problem_params():
     dummy_data = jnp.sin(2 * jnp.pi * frequencies * time / time_steps)
     # Create simple control inputs
     control_data = 0.1 * jnp.sin(
-        2 * jnp.pi * jnp.linspace(0, 1, time_steps).reshape(-1, 1)
+        2
+        * jnp.pi
+        * jnp.linspace(0, 1, time_steps).reshape(-1, 1)
         * jnp.array([1.0, 1.5])
     )
     U_test = dummy_data[-100:]
@@ -153,9 +155,6 @@ def test_esn_controller_control_application(dummy_control_problem_params):
         beta=1e-6,
     )
 
-    # Apply control
-    print(R.shape)
-    print(controller_trained.readout)
     U_controlled = controller_trained.apply_control(
         control_seq=C_test[:fcast_len], res_state=R[-1]
     )
@@ -195,12 +194,6 @@ def test_lorenz_control_basic():
         jax.random.PRNGKey(43), (U_test.shape[0], control_dim)
     )
 
-    # Train controller
-    print(data_dim)
-    print(control_dim)
-    print(res_dim)
-    print(U_train.shape)
-    print(C_train.shape)
     controller = orc.control.ESNController(
         data_dim=data_dim,
         control_dim=control_dim,
@@ -249,11 +242,6 @@ def test_esn_controller_reconstruction():
     C_train = jnp.zeros((U_train.shape[0], control_dim))
 
     # Train controller
-    print(data_dim)
-    print(control_dim)
-    print(res_dim)
-    print(U_train.shape)
-    print(C_train.shape)
     controller = orc.control.ESNController(
         data_dim=data_dim,
         control_dim=control_dim,
@@ -270,8 +258,36 @@ def test_esn_controller_reconstruction():
 
     # Check that controller produces reasonable outputs
     assert jnp.all(jnp.isfinite(U_ctrl_recon))
-    reconstruction_error = jnp.linalg.norm(U_ctrl_recon - U_train[200:]) / U_train[
-        200:
-    ].shape[0]
+    reconstruction_error = (
+        jnp.linalg.norm(U_ctrl_recon - U_train[200:]) / U_train[200:].shape[0]
+    )
     # With zero control, controller should still reconstruct well
     assert reconstruction_error < 1.0  # Loose bound for sanity check
+
+
+def test_compute_control(dummy_control_problem_params):
+    """Test that control can be computed."""
+    Nx, control_dim, U_train, C_train, U_test, C_test = dummy_control_problem_params
+
+    res_dim = 200
+    fcast_len = 20
+
+    # Initialize and train controller
+    controller = orc.control.ESNController(
+        data_dim=Nx,
+        control_dim=control_dim,
+        res_dim=res_dim,
+        seed=0,
+    )
+
+    controller_trained, R = orc.control.train_ESNController(
+        controller,
+        train_seq=U_train,
+        control_seq=C_train,
+        spinup=50,
+        beta=1e-6,
+    )
+
+    U_controlled = controller_trained.compute_control(
+        jnp.zeros((fcast_len, control_dim)), R[-1], jnp.zeros((fcast_len, Nx))
+    )
