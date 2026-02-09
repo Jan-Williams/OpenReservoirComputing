@@ -7,7 +7,6 @@ import jax
 import jax.numpy as jnp
 import jax.scipy.optimize
 from jaxtyping import Array, Float
-import optax
 
 from orc.drivers import DriverBase
 from orc.embeddings import EmbedBase
@@ -160,9 +159,7 @@ class RCControllerBase(eqx.Module, ABC):
         _, res_seq = jax.lax.scan(scan_fn, res_state, (in_seq, control_seq))
         return res_seq
 
-    def __call__(
-        self, in_seq: Array, control_seq: Array, res_state: Array
-    ) -> Array:
+    def __call__(self, in_seq: Array, control_seq: Array, res_state: Array) -> Array:
         """Teacher forces the reservoir, wrapper for `force` method.
 
         Parameters
@@ -212,6 +209,7 @@ class RCControllerBase(eqx.Module, ABC):
             proj_vars = self.embedding(combined_input)
             next_res_state = self.driver(proj_vars, state)
             return (next_res_state, self.readout(next_res_state))
+
         res_state, state_seq = jax.lax.scan(scan_fn, res_state, control_seq)
         return state_seq
 
@@ -254,7 +252,7 @@ class RCControllerBase(eqx.Module, ABC):
 
         new_model = eqx.tree_at(where, self, embedding)
         return new_model
-    
+
     def compute_penalty(
         self,
         control_seq: Array,
@@ -284,11 +282,11 @@ class RCControllerBase(eqx.Module, ABC):
         """
         fcast, _ = self.apply_control(control_seq, res_state)
         deviation = fcast - ref_traj
-        dev_penalty = jnp.sum(deviation ** 2) * self.alpha_1
-        mag_penalty = jnp.sum(control_seq ** 2) * self.alpha_2
+        dev_penalty = jnp.sum(deviation**2) * self.alpha_1
+        mag_penalty = jnp.sum(control_seq**2) * self.alpha_2
         deriv_penalty = jnp.sum(jnp.diff(control_seq, axis=0) ** 2) * self.alpha_3
         return dev_penalty + mag_penalty + deriv_penalty
-    
+
     @eqx.filter_jit
     def compute_control(
         self,
@@ -321,7 +319,7 @@ class RCControllerBase(eqx.Module, ABC):
             control_seq = control_seq.reshape(-1, self.control_dim)
             return self.compute_penalty(control_seq, res_state, ref_traj)
 
-        # TODO: Implement optimization to allow finer grained control of latency tolerances
+        # TODO: Implement optimization to allow finer grained control of tolerances
         # linesearch = optax.scale_by_backtracking_linesearch(
         #     max_backtracking_steps=30,
         #     decrease_factor=0.5,
@@ -338,17 +336,27 @@ class RCControllerBase(eqx.Module, ABC):
         #         def step(carry, _):
         #             x, state = carry
         #             value, grad = value_and_grad_fn(x)
-        #             updates, state = solver.update(grad, state, x, value=value, grad=grad, value_fn=loss_fn)
+        #             updates, state = solver.update(
+        #                                              grad,
+        #                                              state,
+        #                                               x,
+        #                                               value=value,
+        #                                               grad=grad,
+        #                                               value_fn=loss_fn)
         #             x = optax.apply_updates(x, updates)
         #             return (x, state), None
 
         #         init_state = solver.init(x0)
-        #         (x_final, final_state), _ = jax.lax.scan(step, (x0, init_state), None, length=max_iter)
+        #         (x_final, final_state), _ = jax.lax.scan(step, (x0, init_state),
+        #                                                   None,
+        #                                                   length=max_iter)
         #         return x_final, final_state
 
         #     control_opt, state = run_lbfgs(control_seq)
 
-        optimize_results = jax.scipy.optimize.minimize(loss_fn, control_seq.reshape(-1), method='BFGS')
+        optimize_results = jax.scipy.optimize.minimize(
+            loss_fn, control_seq.reshape(-1), method="BFGS"
+        )
         control_opt = optimize_results.x.reshape(-1, self.control_dim)
-        
+
         return control_opt
