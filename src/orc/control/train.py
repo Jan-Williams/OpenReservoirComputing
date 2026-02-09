@@ -81,6 +81,7 @@ def train_ESNController(
 
     cmat = ridge_regression(res_seq_train[spinup:], target_seq[spinup:], beta)
     cmat = cmat.reshape(1, cmat.shape[0], cmat.shape[1])
+
     def where(m):
         return m.readout.wout
 
