@@ -91,7 +91,7 @@ def test_esn_controller_apply_control_shapes():
     res_state = jax.random.normal(jax.random.PRNGKey(1), (res_dim,))
 
     # Apply control
-    output_seq = controller.apply_control(control_seq, fcast_len, res_state)
+    output_seq = controller.apply_control(control_seq, res_state)
 
     # Check output shape
     assert output_seq.shape == (fcast_len, data_dim)
@@ -157,7 +157,7 @@ def test_esn_controller_control_application(dummy_control_problem_params):
     print(R.shape)
     print(controller_trained.readout)
     U_controlled = controller_trained.apply_control(
-        control_seq=C_test[:fcast_len], fcast_len=fcast_len, res_state=R[-1]
+        control_seq=C_test[:fcast_len], res_state=R[-1]
     )
 
     # Check output
@@ -220,7 +220,7 @@ def test_lorenz_control_basic():
     # Apply control for a short horizon
     fcast_len = 50
     U_controlled = controller_trained.apply_control(
-        control_seq=C_test[:fcast_len], fcast_len=fcast_len, res_state=R[-1]
+        control_seq=C_test[:fcast_len], res_state=R[-1]
     )
 
     # Basic checks - output should be finite and reasonable

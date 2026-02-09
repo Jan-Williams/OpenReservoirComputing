@@ -199,9 +199,8 @@ class RCControllerBase(eqx.Module, ABC):
 
         Returns
         -------
-        tuple[Array, Array]
-            Tuple of (controlled output trajectory, final reservoir state),
-            with shapes (shape=(fcast_len, out_dim)) and (shape=(res_dim,)).
+        Array
+            Controlled output trajectory with shape=(fcast_len, out_dim)).
         """
 
         def scan_fn(state, control_vars):
@@ -214,7 +213,7 @@ class RCControllerBase(eqx.Module, ABC):
             next_res_state = self.driver(proj_vars, state)
             return (next_res_state, self.readout(next_res_state))
         res_state, state_seq = jax.lax.scan(scan_fn, res_state, control_seq)
-        return state_seq, res_state
+        return state_seq
 
     def set_readout(self, readout: ReadoutBase) -> "RCControllerBase":
         """Replace readout layer.
