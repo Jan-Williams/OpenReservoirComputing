@@ -1,6 +1,11 @@
-"""Classification with Reservoir Computers.
+"""Classification with Reservoir Computers."""
 
-This module is currently a placeholder for future classifier implementations.
-"""
+from orc.classifier.base import RCClassifierBase
+from orc.classifier.models import ESNClassifier
+from orc.classifier.train import train_ESNClassifier
 
-__all__ = []
+__all__ = [
+    "RCClassifierBase",
+    "ESNClassifier",
+    "train_ESNClassifier",
+]
