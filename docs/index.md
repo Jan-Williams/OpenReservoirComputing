@@ -124,10 +124,10 @@ ORC welcomes contributions from the reservoir computing community. See the [Cont
 When using ORC in research publications, please cite:
 
 ```bibtex
-@software{orc2024,
+@software{orc2025,
   title={OpenReservoirComputing: GPU-accelerated reservoir computing in JAX},
-  author={Tretiak, Dima and Williams, Jan P.},
-  year={2024},
+  author={Williams, Jan P. and Tretiak, Dima and Kutz, Nathan and Manohar, Krithika},
+  year={2025},
   url={https://github.com/Jan-Williams/OpenReservoirComputing}
 }
 ```
