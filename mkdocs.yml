@@ -95,10 +95,6 @@ extra:
 docs_dir: docs
 site_dir: site
 
-# Copy additional files
-extra_files:
-  - imgs/
-
 nav:
   - Home: index.md
   - Getting Started:
@@ -110,12 +106,19 @@ nav:
       - Embeddings: user-guide/embeddings.md
       - Readouts: user-guide/readouts.md
       - Models: user-guide/models.md
+      - Data: user-guide/data.md
   - Examples:
       - Lorenz System: examples/lorenz.ipynb
       - RC Background: examples/rc_background.ipynb
+      - Continuous RC: examples/continuous_rc.ipynb
+      - Classification: examples/classification.ipynb
+      - Control: examples/control.ipynb
+      - Data Library: examples/data_library.ipynb
+      - Kuramoto-Sivashinsky: examples/ks.ipynb
   - API Reference:
-      - Models: api/models.md
-      - RC Base Classes: api/rc.md
+      - Forecaster: api/forecaster.md
+      - Classifier: api/classifier.md
+      - Control: api/control.md
       - Drivers: api/drivers.md
       - Embeddings: api/embeddings.md
       - Readouts: api/readouts.md

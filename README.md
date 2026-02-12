@@ -3,7 +3,6 @@
 </div>
 
 # ORC: Open Reservoir Computing
-### Warning: ORC is currently under development, many things may be (are definitely) broken and not all functionality is documented
 [![CI](https://github.com/Jan-Williams/OpenReservoirComputing/actions/workflows/tests.yml/badge.svg)](https://github.com/Jan-Williams/OpenReservoirComputing/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/Jan-Williams/OpenReservoirComputing/branch/main/graph/badge.svg)](https://codecov.io/gh/Jan-Williams/OpenReservoirComputing)
 
@@ -11,8 +10,6 @@
 ORC is the one-stop-shop for performant reservoir computing in jax. Key high-level features include
 - Modular design for mixing and matching layers and reservoir drivers (or creating your own!)
 - Continuous, discrete, serial, and parallel implementations
-- Built in hyperparameter tuning (coming soon!)
-- Multi-gpu training and inference (coming soon!)
 
 ## Installation
 
