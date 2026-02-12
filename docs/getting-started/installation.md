@@ -13,7 +13,7 @@
 For CPU-only usage, clone the repository and install:
 
 ```bash
-git clone https://github.com/dtretiak/OpenReservoirComputing.git
+git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 cd OpenReservoirComputing
 pip install .
 ```
@@ -23,7 +23,7 @@ pip install .
 For GPU acceleration with CUDA support:
 
 ```bash
-git clone https://github.com/dtretiak/OpenReservoirComputing.git
+git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 cd OpenReservoirComputing
 pip install .[gpu]
 ```
@@ -34,7 +34,7 @@ pip install .[gpu]
 For contributors or advanced users who want to modify the code:
 
 ```bash
-git clone https://github.com/dtretiak/OpenReservoirComputing.git
+git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 cd OpenReservoirComputing
 pip install -e .[dev]
 ```
@@ -65,7 +65,7 @@ U, t = orc.data.lorenz63(tN=10, dt=0.01)
 print(f"Generated Lorenz data shape: {U.shape}")
 
 # Test model creation
-esn = orc.models.ESNForecaster(data_dim=3, res_dim=100)
+esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=100)
 print("ESN created successfully!")
 print("Installation verified ✓")
 ```
@@ -96,7 +96,7 @@ ImportError: cannot import name 'x' from 'orc'
 
 If you encounter issues:
 
-1. Check the [GitHub Issues](https://github.com/dtretiak/OpenReservoirComputing/issues)
+1. Check the [GitHub Issues](https://github.com/Jan-Williams/OpenReservoirComputing/issues)
 2. Ensure your Python version is supported (3.10-3.12)
 3. Try a clean virtual environment installation
 4. For GPU issues, verify CUDA installation with `nvidia-smi`
