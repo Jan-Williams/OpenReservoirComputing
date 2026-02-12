@@ -10,7 +10,6 @@ from orc import (
     embeddings,
     forecaster,
     readouts,
-    tuning,
     utils,
 )
 
@@ -20,7 +19,6 @@ __all__ = [
     "forecaster",
     "classifier",
     "control",
-    "tuning",
     "drivers",
     "embeddings",
     "readouts",
