@@ -17,7 +17,7 @@ The `ESNForecaster` implements standard discrete-time Echo State Networks with t
 #### Basic Usage
 
 ```python
-from orc.models.esn import ESNForecaster, train_ESNForecaster
+from orc.forecaster import ESNForecaster, train_ESNForecaster
 import jax.numpy as jnp
 
 # Create ESN model
@@ -114,7 +114,7 @@ The `CESNForecaster` implements continuous-time Echo State Networks using ODE so
 #### Basic Usage
 
 ```python
-from orc.models.esn import CESNForecaster, train_CESNForecaster
+from orc.forecaster import CESNForecaster, train_CESNForecaster
 import jax.numpy as jnp
 
 # Create continuous ESN model  
@@ -272,4 +272,4 @@ class CustomForecaster(RCForecasterBase):
 - Use `batch_size` parameter for memory-constrained training with parallel reservoirs
 - Consider `chunks > 1` for high-dimensional systems to reduce the required reservoir size
 
-For detailed API documentation, see the [Models API Reference](../api/models.md).
+For detailed API documentation, see the [Forecaster API Reference](../api/forecaster.md).

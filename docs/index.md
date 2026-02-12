@@ -43,8 +43,8 @@ U_train = U[:split_idx, :]
 U_test = U[split_idx:, :]
 
 # Create and train Echo State Network
-esn = orc.models.ESNForecaster(data_dim=3, res_dim=500, seed=42)
-esn, res_states = orc.models.train_ESNForecaster(esn, U_train)
+esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=500, seed=42)
+esn, res_states = orc.forecaster.train_ESNForecaster(esn, U_train)
 
 # Generate forecast
 U_pred = esn.forecast(fcast_len=U_test.shape[0], res_state=res_states[-1])
@@ -72,17 +72,21 @@ orc.utils.visualization.plot_time_series(
 ### API Reference
 Complete technical documentation of all classes, functions, and interfaces:
 
-- [**Models**](api/models.md): ESN and continuous ESN forecaster implementations
+- [**Forecaster**](api/forecaster.md): Time series forecasting models (ESN, continuous ESN, ensemble)
 
-- [**RC Base Classes**](api/rc.md): Core reservoir computing abstractions
+- [**Classifier**](api/classifier.md): Time series classification models
 
-- [**Drivers**](api/drivers.md): Driver base class and specific implementations
+- [**Control**](api/control.md): Dynamical system control models
 
-- [**Embeddings**](api/embeddings.md): Embedding base class and specific implementations
+- [**Drivers**](api/drivers.md): Reservoir driver implementations
 
-- [**Readouts**](api/readouts.md): Readout base class and specific implementations
+- [**Embeddings**](api/embeddings.md): Input embedding implementations
 
-- [**Utilities**](api/utils.md): Data generation, visualization, and analysis tools
+- [**Readouts**](api/readouts.md): Output readout implementations
+
+- [**Data**](api/data.md): Built-in dynamical systems for benchmarking
+
+- [**Utils**](api/utils.md): Regression, visualization, and numerical utilities
 
 ### Examples
 Practical demonstrations using Jupyter notebooks:
@@ -124,7 +128,7 @@ When using ORC in research publications, please cite:
   title={OpenReservoirComputing: GPU-accelerated reservoir computing in JAX},
   author={Tretiak, Dima and Williams, Jan P.},
   year={2024},
-  url={https://github.com/dtretiak/OpenReservoirComputing}
+  url={https://github.com/Jan-Williams/OpenReservoirComputing}
 }
 ```
 

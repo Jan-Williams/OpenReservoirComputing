@@ -29,14 +29,14 @@ U_test = U[split_idx:, :]
 
 ```python
 # Create ESN forecaster
-esn = orc.models.ESNForecaster(
+esn = orc.forecaster.ESNForecaster(
     data_dim=3,      # Lorenz system is 3D
     res_dim=500,     # 500 reservoir neurons
     seed=42          # For reproducibility
 )
 
 # Train the model
-esn, res_states = orc.models.train_ESNForecaster(esn, U_train)
+esn, res_states = orc.forecaster.train_ESNForecaster(esn, U_train)
 print("Training complete!")
 ```
 
@@ -83,8 +83,8 @@ U_train = U[:split_idx, :]
 U_test = U[split_idx:, :]
 
 # Create and train ESN
-esn = orc.models.ESNForecaster(data_dim=3, res_dim=500, seed=42)
-esn, res_states = orc.models.train_ESNForecaster(esn, U_train)
+esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=500, seed=42)
+esn, res_states = orc.forecaster.train_ESNForecaster(esn, U_train)
 
 # Make predictions
 U_pred = esn.forecast(fcast_len=U_test.shape[0], res_state=res_states[-1])
@@ -122,13 +122,13 @@ Now that you have a working reservoir computer:
 your_data = jnp.array(...)  # Shape: (1000, 5) for 1000 timesteps, 5 features
 
 # Create appropriately sized ESN
-esn = orc.models.ESNForecaster(
+esn = orc.forecaster.ESNForecaster(
     data_dim=your_data.shape[1],  # Number of features
     res_dim=200                   # Adjust based on complexity
 )
 
 # Train and forecast as before
-esn, states = orc.models.train_ESNForecaster(esn, your_data[:-100])
+esn, states = orc.forecaster.train_ESNForecaster(esn, your_data[:-100])
 predictions = esn.forecast(fcast_len=100, res_state=states[-1])
 ```
 
@@ -142,8 +142,8 @@ U_test, t_test = orc.data.lorenz63(tN=100, dt=0.01, u0=(10.0, 1.0, -10.0))
 # Train as before
 res_dim = 500
 data_dim = 3
-esn = orc.models.ESNForecaster(data_dim=data_dim, res_dim=res_dim, seed=42)
-esn, res_states_train = orc.models.train_ESNForecaster(esn, U_train)
+esn = orc.forecaster.ESNForecaster(data_dim=data_dim, res_dim=res_dim, seed=42)
+esn, res_states_train = orc.forecaster.train_ESNForecaster(esn, U_train)
 
 # Spinup the reservoir on new trajectory
 # Note the initial reservoir state is a row vector
