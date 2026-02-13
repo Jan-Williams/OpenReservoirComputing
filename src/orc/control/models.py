@@ -29,6 +29,12 @@ class ESNController(RCControllerBase):
         Trainable linear readout layer.
     embedding : LinearEmbedding
         Untrainable linear embedding layer for [input, control] concatenation.
+    alpha_1 : float
+        Weight for trajectory deviation penalty in control optimization.
+    alpha_2 : float
+        Weight for control magnitude penalty in control optimization.
+    alpha_3 : float
+        Weight for control derivative penalty in control optimization.
 
     Methods
     -------
@@ -57,6 +63,9 @@ class ESNController(RCControllerBase):
         Wr_density: float = 0.02,
         Wr_spectral_radius: float = 0.8,
         dtype: type = jnp.float64,
+        alpha_1: float = 100,
+        alpha_2: float = 1,
+        alpha_3: float = 5,
         seed: int = 0,
         quadratic: bool = False,
         use_sparse_eigs: bool = True,
@@ -84,6 +93,12 @@ class ESNController(RCControllerBase):
             Largest eigenvalue of the reservoir adjacency matrix Wr.
         dtype : type
             Data type of the model (jnp.float64 is highly recommended).
+        alpha_1 : float
+            Weight for trajectory deviation penalty in control optimization.
+        alpha_2 : float
+            Weight for control magnitude penalty in control optimization.
+        alpha_3 : float
+            Weight for control derivative penalty in control optimization.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
         quadratic : bool
@@ -136,4 +151,7 @@ class ESNController(RCControllerBase):
             control_dim=control_dim,
             dtype=dtype,
             seed=seed,
+            alpha_1=alpha_1,
+            alpha_2=alpha_2,
+            alpha_3=alpha_3
         )
