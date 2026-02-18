@@ -20,6 +20,8 @@ class EmbedBase(eqx.Module, ABC):
         Input dimension.
     res_dim : int
         Reservoir dimension.
+    chunks : int
+        Number of parallel reservoirs. Default is 0 (no chunks dimension).
     dtype : Float
         Dtype of JAX arrays, jnp.float32 or jnp.float64.
 
@@ -33,6 +35,7 @@ class EmbedBase(eqx.Module, ABC):
 
     in_dim: int
     res_dim: int
+    chunks: int = 0
     dtype: Float
 
     def __init__(self, in_dim, res_dim, dtype=jnp.float64):

@@ -12,12 +12,16 @@ class ReadoutBase(eqx.Module, ABC):
     """
     Base class dictating API for all implemented readout layers.
 
+    All readout layers should store their trained weight matrix as ``wout``.
+
     Attributes
     ----------
     out_dim : int
         Dimension of reservoir output.
     res_dim : int
         Reservoir dimension.
+    chunks : int
+        Number of parallel reservoirs. Default is 0 (no chunks dimension).
     dtype : Float
         Dtype of JAX arrays, jnp.float32 or jnp.float64.
 
@@ -27,11 +31,18 @@ class ReadoutBase(eqx.Module, ABC):
         Map from reservoir state to output state.
     batch_readout(res_state)
         Map from reservoir states to output states.
+    prepare_train(res_seq)
+        Prepare reservoir states for ridge regression during training.
+    prepare_target(target_seq)
+        Prepare target sequence for ridge regression during training.
+    set_wout(cmat)
+        Return a new readout with updated output weights.
     """
 
     out_dim: int
     res_dim: int
-    dtype: Float
+    chunks: int = 0
+    dtype: Float = jnp.float64
 
     def __init__(self, out_dim, res_dim, dtype=jnp.float64):
         """Ensure in dim, res dim, and dtype are correct type."""
@@ -111,6 +122,60 @@ class ReadoutBase(eqx.Module, ABC):
             elif len(res_state.shape) == 2:
                 to_ret = self.batch_readout(res_state)
         return to_ret
+
+    def prepare_train(self, res_seq: Array) -> Array:
+        """Prepare reservoir states for ridge regression during training.
+
+        By default, returns the reservoir states unchanged. Subclasses may
+        override to apply nonlinear transforms or reshape for chunk structure.
+
+        Parameters
+        ----------
+        res_seq : Array
+            Sequence of reservoir states.
+
+        Returns
+        -------
+        Array
+            Prepared reservoir states for ridge regression.
+        """
+        return res_seq
+
+    def prepare_target(self, target_seq: Array) -> Array:
+        """Prepare target sequence for ridge regression during training.
+
+        By default, returns the target sequence unchanged. Subclasses may
+        override to reshape for chunk structure.
+
+        Parameters
+        ----------
+        target_seq : Array
+            Target sequence, (shape=(seq_len, out_dim)).
+
+        Returns
+        -------
+        Array
+            Prepared target sequence for ridge regression.
+        """
+        return target_seq
+
+    def set_wout(self, cmat: Array):
+        """Return a new readout with updated output weights.
+
+        Override this method if your readout uses a different
+        attribute name for the output weight matrix.
+
+        Parameters
+        ----------
+        cmat : Array
+            New output weight matrix.
+
+        Returns
+        -------
+        ReadoutBase
+            New readout with updated weights.
+        """
+        return eqx.tree_at(lambda r: r.wout, self, cmat)
 
 
 class ParallelLinearReadout(ReadoutBase):
@@ -192,6 +257,21 @@ class ParallelLinearReadout(ReadoutBase):
                 "Incorrect reservoir dimension for instantiated output map."
             )
         return jnp.ravel(eqx.filter_vmap(jnp.matmul)(self.wout, res_state))
+
+    def prepare_target(self, target_seq: Array) -> Array:
+        """Reshape target for parallel chunk structure.
+
+        Parameters
+        ----------
+        target_seq : Array
+            Target sequence, (shape=(seq_len, out_dim)).
+
+        Returns
+        -------
+        Array
+            Reshaped target, (shape=(seq_len, chunks, out_dim/chunks)).
+        """
+        return target_seq.reshape(target_seq.shape[0], self.chunks, -1)
 
 
 class LinearReadout(ParallelLinearReadout):
@@ -277,6 +357,36 @@ class LinearReadout(ParallelLinearReadout):
             Output state, (out_dim,) or shape=(seq_len, out_dim)).
         """
         return jnp.squeeze(super().__call__(res_state[..., None, :]))
+
+    def prepare_train(self, res_seq: Array) -> Array:
+        """Unsqueeze to add chunks=1 axis for ridge regression.
+
+        Parameters
+        ----------
+        res_seq : Array
+            Reservoir states, (shape=(seq_len, res_dim)).
+
+        Returns
+        -------
+        Array
+            Unsqueezed states, (shape=(seq_len, 1, res_dim)).
+        """
+        return res_seq[:, None, :]
+
+    def prepare_target(self, target_seq: Array) -> Array:
+        """Unsqueeze to add chunks=1 axis for ridge regression.
+
+        Parameters
+        ----------
+        target_seq : Array
+            Target sequence, (shape=(seq_len, out_dim)).
+
+        Returns
+        -------
+        Array
+            Unsqueezed target, (shape=(seq_len, 1, out_dim)).
+        """
+        return target_seq[:, None, :]
 
 
 class ParallelNonlinearReadout(ReadoutBase):
@@ -406,6 +516,36 @@ class ParallelNonlinearReadout(ReadoutBase):
             )
         transformed_res_state = self.nonlinear_transform(res_state)
         return jnp.ravel(eqx.filter_vmap(jnp.matmul)(self.wout, transformed_res_state))
+
+    def prepare_train(self, res_seq: Array) -> Array:
+        """Apply nonlinear transform to reservoir states for ridge regression.
+
+        Parameters
+        ----------
+        res_seq : Array
+            Reservoir states, (shape=(seq_len, chunks, res_dim)).
+
+        Returns
+        -------
+        Array
+            Transformed states, (shape=(seq_len, chunks, res_dim)).
+        """
+        return self.nonlinear_transform(res_seq)
+
+    def prepare_target(self, target_seq: Array) -> Array:
+        """Reshape target for parallel chunk structure.
+
+        Parameters
+        ----------
+        target_seq : Array
+            Target sequence, (shape=(seq_len, out_dim)).
+
+        Returns
+        -------
+        Array
+            Reshaped target, (shape=(seq_len, chunks, out_dim/chunks)).
+        """
+        return target_seq.reshape(target_seq.shape[0], self.chunks, -1)
 
 
 class NonlinearReadout(ParallelNonlinearReadout):
@@ -537,6 +677,36 @@ class NonlinearReadout(ParallelNonlinearReadout):
             Output state, (out_dim,) or shape=(seq_len, out_dim)).
         """
         return jnp.squeeze(super().__call__(res_state[..., None, :]))
+
+    def prepare_train(self, res_seq: Array) -> Array:
+        """Apply nonlinear transform and unsqueeze to add chunks=1 axis.
+
+        Parameters
+        ----------
+        res_seq : Array
+            Reservoir states, (shape=(seq_len, res_dim)).
+
+        Returns
+        -------
+        Array
+            Transformed and unsqueezed states, (shape=(seq_len, 1, res_dim)).
+        """
+        return self.nonlinear_transform(res_seq)[:, None, :]
+
+    def prepare_target(self, target_seq: Array) -> Array:
+        """Unsqueeze to add chunks=1 axis for ridge regression.
+
+        Parameters
+        ----------
+        target_seq : Array
+            Target sequence, (shape=(seq_len, out_dim)).
+
+        Returns
+        -------
+        Array
+            Unsqueezed target, (shape=(seq_len, 1, out_dim)).
+        """
+        return target_seq[:, None, :]
 
 
 class ParallelQuadraticReadout(ParallelNonlinearReadout):
@@ -740,3 +910,18 @@ class EnsembleLinearReadout(ReadoutBase):
                 "Incorrect reservoir dimension for instantiated output map."
             )
         return jnp.mean(eqx.filter_vmap(jnp.matmul)(self.wout, res_state), axis=0)
+
+    def prepare_target(self, target_seq: Array) -> Array:
+        """Repeat target across all ensemble members.
+
+        Parameters
+        ----------
+        target_seq : Array
+            Target sequence, (shape=(seq_len, out_dim)).
+
+        Returns
+        -------
+        Array
+            Repeated target, (shape=(seq_len, chunks, out_dim)).
+        """
+        return jnp.repeat(target_seq[:, None, :], self.chunks, axis=1)

@@ -292,3 +292,76 @@ def test_compute_control(dummy_control_problem_params):
     )
 
     assert control.shape == (fcast_len, control_dim)
+
+
+####################### UNIFIED train_RCController TESTS #####################
+
+
+def test_train_rccontroller_esn(dummy_control_problem_params):
+    """Test that train_RCController produces identical results to train_ESNController."""
+    Nx, control_dim, U_train, C_train, U_test, C_test = dummy_control_problem_params
+
+    res_dim = 200
+
+    controller = orc.control.ESNController(
+        data_dim=Nx,
+        control_dim=control_dim,
+        res_dim=res_dim,
+        seed=0,
+    )
+
+    # Train with both functions
+    ctrl_old, R_old = orc.control.train_ESNController(
+        controller,
+        train_seq=U_train,
+        control_seq=C_train,
+        spinup=50,
+        beta=1e-6,
+    )
+
+    ctrl_new, R_new = orc.control.train_RCController(
+        controller,
+        train_seq=U_train,
+        control_seq=C_train,
+        spinup=50,
+        beta=1e-6,
+    )
+
+    # Verify identical results
+    assert jnp.allclose(ctrl_old.readout.wout, ctrl_new.readout.wout)
+    assert jnp.allclose(R_old, R_new)
+
+
+def test_train_rccontroller_quadratic(dummy_control_problem_params):
+    """Test train_RCController with quadratic readout."""
+    Nx, control_dim, U_train, C_train, U_test, C_test = dummy_control_problem_params
+
+    res_dim = 200
+
+    controller = orc.control.ESNController(
+        data_dim=Nx,
+        control_dim=control_dim,
+        res_dim=res_dim,
+        seed=0,
+        quadratic=True,
+    )
+
+    ctrl_trained, R = orc.control.train_RCController(
+        controller,
+        train_seq=U_train,
+        control_seq=C_train,
+        spinup=50,
+        beta=1e-6,
+    )
+
+    assert ctrl_trained is not None
+    assert R.shape[0] == U_train.shape[0]
+    assert R.shape[1] == res_dim
+
+    # Apply control
+    fcast_len = 50
+    U_controlled = ctrl_trained.apply_control(
+        control_seq=C_test[:fcast_len], res_state=R[-1]
+    )
+    assert U_controlled.shape == (fcast_len, Nx)
+    assert jnp.all(jnp.isfinite(U_controlled))

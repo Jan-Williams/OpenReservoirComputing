@@ -226,17 +226,7 @@ class RCForecasterBase(eqx.Module, ABC):
         Array
             Forecasted states, (shape=(fcast_len, data_dim)).
         """
-        if self.chunks > 0:
-            res_seq = self.force(
-                spinup_data, jnp.zeros((self.chunks, self.res_dim), dtype=self.dtype)
-            )
-        elif self.chunks == 0:
-            res_seq = self.force(
-                spinup_data, jnp.zeros((self.res_dim), dtype=self.dtype)
-            )
-        else:
-            raise ValueError(f"chunks must be >= 0, but found chunks = {self.chunks}")
-
+        res_seq = self.force(spinup_data, self.driver.default_state())
         return self.forecast(fcast_len, res_seq[-1])
 
 
@@ -471,17 +461,5 @@ class CRCForecasterBase(RCForecasterBase, ABC):
             dt0 = ts[1] - ts[0]
             spinup_ts = jnp.arange(0.0, spinup_data.shape[0], dtype=self.dtype) * dt0
 
-        if self.chunks > 0:
-            res_seq = self.force(
-                spinup_data,
-                jnp.zeros((self.chunks, self.res_dim), dtype=self.dtype),
-                spinup_ts,
-            )
-        elif self.chunks == 0:
-            res_seq = self.force(
-                spinup_data, jnp.zeros((self.res_dim), dtype=self.dtype), spinup_ts
-            )
-        else:
-            raise ValueError(f"chunks must be >= 0, but found chunks = {self.chunks}")
-
+        res_seq = self.force(spinup_data, self.driver.default_state(), spinup_ts)
         return self.forecast(ts, res_seq[-1])
