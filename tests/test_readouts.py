@@ -88,6 +88,19 @@ def test_ravel():
     ).all()
 
 
+@pytest.mark.parametrize("chunks", [1, 4])
+def test_parallel_linear_prepare_target(chunks):
+    """Test that prepare_target reshapes (seq_len, out_dim) to (seq_len, chunks, out_dim/chunks)."""
+    out_dim = 12
+    res_dim = 100
+    readout = orc.readouts.ParallelLinearReadout(
+        out_dim=out_dim, res_dim=res_dim, chunks=chunks
+    )
+    target_seq = jnp.ones((50, out_dim))
+    result = readout.prepare_target(target_seq)
+    assert result.shape == (50, chunks, out_dim // chunks)
+
+
 def test_quadratic_readout():
     readout = orc.readouts.ParallelNonlinearReadout(
         out_dim=6, res_dim=6, nonlin_list=[lambda x: x**2], chunks=1, dtype=jnp.float64
@@ -101,6 +114,35 @@ def test_quadratic_readout():
     target_output = jnp.array([0, 1, 2, 9, 4, 25])
     test_out = readout(to_output)
     assert jnp.allclose(test_out, target_output)
+
+
+@pytest.mark.parametrize("chunks", [1, 4])
+def test_parallel_nonlinear_prepare_train(chunks):
+    """Test that ParallelNonlinearReadout.prepare_train applies nonlinear transform."""
+    res_dim = 12
+    out_dim = 12
+    readout = orc.readouts.ParallelNonlinearReadout(
+        out_dim=out_dim, res_dim=res_dim, nonlin_list=[lambda x: x**2],
+        chunks=chunks, dtype=jnp.float64,
+    )
+    res_seq = jax.random.normal(jax.random.key(0), shape=(50, chunks, res_dim))
+    result = readout.prepare_train(res_seq)
+    assert result.shape == (50, chunks, res_dim)
+    expected = readout.nonlinear_transform(res_seq)
+    assert jnp.allclose(result, expected)
+
+
+@pytest.mark.parametrize("chunks", [1, 4])
+def test_parallel_nonlinear_prepare_target(chunks):
+    """Test that ParallelNonlinearReadout.prepare_target reshapes correctly."""
+    out_dim = 12
+    readout = orc.readouts.ParallelNonlinearReadout(
+        out_dim=out_dim, res_dim=12, nonlin_list=[lambda x: x**2],
+        chunks=chunks, dtype=jnp.float64,
+    )
+    target_seq = jnp.ones((50, out_dim))
+    result = readout.prepare_target(target_seq)
+    assert result.shape == (50, chunks, out_dim // chunks)
 
 
 def test_nonlin_and_quadratic_readout():
@@ -172,6 +214,22 @@ def test_single_linearreadout_chunks_is_one(single_linearreadout):
     assert single_linearreadout.chunks == 1
 
 
+def test_single_linearreadout_prepare_train(single_linearreadout):
+    """Test that LinearReadout.prepare_train unsqueezes to (seq_len, 1, res_dim)."""
+    res_seq = jnp.ones((50, single_linearreadout.res_dim))
+    result = single_linearreadout.prepare_train(res_seq)
+    assert result.shape == (50, 1, single_linearreadout.res_dim)
+    assert jnp.array_equal(result[:, 0, :], res_seq)
+
+
+def test_single_linearreadout_prepare_target(single_linearreadout):
+    """Test that LinearReadout.prepare_target unsqueezes to (seq_len, 1, out_dim)."""
+    target_seq = jnp.ones((50, single_linearreadout.out_dim))
+    result = single_linearreadout.prepare_target(target_seq)
+    assert result.shape == (50, 1, single_linearreadout.out_dim)
+    assert jnp.array_equal(result[:, 0, :], target_seq)
+
+
 ##################### SINGLE NONLINEAR READOUT TESTS #####################
 
 
@@ -220,6 +278,24 @@ def test_single_nonlinearreadout_call(single_nonlinearreadout):
 def test_single_nonlinearreadout_chunks_is_one(single_nonlinearreadout):
     """Test that NonlinearReadout always has chunks=1."""
     assert single_nonlinearreadout.chunks == 1
+
+
+def test_single_nonlinearreadout_prepare_train(single_nonlinearreadout):
+    """Test that NonlinearReadout.prepare_train applies transform and unsqueezes."""
+    res_seq = jnp.ones((50, single_nonlinearreadout.res_dim))
+    result = single_nonlinearreadout.prepare_train(res_seq)
+    assert result.shape == (50, 1, single_nonlinearreadout.res_dim)
+    # Verify nonlinear transform was applied (not just identity)
+    expected = single_nonlinearreadout.nonlinear_transform(res_seq)
+    assert jnp.allclose(result[:, 0, :], expected)
+
+
+def test_single_nonlinearreadout_prepare_target(single_nonlinearreadout):
+    """Test that NonlinearReadout.prepare_target unsqueezes to (seq_len, 1, out_dim)."""
+    target_seq = jnp.ones((50, single_nonlinearreadout.out_dim))
+    result = single_nonlinearreadout.prepare_target(target_seq)
+    assert result.shape == (50, 1, single_nonlinearreadout.out_dim)
+    assert jnp.array_equal(result[:, 0, :], target_seq)
 
 
 ##################### SINGLE QUADRATIC READOUT TESTS #####################
@@ -271,6 +347,22 @@ def test_single_quadraticreadout_chunks_is_one(single_quadraticreadout):
     assert single_quadraticreadout.chunks == 1
 
 
+def test_single_quadraticreadout_prepare_train(single_quadraticreadout):
+    """Test that QuadraticReadout inherits prepare_train from NonlinearReadout."""
+    res_seq = jnp.ones((50, single_quadraticreadout.res_dim))
+    result = single_quadraticreadout.prepare_train(res_seq)
+    assert result.shape == (50, 1, single_quadraticreadout.res_dim)
+    expected = single_quadraticreadout.nonlinear_transform(res_seq)
+    assert jnp.allclose(result[:, 0, :], expected)
+
+
+def test_single_quadraticreadout_prepare_target(single_quadraticreadout):
+    """Test that QuadraticReadout inherits prepare_target from NonlinearReadout."""
+    target_seq = jnp.ones((50, single_quadraticreadout.out_dim))
+    result = single_quadraticreadout.prepare_target(target_seq)
+    assert result.shape == (50, 1, single_quadraticreadout.out_dim)
+
+
 ##################### ENSEMBLE LINEAR READOUT TESTS #####################
 
 
@@ -296,3 +388,82 @@ def test_ensemble_readout_shapes(chunks, batch_size, out_dim):
     inputs = jnp.ones((chunks, res_dim))
     outputs = readout(inputs)
     assert outputs.shape == (out_dim,)
+
+
+@pytest.mark.parametrize("chunks,out_dim", [(5, 3), (3, 4)])
+def test_ensemble_prepare_target(chunks, out_dim):
+    """Test that EnsembleLinearReadout.prepare_target repeats target across chunks."""
+    res_dim = 100
+    readout = orc.readouts.EnsembleLinearReadout(out_dim, res_dim, chunks)
+    target_seq = jax.random.normal(jax.random.key(0), shape=(50, out_dim))
+    result = readout.prepare_target(target_seq)
+    assert result.shape == (50, chunks, out_dim)
+    # Each chunk should get the same target
+    for c in range(chunks):
+        assert jnp.array_equal(result[:, c, :], target_seq)
+
+
+##################### CUSTOM READOUT (chunks=0) TESTS #####################
+
+
+class CustomReadout(orc.readouts.ReadoutBase):
+    """Custom readout mimicking the notebook pattern, with wout convention."""
+
+    wout: jnp.ndarray
+
+    def __init__(self, out_dim, res_dim):
+        super().__init__(out_dim, res_dim)
+        self.wout = jnp.zeros((out_dim, res_dim))
+
+    def readout(self, res_state):
+        return self.wout @ res_state
+
+
+def test_custom_readout_chunks_default():
+    """Custom readouts inheriting from ReadoutBase should have chunks=0."""
+    readout = CustomReadout(out_dim=3, res_dim=100)
+    assert readout.chunks == 0
+
+
+def test_custom_readout_prepare_train_passthrough():
+    """prepare_train should be identity for chunks=0 readouts."""
+    readout = CustomReadout(out_dim=3, res_dim=100)
+    res_seq = jnp.ones((50, 100))
+    result = readout.prepare_train(res_seq)
+    assert result.shape == (50, 100)
+    assert jnp.array_equal(result, res_seq)
+
+
+def test_custom_readout_prepare_target_passthrough():
+    """prepare_target should be identity for chunks=0 readouts."""
+    readout = CustomReadout(out_dim=3, res_dim=100)
+    target_seq = jnp.ones((50, 3))
+    result = readout.prepare_target(target_seq)
+    assert result.shape == (50, 3)
+    assert jnp.array_equal(result, target_seq)
+
+
+def test_custom_readout_set_wout():
+    """set_wout should return a new readout with updated weights."""
+    readout = CustomReadout(out_dim=3, res_dim=100)
+    new_wout = jnp.ones((3, 100))
+    new_readout = readout.set_wout(new_wout)
+    assert jnp.array_equal(new_readout.wout, new_wout)
+    assert jnp.array_equal(readout.wout, jnp.zeros((3, 100)))
+
+
+def test_custom_readout_call():
+    """Custom readout with chunks=0 should handle 1D and 2D inputs."""
+    readout = CustomReadout(out_dim=3, res_dim=10)
+    new_wout = jnp.eye(3, 10)
+    readout = readout.set_wout(new_wout)
+
+    # Single state
+    res_state = jnp.arange(10, dtype=jnp.float64)
+    out = readout(res_state)
+    assert out.shape == (3,)
+
+    # Batch of states
+    batch = jnp.ones((5, 10))
+    out = readout(batch)
+    assert out.shape == (5, 3)

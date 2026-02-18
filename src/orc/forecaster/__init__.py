@@ -6,6 +6,7 @@ from orc.forecaster.train import (
     train_CESNForecaster,
     train_EnsembleESNForecaster,
     train_ESNForecaster,
+    train_RCForecaster,
 )
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "ESNForecaster",
     "CESNForecaster",
     "EnsembleESNForecaster",
+    "train_RCForecaster",
     "train_ESNForecaster",
     "train_CESNForecaster",
     "train_EnsembleESNForecaster",
