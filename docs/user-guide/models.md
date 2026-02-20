@@ -246,7 +246,46 @@ For detailed API documentation, see the [Control API Reference](../api/control.m
 
 ## Training Functions
 
-Both ESN models use ridge regression for training the readout layer.
+All models use ridge regression for training the readout layer. ORC provides unified training functions that work with any model inheriting from the base classes, as well as convenience wrappers for each specific model type.
+
+### Unified Training Functions (Recommended)
+
+The primary training API uses generic functions that work with any `RCForecasterBase`, `RCClassifierBase`, or `RCControllerBase` subclass, including custom models:
+
+```python
+from orc.forecaster import train_RCForecaster
+from orc.classifier import train_RCClassifier
+from orc.control import train_RCController
+
+# Forecaster: works with ESNForecaster, CESNForecaster, EnsembleESNForecaster,
+# and any custom RCForecasterBase subclass
+trained_model, res_states = train_RCForecaster(model, train_seq, target_seq=target_seq)
+
+# Classifier: works with ESNClassifier and custom RCClassifierBase subclasses
+trained_model = train_RCClassifier(model, train_seqs, labels)
+
+# Controller: works with ESNController and custom RCControllerBase subclasses
+trained_model, res_states = train_RCController(model, train_seq, control_seq)
+```
+
+For continuous-time models, pass the time vector via `**force_kwargs`:
+
+```python
+# CESNForecaster via the unified function
+trained_model, res_states = train_RCForecaster(
+    model, train_seq, target_seq=target_seq, ts=t_train
+)
+```
+
+### Model-Specific Convenience Functions
+
+The legacy model-specific functions remain available and delegate to the unified functions above:
+
+- `train_ESNForecaster` — equivalent to `train_RCForecaster` with an `ESNForecaster` type check
+- `train_CESNForecaster` — equivalent to `train_RCForecaster(..., ts=t_train)` with a `CESNForecaster` type check
+- `train_EnsembleESNForecaster` — equivalent to `train_RCForecaster` with an `EnsembleESNForecaster` type check
+- `train_ESNClassifier` — equivalent to `train_RCClassifier` with an `ESNClassifier` type check
+- `train_ESNController` — equivalent to `train_RCController` with an `ESNController` type check
 
 ### Training Parameters
 
@@ -255,19 +294,22 @@ Both ESN models use ridge regression for training the readout layer.
 
 - `beta`: Tikhonov regularization parameter (typically 1e-8 to 1e-6)
 
-- `initial_res_state`: Custom initial reservoir state (default: zeros)
+- `initial_res_state`: Custom initial reservoir state (default: uses `model.driver.default_state()`)
 
 **Memory Management:**
-- `batch_size`: Process parallel reservoirs in batches to reduce memory usage
+- `batch_size`: Process parallel reservoirs in batches to reduce memory usage (available for all three unified functions)
+
+**Extra Force Arguments:**
+- `**force_kwargs`: Additional keyword arguments forwarded to `model.force()` (e.g., `ts=t_train` for continuous models)
 
 ### Advanced Training
 
 ```python
 # Batched training for memory efficiency with many parallel reservoirs
-trained_model, res_states = train_ESNForecaster(
+trained_model, res_states = train_RCForecaster(
     model,
     train_seq,
-    target_seq,
+    target_seq=target_seq,
     spinup=100,
     beta=1e-7,
     batch_size=10    # Process 10 parallel reservoirs at a time
@@ -317,9 +359,9 @@ The models module demonstrates the power of ORC's modular design:
 To create your own model, follow the ESN pattern:
 
 ```python
-from orc.rc import RCForecasterBase
+from orc.forecaster import RCForecasterBase, train_RCForecaster
 from orc.drivers import CustomDriver
-from orc.embeddings import CustomEmbedding  
+from orc.embeddings import CustomEmbedding
 from orc.readouts import CustomReadout
 
 class CustomForecaster(RCForecasterBase):
@@ -328,10 +370,21 @@ class CustomForecaster(RCForecasterBase):
         driver = CustomDriver(res_dim=res_dim, **kwargs)
         embedding = CustomEmbedding(in_dim=data_dim, res_dim=res_dim, **kwargs)
         readout = CustomReadout(out_dim=data_dim, res_dim=res_dim, **kwargs)
-        
+
         # Initialize base class
         super().__init__(driver, readout, embedding, **kwargs)
+
+# Train using the unified function — no model-specific training code needed
+trained_model, res_states = train_RCForecaster(
+    CustomForecaster(data_dim=3, res_dim=500),
+    train_seq,
+    target_seq=target_seq,
+    spinup=100,
+    beta=8e-8,
+)
 ```
+
+The unified `train_RCForecaster` function delegates shape handling to the readout's `prepare_train`, `prepare_target`, and `set_wout` methods and the driver's `default_state` method, so custom components that implement those methods integrate automatically with training. See the [Readouts](readouts.md) and [Drivers](drivers.md) user guides for details.
 
 ## Performance Considerations
 

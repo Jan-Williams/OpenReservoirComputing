@@ -185,3 +185,99 @@ def test_esn_classifier_invalid_state_repr():
         orc.classifier.ESNClassifier(
             data_dim=4, n_classes=3, res_dim=100, state_repr="invalid"
         )
+
+
+####################### UNIFIED train_RCClassifier TESTS #####################
+
+
+def test_train_rcclassifier_esn(dummy_classification_data):
+    """Test that train_RCClassifier gives same results to train_ESNClassifier."""
+    data_dim, n_classes, train_seqs, labels = dummy_classification_data
+
+    res_dim = 200
+
+    classifier = orc.classifier.ESNClassifier(
+        data_dim=data_dim,
+        n_classes=n_classes,
+        res_dim=res_dim,
+        seed=0,
+    )
+
+    # Train with both functions
+    cls_old = orc.classifier.train_ESNClassifier(
+        classifier,
+        train_seqs=train_seqs,
+        labels=labels,
+        beta=1e-6,
+    )
+
+    cls_new = orc.classifier.train_RCClassifier(
+        classifier,
+        train_seqs=train_seqs,
+        labels=labels,
+        beta=1e-6,
+    )
+
+    # Verify identical results
+    assert jnp.allclose(cls_old.readout.wout, cls_new.readout.wout)
+
+
+def test_train_rcclassifier_mean_state(dummy_classification_data):
+    """Test train_RCClassifier with mean state representation."""
+    data_dim, n_classes, train_seqs, labels = dummy_classification_data
+
+    res_dim = 200
+
+    classifier = orc.classifier.ESNClassifier(
+        data_dim=data_dim,
+        n_classes=n_classes,
+        res_dim=res_dim,
+        seed=0,
+        state_repr="mean",
+    )
+
+    cls_trained = orc.classifier.train_RCClassifier(
+        classifier,
+        train_seqs=train_seqs,
+        labels=labels,
+        spinup=10,
+        beta=1e-6,
+    )
+
+    assert cls_trained is not None
+    probs = cls_trained.classify(train_seqs[0], spinup=10)
+    assert probs.shape == (n_classes,)
+    assert jnp.allclose(jnp.sum(probs), 1.0, atol=1e-6)
+    assert jnp.all(jnp.isfinite(probs))
+
+
+def test_train_rcclassifier_quadratic(dummy_classification_data):
+    """Test train_RCClassifier with quadratic readout."""
+    data_dim, n_classes, train_seqs, labels = dummy_classification_data
+
+    res_dim = 200
+
+    classifier = orc.classifier.ESNClassifier(
+        data_dim=data_dim,
+        n_classes=n_classes,
+        res_dim=res_dim,
+        seed=0,
+        quadratic=True,
+    )
+
+    # Train with both functions and verify identical results
+    cls_old = orc.classifier.train_ESNClassifier(
+        classifier,
+        train_seqs=train_seqs,
+        labels=labels,
+        beta=1e-6,
+    )
+
+    cls_new = orc.classifier.train_RCClassifier(
+        classifier,
+        train_seqs=train_seqs,
+        labels=labels,
+        beta=1e-6,
+    )
+
+    assert jnp.allclose(cls_old.readout.wout, cls_new.readout.wout)

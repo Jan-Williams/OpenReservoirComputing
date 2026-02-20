@@ -20,6 +20,11 @@ The `orc.control` subpackage provides reservoir computing models for dynamical s
 
 ## Training Functions
 
+::: orc.control.train.train_RCController
+    options:
+      show_root_heading: true
+      show_source: true
+
 ::: orc.control.train.train_ESNController
     options:
       show_root_heading: true

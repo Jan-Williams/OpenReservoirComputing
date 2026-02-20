@@ -508,3 +508,113 @@ def test_ensemble_forecast_from_IC(dummy_problem_params):
     U_pred1 = esn.forecast(fcast_len=fcast_len, res_state=R[-1])
     U_pred2 = esn.forecast_from_IC(fcast_len, U_train[-101:])
     assert jnp.allclose(U_pred1, U_pred2)
+
+
+####################### UNIFIED train_RCForecaster TESTS #####################
+
+
+def test_train_rcforecaster_esn():
+    """Test train_RCForecaster produces same result as train_ESNForecaster."""
+    res_dim = 500
+    tN = 50
+    dt = 0.01
+    u0 = np.array([0.05, 1, 1.05])
+
+    U, _ = orc.data.lorenz63(tN=tN, dt=dt, u0=u0)
+    U_train = U[:4000, :]
+
+    esn = orc.forecaster.ESNForecaster(
+        data_dim=3, res_dim=res_dim, seed=0, quadratic=True
+    )
+
+    esn_old, R_old = orc.forecaster.train_ESNForecaster(esn, U_train)
+    esn_new, R_new = orc.forecaster.train_RCForecaster(esn, U_train)
+
+    assert jnp.allclose(esn_old.readout.wout, esn_new.readout.wout)
+    assert jnp.allclose(R_old, R_new)
+
+
+def test_train_rcforecaster_cesn():
+    """Test train_RCForecaster with ts= produces same result as train_CESNForecaster."""
+    res_dim = 300
+    tN = 30
+    dt = 0.01
+    u0 = np.array([0.05, 1, 1.05])
+
+    U, ts = orc.data.lorenz63(tN=tN, dt=dt, u0=u0)
+    U_train = U[:2000, :]
+    ts_train = ts[:2000]
+
+    cesn = orc.forecaster.CESNForecaster(
+        data_dim=3, res_dim=res_dim, seed=0
+    )
+
+    cesn_old, R_old = orc.forecaster.train_CESNForecaster(cesn, U_train, ts_train)
+    cesn_new, R_new = orc.forecaster.train_RCForecaster(cesn, U_train, ts=ts_train)
+
+    assert jnp.allclose(cesn_old.readout.wout, cesn_new.readout.wout)
+    assert jnp.allclose(R_old, R_new)
+
+
+def test_train_rcforecaster_ensemble():
+    """Test train_RCForecaster produces same result as train_EnsembleESNForecaster."""
+    res_dim = 500
+    chunks = 6
+    tN = 50
+    dt = 0.01
+    u0 = np.array([0.05, 1, 1.05])
+
+    U, _ = orc.data.lorenz63(tN=tN, dt=dt, u0=u0)
+    U_train = U[:4000, :]
+
+    esn = orc.forecaster.EnsembleESNForecaster(
+        data_dim=3, res_dim=res_dim, seed=0, chunks=chunks
+    )
+
+    esn_old, R_old = orc.forecaster.train_EnsembleESNForecaster(esn, U_train)
+    esn_new, R_new = orc.forecaster.train_RCForecaster(esn, U_train)
+
+    assert jnp.allclose(esn_old.readout.wout, esn_new.readout.wout)
+    assert jnp.allclose(R_old, R_new)
+
+
+def test_train_rcforecaster_custom_readout():
+    """Test train_RCForecaster with a custom chunks=0 readout."""
+
+    class SimpleReadout(orc.readouts.ReadoutBase):
+        wout: jnp.ndarray
+
+        def __init__(self, out_dim, res_dim):
+            super().__init__(out_dim, res_dim)
+            self.wout = jnp.zeros((out_dim, res_dim))
+
+        def readout(self, res_state):
+            return self.wout @ res_state
+
+    class SimpleForecaster(orc.forecaster.RCForecasterBase):
+        pass
+
+    data_dim = 3
+    res_dim = 200
+    embedding = orc.embeddings.LinearEmbedding(
+        in_dim=data_dim, res_dim=res_dim, scaling=1.0, seed=0
+    )
+    driver = orc.drivers.ESNDriver(res_dim=res_dim, seed=0)
+    readout = SimpleReadout(out_dim=data_dim, res_dim=res_dim)
+
+    model = SimpleForecaster(driver, readout, embedding)
+    assert model.chunks == 0
+
+    tN = 50
+    dt = 0.01
+    u0 = np.array([0.05, 1, 1.05])
+    U, _ = orc.data.lorenz63(tN=tN, dt=dt, u0=u0)
+    U_train = U[:4000, :]
+
+    trained_model, tot_res_seq = orc.forecaster.train_RCForecaster(model, U_train)
+
+    # Verify wout was updated from zeros
+    assert not jnp.allclose(trained_model.readout.wout, jnp.zeros((data_dim, res_dim)))
+    # Verify shapes
+    assert trained_model.readout.wout.shape == (data_dim, res_dim)
+    assert tot_res_seq.shape[1] == res_dim

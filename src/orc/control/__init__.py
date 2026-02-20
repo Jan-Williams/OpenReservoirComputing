@@ -6,10 +6,11 @@ systems where exogenous control inputs influence the system at each time step.
 
 from orc.control.base import RCControllerBase
 from orc.control.models import ESNController
-from orc.control.train import train_ESNController
+from orc.control.train import train_ESNController, train_RCController
 
 __all__ = [
     "RCControllerBase",
     "ESNController",
+    "train_RCController",
     "train_ESNController",
 ]
