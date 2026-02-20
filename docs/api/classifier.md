@@ -20,6 +20,11 @@ The `orc.classifier` subpackage provides reservoir computing models for time ser
 
 ## Training Functions
 
+::: orc.classifier.train.train_RCClassifier
+    options:
+      show_root_heading: true
+      show_source: true
+
 ::: orc.classifier.train.train_ESNClassifier
     options:
       show_root_heading: true
