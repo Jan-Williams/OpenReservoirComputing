@@ -52,7 +52,7 @@ t_test = t[split_idx:]
 
 # Initialize and train the ESN
 esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=400)
-esn, R = orc.forecaster.train_ESNForecaster(esn, U_train)
+esn, R = orc.forecaster.train_RCForecaster(esn, U_train)
 
 # Forecast! 
 U_pred = esn.forecast(fcast_len=U_test.shape[0], res_state=R[-1]) # feed in the last reservoir state seen in training

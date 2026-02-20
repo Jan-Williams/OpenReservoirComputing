@@ -38,6 +38,11 @@ The `orc.forecaster` subpackage provides reservoir computing models for time ser
 
 ## Training Functions
 
+::: orc.forecaster.train.train_RCForecaster
+    options:
+      show_root_heading: true
+      show_source: true
+
 ::: orc.forecaster.train.train_ESNForecaster
     options:
       show_root_heading: true
