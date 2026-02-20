@@ -298,7 +298,7 @@ def test_compute_control(dummy_control_problem_params):
 
 
 def test_train_rccontroller_esn(dummy_control_problem_params):
-    """Test that train_RCController produces identical results to train_ESNController."""
+    """Test that train_RCController gives same results to train_ESNController."""
     Nx, control_dim, U_train, C_train, U_test, C_test = dummy_control_problem_params
 
     res_dim = 200

@@ -191,7 +191,7 @@ def test_esn_classifier_invalid_state_repr():
 
 
 def test_train_rcclassifier_esn(dummy_classification_data):
-    """Test that train_RCClassifier produces identical results to train_ESNClassifier."""
+    """Test that train_RCClassifier gives same results to train_ESNClassifier."""
     data_dim, n_classes, train_seqs, labels = dummy_classification_data
 
     res_dim = 200

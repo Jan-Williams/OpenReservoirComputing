@@ -90,7 +90,10 @@ def test_ravel():
 
 @pytest.mark.parametrize("chunks", [1, 4])
 def test_parallel_linear_prepare_target(chunks):
-    """Test that prepare_target reshapes (seq_len, out_dim) to (seq_len, chunks, out_dim/chunks)."""
+    """
+    Test that prepare_target reshapes (seq_len, out_dim) to
+    (seq_len, chunks, out_dim/chunks).
+    """
     out_dim = 12
     res_dim = 100
     readout = orc.readouts.ParallelLinearReadout(
