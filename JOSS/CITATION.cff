@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "OpenReservoirComputing: GPU-Accelerated Reservoir Computing in JAX"
+type: software
+authors:
+  - given-names: Jan P.
+    family-names: Williams
+    email: jmpw1@uw.edu
+    affiliation: University of Washington
+    # orcid: https://orcid.org/TODO
+  - given-names: Dima
+    family-names: Tretiak
+    email: dtretiak@uw.edu
+    affiliation: University of Washington
+    # orcid: https://orcid.org/TODO
+repository-code: https://github.com/Jan-Williams/OpenReservoirComputing
+url: https://Jan-Williams.github.io/OpenReservoirComputing/
+license: Apache-2.0
+keywords:
+  - reservoir computing
+  - echo state networks
+  - time series forecasting
+  - JAX
+  - GPU computing
+  - chaotic systems
+# doi: TODO - will be assigned by JOSS upon acceptance
+# version: TODO - set to release version at submission time
