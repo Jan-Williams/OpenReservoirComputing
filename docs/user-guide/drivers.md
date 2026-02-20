@@ -12,12 +12,16 @@ The `DriverBase` class defines the core interface that all driver implementation
 
 ### Key Attributes
 - `res_dim`: Reservoir dimension
+- `chunks`: Number of parallel reservoirs (default `0`, meaning no chunks dimension)
 - `dtype`: JAX array dtype (jnp.float32 or jnp.float64)
 
 ### Core Methods
 - `advance(proj_vars, res_state)`: Advance single reservoir state by one time step
 - `batch_advance(proj_vars, res_state)`: Advance batch of reservoir states by one time step
 - `__call__(proj_vars, res_state)`: Flexible interface supporting both single and batch updates
+- `default_state()`: Create a zero initial reservoir state with the appropriate shape —
+  `(chunks, res_dim)` when `chunks > 0`, or `(res_dim,)` for single-reservoir drivers.
+  Used by the unified training functions when no `initial_res_state` is provided.
 
 ## ParallelESNDriver
 
@@ -142,6 +146,11 @@ class CustomDriver(DriverBase):
 ### Requirements
 - Inherit from `DriverBase`
 - Implement the abstract `advance()` method
+- Override `default_state()` if your driver uses a non-standard state shape (e.g., a single
+  reservoir driver should return `jnp.zeros((res_dim,), dtype=self.dtype)`). The base class
+  implementation returns `(chunks, res_dim)` when `chunks > 0` and `(res_dim,)` otherwise.
+  The unified training functions (`train_RCForecaster`, etc.) call this method to construct
+  the initial reservoir state when none is provided by the caller.
 - Choose your parallel reservoir support level:
 
 #### Single Reservoir Only

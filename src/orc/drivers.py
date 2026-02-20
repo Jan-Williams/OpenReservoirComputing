@@ -22,7 +22,9 @@ class DriverBase(eqx.Module, ABC):
     Attributes
     ----------
     res_dim : int
-        Reservoir dimensionxe
+        Reservoir dimension.
+    chunks : int
+        Number of parallel reservoirs. Default is 0 (no chunks dimension).
     dtype : Float
         Dtype for model, jnp.float64 or jnp.float32.
 
@@ -32,9 +34,12 @@ class DriverBase(eqx.Module, ABC):
         Advance reservoir according to proj_vars.
     batch_advance(proj_vars, res_state)
         Advance batch of reservoir states according to proj_vars.
+    default_state()
+        Create a zero initial reservoir state with appropriate shape.
     """
 
     res_dim: int
+    chunks: int = 0
     dtype: Float
 
     def __init__(self, res_dim, dtype=jnp.float64):
@@ -112,6 +117,20 @@ class DriverBase(eqx.Module, ABC):
             elif len(proj_vars.shape) == 2:
                 to_ret = self.batch_advance(proj_vars, res_state)
         return to_ret
+
+    def default_state(self) -> Array:
+        """Create a zero initial reservoir state with appropriate shape.
+
+        Returns
+        -------
+        Array
+            Zero reservoir state, (shape=(chunks, res_dim) if chunks > 0,
+            else shape=(res_dim,)).
+        """
+        if self.chunks > 0:
+            return jnp.zeros((self.chunks, self.res_dim), dtype=self.dtype)
+        else:
+            return jnp.zeros((self.res_dim,), dtype=self.dtype)
 
 
 class ParallelESNDriver(DriverBase):
@@ -426,6 +445,16 @@ class ESNDriver(ParallelESNDriver):
         res_next = super().__call__(proj_vars[..., None, :], res_state[..., None, :])
         res_next = jnp.squeeze(res_next)
         return res_next
+
+    def default_state(self) -> Array:
+        """Create a zero initial reservoir state.
+
+        Returns
+        -------
+        Array
+            Zero reservoir state, (shape=(res_dim,)).
+        """
+        return jnp.zeros((self.res_dim,), dtype=self.dtype)
 
 
 class ParallelTaylorDriver(DriverBase):
@@ -750,6 +779,16 @@ class TaylorDriver(ParallelTaylorDriver):
         res_next = super().__call__(proj_vars[..., None, :], res_state[..., None, :])
         res_next = jnp.squeeze(res_next)
         return res_next
+
+    def default_state(self) -> Array:
+        """Create a zero initial reservoir state.
+
+        Returns
+        -------
+        Array
+            Zero reservoir state, (shape=(res_dim,)).
+        """
+        return jnp.zeros((self.res_dim,), dtype=self.dtype)
 
 
 @sparse.sparsify
