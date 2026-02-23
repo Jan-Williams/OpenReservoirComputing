@@ -51,6 +51,13 @@ Because of ORC's functional approach in JAX, built-in and user-created models pr
 
 
 # State of the Field
+| | Language | GPU | DL Compatible | Parallelizable | Forecasting | Classification | Control | Continuous Time |
+|---|---|---|---|---|---|---|---|---|
+| **OpenReservoirComputing** | Python | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **ReservoirPy** | Python | ✓* | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ |
+| **ReservoirComputing.jl** | Julia | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
+
+Table 1: Comparison of reservoir computing libraries across key features. ✓ indicates full support; ✗ indicates no support. \*ReservoirPy's GPU support is available via its JAX backend (v0.4.0+) but does not fully exploit JAX's functional programming model. {#tbl:comparison}
 
 The most commonly used open-source library for reservoir computing is ReservoirPy [@trouvain2020reservoirpy]. Much like ORC, ReservoirPy provides a variety of built-in architectures, as well as an easy-to-use API for designing one's own layers. ReservoirPy was initially built on NumPy and SciPy with the maintainers adding a JAX backend in v0.4.0. However, ORC differs from ReservoirPy in several important ways.
 
@@ -60,7 +67,7 @@ Second, ORC has a different built-in feature set. ORC supports continuous-time r
 
 Third, ORC models work seamlessly with other deep learning models implemented in Equinox. ReservoirPy is an outstanding library for standalone RC tasks that do not need to integrate with other deep learning frameworks. Working with NumPy rather than JAX may also be more accessible for users unfamiliar with functional programming. However,  ORC's design priorities and advantages are nonetheless distinct from ReservoirPy's, as outlined above.
 
-Other open source libraries for RC include Pytorch-ESN and ReservoirComputing.jl. Pytorch-ESN allows for integration with other PyTorch models, but is not as widely adopted and offers a much more limited feature set than ORC or ReservoirPy. ReservoirComputing.jl is a widely used Julia library for RC that influenced many of ORC's design choices. In particular, ORC's modular design draws heavily from ReservoirComputing.jl. Since Python dominates much of machine learning research, bringing these capabilities to Python is valuable for the broader ML community.
+Other open source libraries for RC include Pytorch-ESN and ReservoirComputing.jl. Pytorch-ESN allows for integration with other PyTorch models, but is not as widely adopted and offers a much more limited feature set than ORC or ReservoirPy. ReservoirComputing.jl is a widely used Julia library for RC that influenced many of ORC's design choices. In particular, ORC's modular design draws heavily from ReservoirComputing.jl. Since Python dominates much of machine learning research, bringing these capabilities to Python is valuable for the broader ML community. A summary of the functionality of ORC, ReservoirPy, and ReservoirComputing.jl is presented in Table 1. 
 
 # Software Design
 
