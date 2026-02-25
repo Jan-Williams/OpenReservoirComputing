@@ -54,10 +54,10 @@ Because of ORC's functional approach in JAX, built-in and user-created models pr
 | | Language | GPU | Auto. Differentiable | Parallelizable/Vectorizable | Forecasting | Classification | Control | Continuous Time |
 |---|---|---|---|---|---|---|---|---|
 | **OpenReservoirComputing** | Python | ✓ | ✓ | ✓/✓ | ✓ | ✓ | ✓ | ✓ |
-| **ReservoirPy** | Python | ✓* | ✗ | ✗ | ✓ | ✓ | ✗/✗ | ✗ |
-| **ReservoirComputing.jl** | Julia | ✓ | ✓ | ✓ | ✓/✗ | ✓ | ✗ | ✗ |
+| **ReservoirPy** | Python | ✓* | ✗ | ✗/✗ | ✓ | ✓ | ✗ | ✗ |
+| **ReservoirComputing.jl** | Julia | ✓ | ✓ | ✓/✗ | ✓ | ✓ | ✗ | ✗ |
 
-Table 1: Comparison of reservoir computing libraries across key features. ✓ indicates full support; ✗ indicates no support. \*ReservoirPy's GPU support is available via its JAX backend (v0.4.0+) but does not fully exploit JAX's functional programming model. {#tbl:comparison}
+Table 1: Comparison of reservoir computing libraries across key features. ✓ indicates full support; ✗ indicates no support. \*ReservoirPy's GPU support is available via its JAX backend (v0.4.0+) but does not fully exploit JAX's functional programming model. *Parallelizable* denotes native support for parallel RC architectures as in [@pathak2018model] and *vectorizable* denotes native support for vectorization (e.g. `vmap`). {#tbl:comparison}
 
 The most commonly used open-source library for reservoir computing is ReservoirPy [@trouvain2020reservoirpy]. Much like ORC, ReservoirPy provides a variety of built-in architectures, as well as an easy-to-use API for designing one's own layers. ReservoirPy was initially built on NumPy and SciPy with the maintainers adding a JAX backend in v0.4.0. However, ORC differs from ReservoirPy in several important ways.
 
