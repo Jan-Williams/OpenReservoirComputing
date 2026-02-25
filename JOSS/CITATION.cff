@@ -7,12 +7,19 @@ authors:
     family-names: Williams
     email: jmpw1@uw.edu
     affiliation: University of Washington
-    # orcid: https://orcid.org/TODO
+    orcid: https://orcid.org/0009-0005-4955-0411
   - given-names: Dima
     family-names: Tretiak
     email: dtretiak@uw.edu
     affiliation: University of Washington
-    # orcid: https://orcid.org/TODO
+  - given-names: J. Nathan
+    family-names: Kutz
+    affiliation: University of Washington
+    orcid: https://orcid.org/0000-0002-6004-2275
+  - given-names: Krithika
+    family-names: Manohar
+    affiliation: University of Washington
+    orcid: https://orcid.org/0000-0002-1582-6767
 repository-code: https://github.com/Jan-Williams/OpenReservoirComputing
 url: https://Jan-Williams.github.io/OpenReservoirComputing/
 license: Apache-2.0

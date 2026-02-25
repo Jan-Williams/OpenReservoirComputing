@@ -9,17 +9,17 @@ tags:
   - chaotic systems
 authors:
   - name: Jan P. Williams
-    orcid: # TODO: Add ORCID
+    orcid: 0009-0005-4955-0411
     affiliation: 1
     corresponding: true
   - name: Dima Tretiak
-    orcid: # TODO: Add ORCID
+    orcid:
     affiliation: 1
   - name: J. Nathan Kutz
-    orcid: # TODO: Add ORCID
+    orcid: 0000-0002-6004-2275
     affiliation: "2, 3, 4"
   - name: Krithika Manohar
-    orcid: # TODO: Add ORCID
+    orcid: 0000-0002-1582-6767
     affiliation: 1
 affiliations:
   - name: Department of Mechanical Engineering, University of Washington, USA
