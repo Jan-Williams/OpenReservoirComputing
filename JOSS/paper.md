@@ -13,10 +13,11 @@ authors:
     affiliation: 1
     corresponding: true
   - name: Dima Tretiak
-    orcid:
+    orcid: 0009-0005-0419-7554
     affiliation: 1
   - name: Steven L. Brunton
     orcid: 0000-0002-6565-5118
+    affiliation: 1
   - name: J. Nathan Kutz
     orcid: 0000-0002-6004-2275
     affiliation: "2, 3, 4"
