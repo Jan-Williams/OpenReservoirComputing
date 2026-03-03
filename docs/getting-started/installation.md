@@ -70,28 +70,6 @@ print("ESN created successfully!")
 print("Installation verified ✓")
 ```
 
-## Troubleshooting
-
-### Common Issues
-
-**JAX Not Found**
-```
-ModuleNotFoundError: No module named 'jax'
-```
-*Solution*: Ensure you're using Python 3.10-3.12 and install with `pip install .[gpu]` or upgrade pip.
-
-**CUDA Errors (GPU)**
-```
-CUDA_ERROR_NO_DEVICE or similar GPU errors
-```
-*Solution*: Verify NVIDIA drivers are installed and compatible with CUDA 12.x.
-
-**Import Errors**
-```
-ImportError: cannot import name 'x' from 'orc'
-```
-*Solution*: Try reinstalling: `pip uninstall OpenReservoirComputing && pip install .[gpu]`
-
 ### Getting Help
 
 If you encounter issues:
