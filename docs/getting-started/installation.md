@@ -2,7 +2,7 @@
 
 ## System Requirements
 
-- **Python**: 3.10, 3.11, or 3.12
+- **Python**: 3.10, 3.11, 3.12, or 3.13
 - **Operating System**: Linux, macOS, or Windows
 - **Hardware**: CPU or NVIDIA GPU
 
@@ -97,6 +97,6 @@ ImportError: cannot import name 'x' from 'orc'
 If you encounter issues:
 
 1. Check the [GitHub Issues](https://github.com/Jan-Williams/OpenReservoirComputing/issues)
-2. Ensure your Python version is supported (3.10-3.12)
+2. Ensure your Python version is supported (3.10-3.13)
 3. Try a clean virtual environment installation
 4. For GPU issues, verify CUDA installation with `nvidia-smi`

@@ -80,6 +80,9 @@ driver = ParallelESNDriver(
 ParallelESNDriver supports multiple parallel reservoirs for processing spatial or high-dimensional data:
 
 ```python
+import jax
+import jax.numpy as jnp
+
 # Multiple parallel reservoirs
 driver = ParallelESNDriver(
     res_dim=500,           # Dimension per reservoir
@@ -90,7 +93,7 @@ driver = ParallelESNDriver(
 )
 
 # Input and state shapes: (chunks, res_dim)
-proj_input = jnp.random.normal(jax.random.key(0), (10, 500))
+proj_input = jax.random.normal(jax.random.key(0), (10, 500))
 res_state = jnp.zeros((10, 500))
 next_state = driver(proj_input, res_state)  # Shape: (10, 500)
 ```
