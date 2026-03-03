@@ -4,7 +4,7 @@
 
 The models module provides complete, ready-to-use reservoir computing architectures by combining the modular embedding, driver, and readout components. These models implement common RC paradigms found in the literature, allowing users to quickly apply proven architectures without building from scratch.
 
-All models are built on the base classes `RCForecasterBase` (discrete-time) and `CRCForecasterBase` (continuous-time) defined in `src/orc/rc.py`.
+All models are built on base classes defined in the corresponding submodules: `RCForecasterBase` and `CRCForecasterBase` in `src/orc/forecaster/base.py`, `RCClassifierBase` in `src/orc/classifier/base.py`, and `RCControllerBase` in `src/orc/control/base.py`.
 
 ## Echo State Networks (ESN)
 
@@ -175,6 +175,64 @@ model = CESNForecaster(
     seed=42
 )
 ```
+
+## ESN Classifier
+
+The `ESNClassifier` implements an Echo State Network for sequence classification tasks. Rather than forecasting, the readout is trained to predict class labels from the reservoir's representation of an input sequence.
+
+### Basic Usage
+
+```python
+from orc.classifier import ESNClassifier, train_ESNClassifier
+import jax.numpy as jnp
+
+# Create ESN classifier
+model = ESNClassifier(
+    data_dim=3,       # Input dimension
+    n_classes=4,      # Number of classes
+    res_dim=500,      # Reservoir dimension
+    seed=42
+)
+
+# Train with a list of sequences and corresponding labels
+# train_seqs: list of arrays, each shape (seq_len, data_dim)
+# labels: array of integer class indices, shape (n_sequences,)
+trained_model = train_ESNClassifier(model, train_seqs, labels)
+
+# Classify a new sequence
+probs = trained_model.classify(
+    in_seq=test_seq,                    # Shape: (seq_len, data_dim)
+    res_state=jnp.zeros((model.res_dim,))
+)
+predicted_class = jnp.argmax(probs)
+```
+
+### Key Parameters
+
+- `data_dim`: Dimension of the input sequences
+- `n_classes`: Number of target classes
+- `res_dim`: Reservoir dimension
+- `leak_rate`: Memory retention (default `0.6`)
+- `Wr_spectral_radius`: Spectral radius of reservoir matrix (default `0.8`)
+- `state_repr`: How to summarize reservoir states for classification — `"final"` uses only the last state, `"mean"` averages all states after spinup (default `"final"`)
+- `quadratic`: Use quadratic readout for a richer feature space (default `False`)
+
+### State Representation
+
+The `state_repr` parameter controls which reservoir states are passed to the readout:
+
+```python
+# Use mean reservoir state (often better for longer sequences)
+model = ESNClassifier(
+    data_dim=3,
+    n_classes=4,
+    res_dim=500,
+    state_repr="mean",
+    seed=42
+)
+```
+
+For detailed API documentation, see the [Classifier API Reference](../api/classifier.md).
 
 ## ESN Controller
 
