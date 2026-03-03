@@ -6,7 +6,7 @@ We welcome contributions to the OpenReservoirComputing project! This guide will 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/OpenReservoirComputing.git
+   git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
    cd OpenReservoirComputing
    ```
 
