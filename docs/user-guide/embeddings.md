@@ -53,7 +53,7 @@ embedding = ParallelLinearEmbedding(
     in_dim=1000,     # Total spatial dimension
     res_dim=200,     # Reservoir dimension per chunk
     scaling=0.1,
-    chunks=50,       # Create 4 parallel reservoirs
+    chunks=50,       # Create 50 parallel reservoirs
     locality=2,     # Each reservoir sees 2 neighbors on each side
                     # in addition to in_dim / chunks values
     periodic=True,  # Use periodic boundary conditions
@@ -62,7 +62,7 @@ embedding = ParallelLinearEmbedding(
 
 # Input gets decomposed into overlapping chunks
 spatial_input = jnp.sin(jnp.linspace(0, 4*jnp.pi, 1000))
-embedded = embedding(spatial_input)  # Shape: (4, 200)
+embedded = embedding(spatial_input)  # Shape: (50, 200)
 ```
 
 ### Key Parameters

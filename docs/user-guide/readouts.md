@@ -61,6 +61,8 @@ output = readout(res_state)     # Shape: (out_dim,)
 ParallelLinearReadout supports multiple parallel reservoirs, automatically handling the appropriate output concatenation:
 
 ```python
+import jax
+
 # Parallel reservoirs readout
 readout = ParallelLinearReadout(
     out_dim=12,     # Total output dimension
@@ -70,7 +72,7 @@ readout = ParallelLinearReadout(
 )
 
 # Process parallel reservoir states
-res_state = jnp.random.normal(jax.random.key(0), (4, 100))
+res_state = jax.random.normal(jax.random.key(0), (4, 100))
 output = readout(res_state)  # Shape: (12,) - concatenated outputs
 ```
 

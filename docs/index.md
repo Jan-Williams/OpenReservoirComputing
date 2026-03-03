@@ -113,7 +113,7 @@ Practical demonstrations using Jupyter notebooks:
 
 **Precision**: x64 floating-point arithmetic enabled by default for numerical stability in chaotic system forecasting.
 
-**Compatibility**: Python 3.10-3.12 on Linux, macOS, and Windows platforms.
+**Compatibility**: Python 3.10-3.13 on Linux, macOS, and Windows platforms.
 
 ## Contributing
 
@@ -124,10 +124,10 @@ ORC welcomes contributions from the reservoir computing community. See the [Cont
 When using ORC in research publications, please cite:
 
 ```bibtex
-@software{orc2025,
+@software{orc2026,
   title={OpenReservoirComputing: GPU-accelerated reservoir computing in JAX},
-  author={Williams, Jan P. and Tretiak, Dima and Kutz, Nathan and Manohar, Krithika},
-  year={2025},
+  author={Williams, Jan P. and Tretiak, Dima and Brunton, Steven L. and Kutz, J. Nathan and Manohar, Krithika},
+  year={2026},
   url={https://github.com/Jan-Williams/OpenReservoirComputing}
 }
 ```
