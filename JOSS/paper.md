@@ -54,11 +54,17 @@ Because of ORC's functional approach in JAX, built-in and user-created models pr
 
 
 # State of the Field
-| | Language | GPU | Auto. Differentiable | Parallelizable/Vectorizable | Forecasting | Classification | Control | Continuous Time |
-|---|---|---|---|---|---|---|---|---|
-| **OpenReservoirComputing** | Python | $\checkmark$ | $\checkmark$ | $\checkmark$/$\checkmark$ | $\checkmark$ | $\checkmark$ | $\checkmark$ | $\checkmark$ |
-| **ReservoirPy** | Python | $\checkmark$* | $\times$ | $\times$/$\times$ | $\checkmark$ | $\checkmark$ | $\times$ | $\times$ |
-| **ReservoirComputing.jl** | Julia | $\checkmark$ | $\checkmark$ | $\checkmark$/$\times$ | $\checkmark$ | $\checkmark$ | $\times$ | $\times$ |
+| | **ORC** | **ReservoirPy** | **RC.jl** |
+|---|---|---|---|
+| Language | Python | Python | Julia |
+| GPU | $\checkmark$ | $\checkmark$* | $\checkmark$ |
+| Auto. Differentiable | $\checkmark$ | $\times$ | $\checkmark$ |
+| Parallelizable | $\checkmark$ | $\times$ | $\checkmark$ |
+| Vectorizable | $\checkmark$ | $\times$ | $\times$ |
+| Forecasting | $\checkmark$ | $\checkmark$ | $\checkmark$ |
+| Classification | $\checkmark$ | $\checkmark$ | $\checkmark$ |
+| Control | $\checkmark$ | $\times$ | $\times$ |
+| Continuous Time | $\checkmark$ | $\times$ | $\times$ |
 
 Table 1: Comparison of reservoir computing libraries across key features. ✓ indicates full support; ✗ indicates no support. \*ReservoirPy's GPU support is available via its JAX backend (v0.4.0+) but does not fully exploit JAX's functional programming model. *Parallelizable* denotes native support for parallel RC architectures as in [@pathak2018model] and *vectorizable* denotes native support for vectorization (e.g. `vmap`). {#tbl:comparison}
 
@@ -75,7 +81,7 @@ Other open source libraries for RC include Pytorch-ESN [@nardo2018pytorchesn] an
 
 # Software Design
 
-![ORC three-layer pipeline architecture. Each reservoir computer (RC) is decomposed into (i) an ``embedding'' function that lifts a low-dimensional signal $u_t$ to the reservoir dimension, (ii) a ``driver'' function that propagates the reservoir state, and (iii) a ``readout'' that maps back to a target $y$. For control and forecasting RCs, the target $y$ is typically $u_{t+1}$ (either in the presence of a forcing term or not) and for classification the target $y$ is a label. \label{fig:architecture}](../imgs/architecture_paper.pdf)
+![ORC three-layer pipeline architecture. Each reservoir computer (RC) is decomposed into (i) an ``embedding'' function that lifts a low-dimensional signal $u_t$ to the reservoir dimension, (ii) a ``driver'' function that propagates the reservoir state, and (iii) a ``readout'' that maps back to a target $y$. For control and forecasting RCs, the target $y$ is typically $u_{t+1}$ (either in the presence of a forcing term or not) and for classification the target $y$ is a label. \label{fig:architecture}](../imgs/architecture_paper.svg)
 
 
 ORC models are decomposed into three components, illustrated in \autoref{fig:architecture}: (i) an embedding $f_E$ that lifts a low-dimensional input signal $u_t$ to a high-dimensional space, (ii) a driver $f_R$ that propagates the high-dimensional state $r_t$, and (iii) a readout $f_O$ that maps the latent state back to an approximation of some low-dimensional signal $y_t$. Depending on the task at hand, $y_t$ may be a future time-step of $u_t$, a label associated with input data, or some other target signal. ORC differs from many existing approaches that unify (i) and (ii). Separating the embedding from the reservoir state propagation allows for cleaner application of RC to non-standard tasks, such as acting as a surrogate model for model predictive control. It also allows for the easier incorporation of non-standard embeddings, including stochastic embeddings that can arise in the study of physical RC systems. Moreover, the modular design lets components developed for one task (e.g., forecasting) be reused directly in another (e.g., classification).
