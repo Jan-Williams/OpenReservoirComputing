@@ -25,12 +25,12 @@ pip install .
 
 If you would like to use ORC on GPU(s), install the optional GPU dependencies:
 ```bash
-pip install .[gpu]
+pip install ".[gpu]"
 ```
 
 To run the example notebooks, install the optional notebook dependencies:
 ```bash
-pip install .[notebooks]
+pip install ".[notebooks]"
 ```
 
 ## Quick start example
@@ -86,12 +86,12 @@ From the root directory of the repository, create an editable install for your g
 
 CPU:
 ```bash
-pip install -e .[dev]
+pip install -e ".[dev]"
 ```
 
 GPU:
 ```bash
-pip install -e .[dev, gpu]
+pip install -e ".[dev, gpu]"
 ```
 
 The main branch is protected from direct changes. If you would like to make a change please create a new branch and work on your new feature. After you are satisfied with your changes, please run our testing suite to ensure all is working well. We also expect new tests to be written for all changes if additions are made. The tests can be simply run from the root directory of the repository with

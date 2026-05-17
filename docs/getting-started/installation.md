@@ -25,7 +25,7 @@ For GPU acceleration with CUDA support:
 ```bash
 git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 cd OpenReservoirComputing
-pip install .[gpu]
+pip install ".[gpu]"
 ```
 
 
@@ -36,7 +36,7 @@ For contributors or advanced users who want to modify the code:
 ```bash
 git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 cd OpenReservoirComputing
-pip install -e .[dev]
+pip install -e ".[dev]"
 ```
 
 This includes additional tools for testing, formatting, and documentation.
@@ -46,7 +46,7 @@ This includes additional tools for testing, formatting, and documentation.
 To install all optional dependencies (GPU, development, notebooks, documentation):
 
 ```bash
-pip install -e .[all]
+pip install -e ".[all]"
 ```
 
 ## Verification
