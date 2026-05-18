@@ -18,7 +18,7 @@ We welcome contributions to the OpenReservoirComputing project! This guide will 
 
 3. **Install in development mode**:
    ```bash
-   pip install -e .[dev,notebooks,gpu]
+   pip install -e ".[dev,notebooks,gpu]"
    ```
 
 ## Code Style
