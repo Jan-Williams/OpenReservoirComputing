@@ -1,3 +1,4 @@
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -365,3 +366,60 @@ def test_train_rccontroller_quadratic(dummy_control_problem_params):
     )
     assert U_controlled.shape == (fcast_len, Nx)
     assert jnp.all(jnp.isfinite(U_controlled))
+
+
+##################### JAX TRANSFORM & AD TESTS #####################
+
+
+@pytest.fixture
+def esn_controller():
+    return orc.control.ESNController(
+        data_dim=3, control_dim=2, res_dim=200, seed=0
+    )
+
+
+def test_controller_transform_stability(esn_controller):
+    """Verify the controller closed-loop is compatible with vmap and jit."""
+    model = esn_controller
+    key = jax.random.key(999)
+    fcast_len = 10
+    batch_size = 3
+
+    control_seq = jax.random.normal(key, shape=(fcast_len, model.control_dim))
+    state_shape = model.driver.default_state().shape
+    batch_state = jax.random.normal(key, shape=(batch_size, *state_shape))
+
+    def fwd(res_state):
+        return model.apply_control(control_seq, res_state)
+
+    vmap_fwd = eqx.filter_vmap(fwd)
+    assert jnp.allclose(
+        vmap_fwd(batch_state),
+        jnp.stack([fwd(s) for s in batch_state]),
+    )
+
+    jit_fwd = eqx.filter_jit(fwd)
+    assert jnp.all(jnp.isfinite(jit_fwd(batch_state[0])))
+
+
+def test_controller_differentiability(esn_controller):
+    """Verify gradients flow backward through apply_control via Equinox."""
+    model = esn_controller
+    key = jax.random.key(999)
+    fcast_len = 10
+
+    control_seq = jax.random.normal(key, shape=(fcast_len, model.control_dim))
+    res_state = jax.random.normal(key, shape=model.driver.default_state().shape)
+
+    @eqx.filter_value_and_grad
+    def loss_fn(m, c, s):
+        return jnp.sum(m.apply_control(c, s))
+
+    loss, grads = loss_fn(model, control_seq, res_state)
+    assert jnp.isfinite(loss)
+
+    def check_finite(g):
+        if eqx.is_array(g) and jnp.issubdtype(g.dtype, jnp.inexact):
+            assert jnp.all(jnp.isfinite(g))
+
+    jax.tree_util.tree_map(check_finite, grads)
