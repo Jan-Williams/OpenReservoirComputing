@@ -742,3 +742,45 @@ def test_cesn_forecast_differentiability(cesn_forecaster):
         if eqx.is_array(g) and jnp.issubdtype(g.dtype, jnp.inexact):
             assert jnp.all(jnp.isfinite(g))
     jax.tree_util.tree_map(check_finite, grads)
+
+
+##################### GRU FORECAST SMOKE TEST #####################
+
+
+def test_gru_forecaster_smoke():
+    """Built-in GRUDriver forecasts Rossler.
+    """
+
+    class GRUForecaster(orc.forecaster.RCForecasterBase):
+        pass
+
+    data_dim = 3
+    res_dim = 300
+    spinup = 100
+    fcast_len = 50
+
+    U, _ = orc.data.rossler(tN=40, dt=0.02, u0=jnp.array([-10.0, 2.0, 1.0]))
+    split = int(U.shape[0] * 0.8)
+    U_train, U_test = U[:split], U[split:]
+
+    model = GRUForecaster(
+        orc.drivers.GRUDriver(res_dim=res_dim, input_rescaling=5.0, seed=0),
+        orc.readouts.LinearReadout(out_dim=data_dim, res_dim=res_dim, seed=0),
+        orc.embeddings.LinearEmbedding(
+            in_dim=data_dim, res_dim=res_dim, scaling=0.1, seed=0
+        ),
+    )
+    model, _ = orc.forecaster.train_RCForecaster(
+        model, train_seq=U_train, spinup=spinup, beta=1e-7
+    )
+    U_pred = model.forecast_from_IC(
+        fcast_len=fcast_len, spinup_data=U_train[-spinup:]
+    )
+
+    assert U_pred.shape == (fcast_len, data_dim)
+    assert jnp.all(jnp.isfinite(U_pred))
+    assert jnp.max(jnp.abs(U_pred)) < 100
+    nrmse = jnp.linalg.norm(
+        (U_pred - U_test[:fcast_len]) / jnp.std(U_train, axis=0), axis=1
+    ) / jnp.sqrt(data_dim)
+    assert jnp.mean(nrmse) < 0.5
