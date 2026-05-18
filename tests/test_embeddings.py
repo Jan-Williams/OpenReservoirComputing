@@ -1,3 +1,5 @@
+import equinox as eqx
+import jax
 import jax.numpy as jnp
 import pytest
 
@@ -149,3 +151,86 @@ def test_ensemble_embed_shapes(chunks, batch_size, in_dim):
     inputs = jnp.ones(in_dim)
     outputs = embedding(inputs)
     assert outputs.shape == (chunks, res_dim)
+
+
+##################### JAX TRANSFORM & AD TESTS #####################
+
+
+@pytest.fixture
+def parallel_linearembedding():
+    return orc.embeddings.ParallelLinearEmbedding(
+        in_dim=16,
+        res_dim=64,
+        scaling=0.1,
+        chunks=4,
+        locality=1,
+        dtype=jnp.float64,
+        seed=0,
+    )
+
+
+@pytest.fixture
+def ensemble_linearembedding():
+    return orc.embeddings.EnsembleLinearEmbedding(
+        in_dim=5,
+        res_dim=64,
+        scaling=0.1,
+        chunks=4,
+        dtype=jnp.float64,
+        seed=0,
+    )
+
+
+@pytest.mark.parametrize(
+    "embedding_fixture",
+    [
+        "single_linearembedding",
+        "parallel_linearembedding",
+        "ensemble_linearembedding",
+    ],
+)
+def test_embedding_transform_stability(embedding_fixture, request):
+    """Verify embeddings are compatible with vmap and jit."""
+    embedding = request.getfixturevalue(embedding_fixture)
+    key = jax.random.key(999)
+    batch_size = 3
+
+    batch_in = jax.random.normal(key, shape=(batch_size, embedding.in_dim))
+
+    vmap_embed = eqx.filter_vmap(embedding.embed)
+    assert jnp.allclose(
+        vmap_embed(batch_in),
+        embedding.batch_embed(batch_in),
+    )
+
+    jit_embed = eqx.filter_jit(embedding.embed)
+    assert jnp.all(jnp.isfinite(jit_embed(batch_in[0])))
+
+
+@pytest.mark.parametrize(
+    "embedding_fixture",
+    [
+        "single_linearembedding",
+        "parallel_linearembedding",
+        "ensemble_linearembedding",
+    ],
+)
+def test_embedding_differentiability(embedding_fixture, request):
+    """Verify gradients flow backward through the embed step via Equinox."""
+    embedding = request.getfixturevalue(embedding_fixture)
+    key = jax.random.key(999)
+
+    in_state = jax.random.normal(key, shape=(embedding.in_dim,))
+
+    @eqx.filter_value_and_grad
+    def loss_fn(model, x):
+        return jnp.sum(model.embed(x))
+
+    loss, grads = loss_fn(embedding, in_state)
+    assert jnp.isfinite(loss)
+
+    def check_finite(g):
+        if eqx.is_array(g) and jnp.issubdtype(g.dtype, jnp.inexact):
+            assert jnp.all(jnp.isfinite(g))
+
+    jax.tree_util.tree_map(check_finite, grads)

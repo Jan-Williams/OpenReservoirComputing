@@ -277,6 +277,8 @@ class CRCForecasterBase(RCForecasterBase, ABC):
 
     solver: diffrax.AbstractSolver
     stepsize_controller: diffrax.AbstractAdaptiveStepSizeController
+    adjoint: diffrax.AbstractAdjoint
+    max_steps: int = eqx.field(static=True)
 
     def __init__(
         self,
@@ -288,6 +290,8 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         seed: int = 0,
         solver: diffrax.AbstractSolver = None,
         stepsize_controller: diffrax.AbstractAdaptiveStepSizeController = None,
+        adjoint: diffrax.AbstractAdjoint = None,
+        max_steps: int = None,
     ):
         """Initialize the continuous reservoir computer.
 
@@ -309,6 +313,17 @@ class CRCForecasterBase(RCForecasterBase, ABC):
             ODE solver to use for the reservoir computer.
         stepsize_controller : diffrax.AbstractAdaptiveStepSizeController
             Stepsize controller to use for the ODE solver.
+        adjoint : diffrax.AbstractAdjoint
+            Adjoint method passed to ``diffrax.diffeqsolve``. Defaults to
+            ``diffrax.RecursiveCheckpointAdjoint()`` (diffrax's default). Note
+            that reverse-mode autodiff through the solve requires either a
+            finite ``max_steps`` or an adjoint that supports unbounded steps
+            (e.g. ``diffrax.BacksolveAdjoint``).
+        max_steps : int
+            Maximum number of solver steps passed to ``diffrax.diffeqsolve``.
+            Defaults to ``None`` (unbounded), which is fast but not
+            reverse-mode differentiable. Set a finite bound to enable
+            reverse-mode autodiff with the default adjoint.
         """
         super().__init__(driver, readout, embedding, chunks, dtype, seed)
         if solver is None:
@@ -317,8 +332,12 @@ class CRCForecasterBase(RCForecasterBase, ABC):
             stepsize_controller = diffrax.PIDController(
                 rtol=1e-3, atol=1e-6, icoeff=1.0
             )
+        if adjoint is None:
+            adjoint = diffrax.RecursiveCheckpointAdjoint()
         self.solver = solver
         self.stepsize_controller = stepsize_controller
+        self.adjoint = adjoint
+        self.max_steps = max_steps
 
     @eqx.filter_jit
     def force(self, in_seq: Array, res_state: Array, ts: Array) -> Array:
@@ -366,7 +385,8 @@ class CRCForecasterBase(RCForecasterBase, ABC):
             stepsize_controller=self.stepsize_controller,
             args=args,
             saveat=save_at,
-            max_steps=None,
+            adjoint=self.adjoint,
+            max_steps=self.max_steps,
         )
         res_seq = sol.ys
         return res_seq
@@ -429,7 +449,8 @@ class CRCForecasterBase(RCForecasterBase, ABC):
             solver=self.solver,
             stepsize_controller=self.stepsize_controller,
             saveat=save_at,
-            max_steps=None,
+            adjoint=self.adjoint,
+            max_steps=self.max_steps,
         )
         res_seq = sol.ys
         return eqx.filter_vmap(self.readout.readout)(res_seq)

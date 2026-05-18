@@ -1,3 +1,4 @@
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import pytest
@@ -939,7 +940,7 @@ def test_grudriver_dims(grudriver):
     # Test single state advance
     in_state = jax.random.normal(key, shape=(res_dim,))
     res_state = jax.random.normal(key, shape=(res_dim,))
-    out_state = grudriver.advance(res_state, in_state)
+    out_state = grudriver.advance(in_state, res_state)
 
     assert out_state.shape == (res_dim,)
     assert jnp.all(jnp.isfinite(out_state))
@@ -955,8 +956,8 @@ def test_grudriver_reproducibility():
     driver1 = orc.drivers.GRUDriver(res_dim=100, seed=42)
     driver2 = orc.drivers.GRUDriver(res_dim=100, seed=42)
 
-    out1 = driver1.advance(res_state, in_state)
-    out2 = driver2.advance(res_state, in_state)
+    out1 = driver1.advance(in_state, res_state)
+    out2 = driver2.advance(in_state, res_state)
 
     assert jnp.allclose(out1, out2)
 
@@ -970,8 +971,8 @@ def test_grudriver_different_seeds():
     driver1 = orc.drivers.GRUDriver(res_dim=100, seed=42)
     driver2 = orc.drivers.GRUDriver(res_dim=100, seed=123)
 
-    out1 = driver1.advance(res_state, in_state)
-    out2 = driver2.advance(res_state, in_state)
+    out1 = driver1.advance(in_state, res_state)
+    out2 = driver2.advance(in_state, res_state)
 
     # Should produce different outputs due to different initialization
     assert not jnp.allclose(out1, out2)
@@ -985,7 +986,7 @@ def test_batchapply_dims_gru(batch_size, grudriver):
     in_states = jax.random.normal(key, shape=(batch_size, res_dim))
     res_states = jax.random.normal(key, shape=(batch_size, res_dim))
 
-    out_states = grudriver.batch_advance(res_states, in_states)
+    out_states = grudriver.batch_advance(in_states, res_states)
 
     assert out_states.shape == (batch_size, res_dim)
     assert jnp.all(jnp.isfinite(out_states))
@@ -998,7 +999,7 @@ def test_grudriver_call_single(grudriver):
 
     in_state = jax.random.normal(key, shape=(res_dim,))
     res_state = jax.random.normal(key, shape=(res_dim,))
-    out_state = grudriver(res_state, in_state)
+    out_state = grudriver(in_state, res_state)
 
     assert out_state.shape == (res_dim,)
     assert jnp.all(jnp.isfinite(out_state))
@@ -1012,7 +1013,7 @@ def test_grudriver_call_batch(grudriver):
 
     in_states = jax.random.normal(key, shape=(batch_size, res_dim))
     res_states = jax.random.normal(key, shape=(batch_size, res_dim))
-    out_states = grudriver.batch_advance(res_states, in_states)
+    out_states = grudriver.batch_advance(in_states, res_states)
 
     assert out_states.shape == (batch_size, res_dim)
     assert jnp.all(jnp.isfinite(out_states))
@@ -1028,9 +1029,9 @@ def test_grudriver_stateful_behavior():
     in_state = jax.random.normal(key, shape=(50,))
 
     # Advance multiple steps
-    state1 = driver.advance(res_state, in_state)
-    state2 = driver.advance(state1, in_state)
-    state3 = driver.advance(state2, in_state)
+    state1 = driver.advance(in_state, res_state)
+    state2 = driver.advance(in_state, state1)
+    state3 = driver.advance(in_state, state2)
 
     # Each state should be different (GRU has memory)
     assert not jnp.allclose(state1, state2)
@@ -1064,10 +1065,72 @@ def test_grudriver_consistency_with_equinox_grucell():
     res_state = jax.random.normal(test_key, shape=(res_dim,))
 
     # Get output from driver
-    driver_output = driver.advance(res_state, in_state)
+    driver_output = driver.advance(in_state, res_state)
 
     # Get output from direct GRU cell usage
     direct_output = driver.gru(in_state, res_state)
 
     # Should be identical
     assert jnp.allclose(driver_output, direct_output)
+
+
+##################### JAX TRANSFORM & AD TESTS #####################
+
+
+@pytest.mark.parametrize(
+    "driver_fixture",
+    ["esndriver", "single_esndriver", "cesn_driver", "taylordriver"],
+)
+def test_driver_transform_stability(driver_fixture, request):
+    """Verify drivers are compatible with vmap and jit."""
+    driver = request.getfixturevalue(driver_fixture)
+    key = jax.random.key(999)
+    batch_size = 3
+
+    if hasattr(driver, "chunks") and driver.chunks > 0:
+        shape = (batch_size, driver.chunks, driver.res_dim)
+    else:
+        shape = (batch_size, driver.res_dim)
+    batch_proj = jax.random.normal(key, shape=shape)
+    batch_state = jax.random.normal(key, shape=shape)
+
+    vmap_advance = eqx.filter_vmap(driver.advance, in_axes=(0, 0))
+    # jax.vmap'ed advance should match the built-in batch_advance
+    assert jnp.allclose(
+        vmap_advance(batch_proj, batch_state),
+        driver.batch_advance(batch_proj, batch_state)
+    )
+
+    jit_advance = eqx.filter_jit(driver.advance)
+    # Explicit external compilation should not leak tracers
+    assert jnp.all(jnp.isfinite(jit_advance(batch_proj[0], batch_state[0])))
+
+
+@pytest.mark.parametrize(
+    "driver_fixture",
+    ["esndriver", "single_esndriver", "cesn_driver", "taylordriver"],
+)
+def test_driver_differentiability(driver_fixture, request):
+    """Verify gradients flow backward through the advance step via Equinox."""
+    driver = request.getfixturevalue(driver_fixture)
+    key = jax.random.key(999)
+
+    if hasattr(driver, "chunks") and driver.chunks > 0:
+        shape = (driver.chunks, driver.res_dim)
+    else:
+        shape = (driver.res_dim,)
+    proj_vars = jax.random.normal(key, shape=shape)
+    res_state = jax.random.normal(key, shape=shape)
+
+    @eqx.filter_value_and_grad
+    def loss_fn(model, p, s):
+        return jnp.sum(model.advance(p, s))
+
+    loss, grads = loss_fn(driver, proj_vars, res_state)
+    assert jnp.isfinite(loss)
+
+    def check_finite(g):
+        if eqx.is_array(g) and jnp.issubdtype(g.dtype, jnp.inexact):
+            assert jnp.all(jnp.isfinite(g))
+
+    jax.tree_util.tree_map(check_finite, grads)

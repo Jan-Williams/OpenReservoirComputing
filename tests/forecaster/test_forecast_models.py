@@ -1,4 +1,5 @@
 import diffrax
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -618,3 +619,168 @@ def test_train_rcforecaster_custom_readout():
     # Verify shapes
     assert trained_model.readout.wout.shape == (data_dim, res_dim)
     assert tot_res_seq.shape[1] == res_dim
+
+
+##################### JAX TRANSFORM & AD TESTS #####################
+
+
+@pytest.fixture
+def esn_forecaster():
+    return orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0)
+
+
+@pytest.fixture
+def ensemble_esn_forecaster():
+    return orc.forecaster.EnsembleESNForecaster(
+        data_dim=3, res_dim=200, chunks=4, seed=0
+    )
+
+
+@pytest.fixture
+def cesn_forecaster():
+    # Fix max_steps and stepsize_controller with diff'ble settings
+    return orc.forecaster.CESNForecaster(
+        data_dim=3,
+        res_dim=200,
+        seed=0,
+        solver=diffrax.Euler(),
+        stepsize_controller=diffrax.ConstantStepSize(),
+        max_steps=4096,
+    )
+
+
+@pytest.mark.parametrize(
+    "forecaster_fixture", ["esn_forecaster", "ensemble_esn_forecaster"]
+)
+def test_forecaster_transform_stability(forecaster_fixture, request):
+    """Verify discrete forecasters are compatible with vmap and jit."""
+    model = request.getfixturevalue(forecaster_fixture)
+    key = jax.random.key(999)
+    fcast_len = 5
+    batch_size = 3
+
+    state_shape = model.driver.default_state().shape
+    batch_state = jax.random.normal(key, shape=(batch_size, *state_shape))
+
+    def fwd(res_state):
+        return model.forecast(fcast_len, res_state)
+
+    vmap_fwd = eqx.filter_vmap(fwd)
+    assert jnp.allclose(
+        vmap_fwd(batch_state),
+        jnp.stack([fwd(s) for s in batch_state]),
+    )
+
+    jit_fwd = eqx.filter_jit(fwd)
+    assert jnp.all(jnp.isfinite(jit_fwd(batch_state[0])))
+
+
+@pytest.mark.parametrize(
+    "forecaster_fixture", ["esn_forecaster", "ensemble_esn_forecaster"]
+)
+def test_forecaster_differentiability(forecaster_fixture, request):
+    """Verify gradients flow backward through forecast via Equinox."""
+    model = request.getfixturevalue(forecaster_fixture)
+    key = jax.random.key(999)
+    fcast_len = 5
+
+    res_state = jax.random.normal(key, shape=model.driver.default_state().shape)
+
+    @eqx.filter_value_and_grad
+    def loss_fn(m, s):
+        return jnp.sum(m.forecast(fcast_len, s))
+
+    loss, grads = loss_fn(model, res_state)
+    assert jnp.isfinite(loss)
+
+    def check_finite(g):
+        if eqx.is_array(g) and jnp.issubdtype(g.dtype, jnp.inexact):
+            assert jnp.all(jnp.isfinite(g))
+
+    jax.tree_util.tree_map(check_finite, grads)
+
+
+def test_cesn_forecast_transform_stability(cesn_forecaster):
+    """Verify CESN continuous forecast is compatible with vmap and jit."""
+    model = cesn_forecaster
+    key = jax.random.key(999)
+    batch_size = 3
+    ts = jnp.arange(5, dtype=jnp.float64) * 0.02
+
+    state_shape = model.driver.default_state().shape
+    batch_state = jax.random.normal(key, shape=(batch_size, *state_shape))
+
+    def fwd(res_state):
+        return model.forecast(ts, res_state)
+
+    vmap_fwd = eqx.filter_vmap(fwd)
+    assert jnp.allclose(
+        vmap_fwd(batch_state),
+        jnp.stack([fwd(s) for s in batch_state]),
+    )
+
+    jit_fwd = eqx.filter_jit(fwd)
+    assert jnp.all(jnp.isfinite(jit_fwd(batch_state[0])))
+
+
+def test_cesn_forecast_differentiability(cesn_forecaster):
+    """Verify gradients flow backward through CESN forecast via Equinox."""
+    model = cesn_forecaster
+    key = jax.random.key(999)
+    ts = jnp.arange(5, dtype=jnp.float64) * 0.02
+
+    res_state = jax.random.normal(key, shape=model.driver.default_state().shape)
+
+    @eqx.filter_value_and_grad
+    def loss_fn(m, s):
+        return jnp.sum(m.forecast(ts, s))
+
+    loss, grads = loss_fn(model, res_state)
+    assert jnp.isfinite(loss)
+
+    def check_finite(g):
+        if eqx.is_array(g) and jnp.issubdtype(g.dtype, jnp.inexact):
+            assert jnp.all(jnp.isfinite(g))
+    jax.tree_util.tree_map(check_finite, grads)
+
+
+##################### GRU FORECAST SMOKE TEST #####################
+
+
+def test_gru_forecaster_smoke():
+    """Built-in GRUDriver forecasts Rossler.
+    """
+
+    class GRUForecaster(orc.forecaster.RCForecasterBase):
+        pass
+
+    data_dim = 3
+    res_dim = 300
+    spinup = 100
+    fcast_len = 50
+
+    U, _ = orc.data.rossler(tN=40, dt=0.02, u0=jnp.array([-10.0, 2.0, 1.0]))
+    split = int(U.shape[0] * 0.8)
+    U_train, U_test = U[:split], U[split:]
+
+    model = GRUForecaster(
+        orc.drivers.GRUDriver(res_dim=res_dim, input_rescaling=5.0, seed=0),
+        orc.readouts.LinearReadout(out_dim=data_dim, res_dim=res_dim, seed=0),
+        orc.embeddings.LinearEmbedding(
+            in_dim=data_dim, res_dim=res_dim, scaling=0.1, seed=0
+        ),
+    )
+    model, _ = orc.forecaster.train_RCForecaster(
+        model, train_seq=U_train, spinup=spinup, beta=1e-7
+    )
+    U_pred = model.forecast_from_IC(
+        fcast_len=fcast_len, spinup_data=U_train[-spinup:]
+    )
+
+    assert U_pred.shape == (fcast_len, data_dim)
+    assert jnp.all(jnp.isfinite(U_pred))
+    assert jnp.max(jnp.abs(U_pred)) < 100
+    nrmse = jnp.linalg.norm(
+        (U_pred - U_test[:fcast_len]) / jnp.std(U_train, axis=0), axis=1
+    ) / jnp.sqrt(data_dim)
+    assert jnp.mean(nrmse) < 0.5
