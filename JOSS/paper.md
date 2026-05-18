@@ -86,7 +86,7 @@ Other open source libraries for RC include Pytorch-ESN [@nardo2018pytorchesn] an
 
 # Software Design
 
-![ORC three-layer pipeline architecture. Each reservoir computer (RC) is decomposed into (i) an embedding function that lifts a low-dimensional signal $u_t$ to the reservoir dimension, (ii) a driver function that propagates the reservoir state, and (iii) a readout that maps back to a target $y$. For control and forecasting RCs, the target $y$ is typically $u_{t+1}$ (either in the presence of a forcing term or not) and for classification the target $y$ is a label. \label{fig:architecture}](../imgs/architecture_paper.svg)
+![ORC three-layer pipeline architecture. Each reservoir computer (RC) is decomposed into (i) an ``embedding'' function that lifts a low-dimensional signal $u_t$ to the reservoir dimension, (ii) a ``driver'' function that propagates the reservoir state, and (iii) a ``readout'' that maps back to a target $y$. For control and forecasting RCs, the target $y$ is typically $u_{t+1}$ (either in the presence of a forcing term or not) and for classification the target $y$ is a label. \label{fig:architecture}](../imgs/architecture_paper.pdf)
 
 ORC models are decomposed into three components, illustrated in \autoref{fig:architecture}: (i) an embedding $f_E$ that lifts a low-dimensional input signal $u_t$ to a high-dimensional space, (ii) a driver $f_R$ that propagates the high-dimensional state $r_t$, and (iii) a readout $f_O$ that maps the latent state back to an approximation of some low-dimensional signal $y_t$. Depending on the task at hand, $y_t$ may be a future time-step of $u_t$, a label associated with input data, or some other target signal. ORC differs from many existing approaches that unify (i) and (ii). Separating the embedding from the reservoir state propagation allows for cleaner application of RC to non-standard tasks, such as acting as a surrogate model for model predictive control.
 
@@ -112,4 +112,4 @@ ORC enables easy reimplementation of architectures that integrate RC with larger
 Claude (Anthropic) was used for code assistance during code debugging, proofreading this paper, and the generation of the architecture visualization SVG. ChatGPT (OpenAI) was used to generate the ORC logo. All generated code was reviewed, tested, and validated by the authors.
 
 # Acknowledgements
-The authors acknowledge support from the National Science Foundation AI Institute in Dynamic Systems (grant number 2112085). The authors also thank Anastasia Bizyaeva, Noa Kaplan, Ling-Wei Kong for insightful conversations.
+The authors acknowledge support from the National Science Foundation AI Institute in Dynamic Systems (grant number 2112085). The authors also thank Anastasia Bizyaeva, Noa Kaplan, and Ling-Wei Kong for insightful conversations.
