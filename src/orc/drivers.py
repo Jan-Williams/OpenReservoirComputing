@@ -858,7 +858,7 @@ class GRUDriver(DriverBase):
     gru: eqx.Module
     chunks: int = 0
 
-    def __init__(self, res_dim, *, seed):
+    def __init__(self, res_dim, input_rescaling=15.0, *, seed):
         """Initialize GRU-based reservoir driver.
 
         Parameters
@@ -870,21 +870,25 @@ class GRUDriver(DriverBase):
         """
         super().__init__(res_dim=res_dim)
         key = jax.random.key(seed)
-        self.gru = eqx.nn.GRUCell(res_dim, res_dim, key=key)
+        gru = eqx.nn.GRUCell(res_dim, res_dim, key=key)
+        gru = eqx.tree_at(
+            lambda c: c.weight_ih, gru, gru.weight_ih * input_rescaling
+        )
+        self.gru = gru
 
-    def advance(self, res_state, in_state):
+    def advance(self, proj_vars, res_state):
         """Advance the reservoir state using GRU dynamics.
 
         Parameters
         ----------
+        proj_vars : Array
+            Projected inputs to reservoir, (shape=(res_dim,)).
         res_state : Array
             Current reservoir state, (shape=(res_dim,)).
-        in_state : Array
-            Projected inputs to reservoir, (shape=(res_dim,)).
 
         Returns
         -------
         Array
             Updated reservoir state, (shape=(res_dim,)).
         """
-        return self.gru(in_state, res_state)
+        return self.gru(proj_vars, res_state)
