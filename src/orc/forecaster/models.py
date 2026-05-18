@@ -203,6 +203,8 @@ class CESNForecaster(CRCForecasterBase):
         use_sparse_eigs: bool = True,
         solver: diffrax.AbstractSolver = None,
         stepsize_controller: diffrax.AbstractAdaptiveStepSizeController = None,
+        adjoint: diffrax.AbstractAdjoint = None,
+        max_steps: int = None,
     ) -> None:
         """
         Initialize the CESN model.
@@ -293,6 +295,8 @@ class CESNForecaster(CRCForecasterBase):
             seed=seed,
             solver=solver,
             stepsize_controller=stepsize_controller,
+            adjoint=adjoint,
+            max_steps=max_steps,
         )
         self.chunks = chunks
 
