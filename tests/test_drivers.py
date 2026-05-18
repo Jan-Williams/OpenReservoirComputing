@@ -1,3 +1,4 @@
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import pytest
@@ -1071,3 +1072,65 @@ def test_grudriver_consistency_with_equinox_grucell():
 
     # Should be identical
     assert jnp.allclose(driver_output, direct_output)
+
+
+##################### JAX TRANSFORM & AD TESTS #####################
+
+
+@pytest.mark.parametrize(
+    "driver_fixture",
+    ["esndriver", "single_esndriver", "cesn_driver", "taylordriver"],
+)
+def test_driver_transform_stability(driver_fixture, request):
+    """Verify drivers are compatible with vmap and jit."""
+    driver = request.getfixturevalue(driver_fixture)
+    key = jax.random.key(999)
+    batch_size = 3
+
+    if hasattr(driver, "chunks") and driver.chunks > 0:
+        shape = (batch_size, driver.chunks, driver.res_dim)
+    else:
+        shape = (batch_size, driver.res_dim)
+    batch_proj = jax.random.normal(key, shape=shape)
+    batch_state = jax.random.normal(key, shape=shape)
+
+    vmap_advance = eqx.filter_vmap(driver.advance, in_axes=(0, 0))
+    # jax.vmap'ed advance should match the built-in batch_advance
+    assert jnp.allclose(
+        vmap_advance(batch_proj, batch_state),
+        driver.batch_advance(batch_proj, batch_state)
+    )
+
+    jit_advance = eqx.filter_jit(driver.advance)
+    # Explicit external compilation should not leak tracers
+    assert jnp.all(jnp.isfinite(jit_advance(batch_proj[0], batch_state[0])))
+
+
+@pytest.mark.parametrize(
+    "driver_fixture",
+    ["esndriver", "single_esndriver", "cesn_driver", "taylordriver"],
+)
+def test_driver_differentiability(driver_fixture, request):
+    """Verify gradients flow backward through the advance step via Equinox."""
+    driver = request.getfixturevalue(driver_fixture)
+    key = jax.random.key(999)
+
+    if hasattr(driver, "chunks") and driver.chunks > 0:
+        shape = (driver.chunks, driver.res_dim)
+    else:
+        shape = (driver.res_dim,)
+    proj_vars = jax.random.normal(key, shape=shape)
+    res_state = jax.random.normal(key, shape=shape)
+
+    @eqx.filter_value_and_grad
+    def loss_fn(model, p, s):
+        return jnp.sum(model.advance(p, s))
+
+    loss, grads = loss_fn(driver, proj_vars, res_state)
+    assert jnp.isfinite(loss)
+
+    def check_finite(g):
+        if eqx.is_array(g) and jnp.issubdtype(g.dtype, jnp.inexact):
+            assert jnp.all(jnp.isfinite(g))
+
+    jax.tree_util.tree_map(check_finite, grads)

@@ -470,3 +470,77 @@ def test_custom_readout_call():
     batch = jnp.ones((5, 10))
     out = readout(batch)
     assert out.shape == (5, 3)
+
+
+##################### JAX TRANSFORM & AD TESTS #####################
+
+# Single-reservoir readouts accept a 1D (res_dim,) state; the parallel/ensemble
+# variants accept a 2D (chunks, res_dim) state. LinearReadout/NonlinearReadout
+# (and QuadraticReadout via NonlinearReadout) are the single-reservoir classes;
+# the Parallel*/Ensemble* classes are their base classes, not instances of them.
+_SINGLE_READOUTS = (orc.readouts.LinearReadout, orc.readouts.NonlinearReadout)
+
+
+def _readout_state_shape(readout):
+    """Per-reservoir-state shape accepted by ``readout.readout``."""
+    if isinstance(readout, _SINGLE_READOUTS):
+        return (readout.res_dim,)
+    return (readout.chunks, readout.res_dim)
+
+
+@pytest.mark.parametrize(
+    "readout_fixture",
+    [
+        "linearreadout",
+        "single_linearreadout",
+        "single_nonlinearreadout",
+        "single_quadraticreadout",
+    ],
+)
+def test_readout_transform_stability(readout_fixture, request):
+    """Verify readouts are compatible with vmap and jit."""
+    readout = request.getfixturevalue(readout_fixture)
+    key = jax.random.key(999)
+    batch_size = 3
+
+    shape = _readout_state_shape(readout)
+    batch_state = jax.random.normal(key, shape=(batch_size, *shape))
+
+    vmap_readout = eqx.filter_vmap(readout.readout)
+    assert jnp.allclose(
+        vmap_readout(batch_state),
+        readout.batch_readout(batch_state),
+    )
+
+    jit_readout = eqx.filter_jit(readout.readout)
+    assert jnp.all(jnp.isfinite(jit_readout(batch_state[0])))
+
+
+@pytest.mark.parametrize(
+    "readout_fixture",
+    [
+        "linearreadout",
+        "single_linearreadout",
+        "single_nonlinearreadout",
+        "single_quadraticreadout",
+    ],
+)
+def test_readout_differentiability(readout_fixture, request):
+    """Verify gradients flow backward through the readout step via Equinox."""
+    readout = request.getfixturevalue(readout_fixture)
+    key = jax.random.key(999)
+
+    res_state = jax.random.normal(key, shape=_readout_state_shape(readout))
+
+    @eqx.filter_value_and_grad
+    def loss_fn(model, s):
+        return jnp.sum(model.readout(s))
+
+    loss, grads = loss_fn(readout, res_state)
+    assert jnp.isfinite(loss)
+
+    def check_finite(g):
+        if eqx.is_array(g) and jnp.issubdtype(g.dtype, jnp.inexact):
+            assert jnp.all(jnp.isfinite(g))
+
+    jax.tree_util.tree_map(check_finite, grads)
