@@ -5,7 +5,7 @@ tags:
   - JAX
   - reservoir computing
   - echo state networks
-  - time series forecasting
+  - time-series forecasting
   - chaotic systems
 authors:
   - name: Jan P. Williams
@@ -46,17 +46,33 @@ OpenReservoirComputing (ORC) is a Python library for reservoir computing (RC) bu
 
 Time-series prediction, classification, and control are fundamental tasks across science and engineering, arising in applications from climate modeling and fluid dynamics to robotics and neuroscience. Deep learning approaches to these tasks typically require large datasets, long training times, and expensive tuning of optimization hyperparameters. RC offers a compelling alternative. Since only the readout layer is trained via a single ridge regression, RC models can be trained in a fraction of the time required by comparable recurrent neural networks, often with less data and fewer hyperparameters to tune [@lukosevicius2009reservoir]. This makes RC particularly attractive for rapid prototyping, real-time applications, and data-limited settings. However, realizing these benefits in practice requires software that is both efficient and adaptable.
 
-ORC's built-in models provide an easy entry point for users new to the field. In particular, a new user can supply their own time-series data to instantiate, train, and forecast in three simple lines of code. Built-in visualization tools make it easy to evaluate model performance. Varying the hyperparameters of built-in models lets users explore how RC performance depends on configuration choices. ORC's JAX foundation makes scaling to higher-dimensional parallel reservoir architectures equally simple.
+ORC's built-in models provide an easy entry point for users new to the field. In particular, a new user can supply their own time-series data to instantiate, train, and forecast in three simple lines of code. 
+
+```python
+import orc
+U_train = ...
+esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=400)
+esn, R = orc.forecaster.train_RCForecaster(esn, U_train)
+U_pred = esn.forecast(fcast_len=1000, res_state=R[-1])
+```
+
+Built-in visualization tools make it easy to evaluate model performance. Varying the hyperparameters of built-in models lets users explore how RC performance depends on configuration choices. ORC's JAX foundation makes scaling to higher-dimensional parallel reservoir architectures equally simple.
 
 Much RC research is aimed at designing performant reservoir architectures. ORC makes this easy through its use of abstract base classes for Embedding, Driver, and Readout layers. Users need only define forward pass logic to integrate a new reservoir topology or readout strategy, while reusing the rest of the framework. This modular approach also enables ablation studies on how different components affect RC performance.
 Because of ORC's functional approach in JAX, built-in and user-created models provide end-to-end differentiability by default. This enables gradient-based optimization of input sequences for control problems. This also makes ORC well suited to integrate with deep learning models such as those presented in [@ozalp2023reconstruction; @ozalp2025real].
 
 # State of the Field
-| | Language | GPU | Auto. Differentiable | Parallelizable/Vectorizable | Forecasting | Classification | Control | Continuous Time |
-|---|---|---|---|---|---|---|---|---|
-| **OpenReservoirComputing** | Python | $\checkmark$ | $\checkmark$ | $\checkmark$/$\checkmark$ | $\checkmark$ | $\checkmark$ | $\checkmark$ | $\checkmark$ |
-| **ReservoirPy** | Python | $\checkmark$* | $\times$ | $\times$/$\times$ | $\checkmark$ | $\checkmark$ | $\times$ | $\times$ |
-| **ReservoirComputing.jl** | Julia | $\checkmark$ | $\checkmark$ | $\checkmark$/$\times$ | $\checkmark$ | $\checkmark$ | $\times$ | $\times$ |
+| | **ORC** | **ReservoirPy** | **RC.jl** |
+|---|---|---|---|
+| Language | Python | Python | Julia |
+| GPU | $\checkmark$ | $\checkmark$* | $\checkmark$ |
+| Auto. Differentiable | $\checkmark$ | $\times$ | $\checkmark$ |
+| Parallelizable | $\checkmark$ | $\times$ | $\checkmark$ |
+| Vectorizable | $\checkmark$ | $\times$ | $\checkmark$ |
+| Forecasting | $\checkmark$ | $\checkmark$ | $\checkmark$ |
+| Classification | $\checkmark$ | $\checkmark$ | $\checkmark$ |
+| Control | $\checkmark$ | $\times$ | $\times$ |
+| Continuous Time | $\checkmark$ | $\times$ | $\times$ |
 
 Table 1: Comparison of reservoir computing libraries across key features. ✓ indicates full support; ✗ indicates no support. \*ReservoirPy's GPU support is available via its JAX backend (v0.4.0+) but does not fully exploit JAX's functional programming model. *Parallelizable* denotes native support for parallel RC architectures as in [@pathak2018model] and *vectorizable* denotes native support for vectorization (e.g. `vmap`). {#tbl:comparison}
 
@@ -81,7 +97,7 @@ ORC supports parallel reservoirs [@pathak2018model] by default via a `chunks` pa
 
 ORC provides unified training functions (`train_RCForecaster`, `train_RCClassifier`, `train_RCController`) that work with any model inheriting from the corresponding base class, including user-defined models with custom components. These functions delegate shape handling to the readout layer, allowing the same training function to handle both discrete and continuous-time models.
 
-The library provides three built-in model classes: `ESNForecaster` for time series prediction, `ESNClassifier` for sequence classification, and `ESNController` for learning control policies with exogenous control inputs. Each composes embedding, driver, and readout components and provides task-specific methods (`forecast`, `classify`, `apply_control`). Users who need custom architectures can subclass the abstract base classes, define only the components that differ, and immediately use the unified training functions without reimplementing teacher forcing, autoregressive prediction, or ridge regression.
+The library provides three built-in model classes: `ESNForecaster` for time-series prediction, `ESNClassifier` for sequence classification, and `ESNController` for learning control policies with exogenous control inputs. Each composes embedding, driver, and readout components and provides task-specific methods (`forecast`, `classify`, `apply_control`). Users who need custom architectures can subclass the abstract base classes, define only the components that differ, and immediately use the unified training functions without reimplementing teacher forcing, autoregressive prediction, or ridge regression.
 
 ORC also includes a data generation module with ODE and PDE integrators for standard benchmark systems, including the Lorenz-63 attractor, Rössler system, double pendulum, Lorenz-96 model, and the Kuramoto-Sivashinsky equation, all implemented using Diffrax.
 
