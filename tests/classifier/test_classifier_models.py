@@ -1,3 +1,4 @@
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import pytest
@@ -281,3 +282,59 @@ def test_train_rcclassifier_quadratic(dummy_classification_data):
     )
 
     assert jnp.allclose(cls_old.readout.wout, cls_new.readout.wout)
+
+
+##################### JAX TRANSFORM & AD TESTS #####################
+
+
+@pytest.fixture
+def esn_classifier():
+    return orc.classifier.ESNClassifier(
+        data_dim=4, n_classes=3, res_dim=200, seed=0
+    )
+
+
+def test_classifier_transform_stability(esn_classifier):
+    """Verify the classifier is compatible with vmap and jit."""
+    model = esn_classifier
+    key = jax.random.key(999)
+    seq_len = 20
+    batch_size = 3
+
+    res_state = model.driver.default_state()
+    batch_seq = jax.random.normal(
+        key, shape=(batch_size, seq_len, model.data_dim)
+    )
+    def fwd(in_seq):
+        return model.classify(in_seq, res_state)
+    vmap_fwd = eqx.filter_vmap(fwd)
+    assert jnp.allclose(
+        vmap_fwd(batch_seq),
+        jnp.stack([fwd(s) for s in batch_seq]),
+    )
+
+    jit_fwd = eqx.filter_jit(fwd)
+    assert jnp.all(jnp.isfinite(jit_fwd(batch_seq[0])))
+
+
+def test_classifier_differentiability(esn_classifier):
+    """Verify gradients flow backward through classify via Equinox."""
+    model = esn_classifier
+    key = jax.random.key(999)
+    seq_len = 20
+
+    res_state = model.driver.default_state()
+    in_seq = jax.random.normal(key, shape=(seq_len, model.data_dim))
+
+    @eqx.filter_value_and_grad
+    def loss_fn(m, x, s):
+        return jnp.sum(m.classify(x, s) ** 2)
+
+    loss, grads = loss_fn(model, in_seq, res_state)
+    assert jnp.isfinite(loss)
+
+    def check_finite(g):
+        if eqx.is_array(g) and jnp.issubdtype(g.dtype, jnp.inexact):
+            assert jnp.all(jnp.isfinite(g))
+
+    jax.tree_util.tree_map(check_finite, grads)
