@@ -940,7 +940,7 @@ def test_grudriver_dims(grudriver):
     # Test single state advance
     in_state = jax.random.normal(key, shape=(res_dim,))
     res_state = jax.random.normal(key, shape=(res_dim,))
-    out_state = grudriver.advance(res_state, in_state)
+    out_state = grudriver.advance(in_state, res_state)
 
     assert out_state.shape == (res_dim,)
     assert jnp.all(jnp.isfinite(out_state))
@@ -956,8 +956,8 @@ def test_grudriver_reproducibility():
     driver1 = orc.drivers.GRUDriver(res_dim=100, seed=42)
     driver2 = orc.drivers.GRUDriver(res_dim=100, seed=42)
 
-    out1 = driver1.advance(res_state, in_state)
-    out2 = driver2.advance(res_state, in_state)
+    out1 = driver1.advance(in_state, res_state)
+    out2 = driver2.advance(in_state, res_state)
 
     assert jnp.allclose(out1, out2)
 
@@ -971,8 +971,8 @@ def test_grudriver_different_seeds():
     driver1 = orc.drivers.GRUDriver(res_dim=100, seed=42)
     driver2 = orc.drivers.GRUDriver(res_dim=100, seed=123)
 
-    out1 = driver1.advance(res_state, in_state)
-    out2 = driver2.advance(res_state, in_state)
+    out1 = driver1.advance(in_state, res_state)
+    out2 = driver2.advance(in_state, res_state)
 
     # Should produce different outputs due to different initialization
     assert not jnp.allclose(out1, out2)
@@ -986,7 +986,7 @@ def test_batchapply_dims_gru(batch_size, grudriver):
     in_states = jax.random.normal(key, shape=(batch_size, res_dim))
     res_states = jax.random.normal(key, shape=(batch_size, res_dim))
 
-    out_states = grudriver.batch_advance(res_states, in_states)
+    out_states = grudriver.batch_advance(in_states, res_states)
 
     assert out_states.shape == (batch_size, res_dim)
     assert jnp.all(jnp.isfinite(out_states))
@@ -999,7 +999,7 @@ def test_grudriver_call_single(grudriver):
 
     in_state = jax.random.normal(key, shape=(res_dim,))
     res_state = jax.random.normal(key, shape=(res_dim,))
-    out_state = grudriver(res_state, in_state)
+    out_state = grudriver(in_state, res_state)
 
     assert out_state.shape == (res_dim,)
     assert jnp.all(jnp.isfinite(out_state))
@@ -1013,7 +1013,7 @@ def test_grudriver_call_batch(grudriver):
 
     in_states = jax.random.normal(key, shape=(batch_size, res_dim))
     res_states = jax.random.normal(key, shape=(batch_size, res_dim))
-    out_states = grudriver.batch_advance(res_states, in_states)
+    out_states = grudriver.batch_advance(in_states, res_states)
 
     assert out_states.shape == (batch_size, res_dim)
     assert jnp.all(jnp.isfinite(out_states))
@@ -1029,9 +1029,9 @@ def test_grudriver_stateful_behavior():
     in_state = jax.random.normal(key, shape=(50,))
 
     # Advance multiple steps
-    state1 = driver.advance(res_state, in_state)
-    state2 = driver.advance(state1, in_state)
-    state3 = driver.advance(state2, in_state)
+    state1 = driver.advance(in_state, res_state)
+    state2 = driver.advance(in_state, state1)
+    state3 = driver.advance(in_state, state2)
 
     # Each state should be different (GRU has memory)
     assert not jnp.allclose(state1, state2)
@@ -1065,7 +1065,7 @@ def test_grudriver_consistency_with_equinox_grucell():
     res_state = jax.random.normal(test_key, shape=(res_dim,))
 
     # Get output from driver
-    driver_output = driver.advance(res_state, in_state)
+    driver_output = driver.advance(in_state, res_state)
 
     # Get output from direct GRU cell usage
     direct_output = driver.gru(in_state, res_state)
