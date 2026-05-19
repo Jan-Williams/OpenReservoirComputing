@@ -140,7 +140,6 @@ def plot_time_series(
     axs[-1].set(xlabel=x_label)
     if title is not None:
         axs[0].set_title(title, fontsize=14)
-    plt.show()
 
 
 def imshow_1D_spatiotemp(
@@ -187,7 +186,6 @@ def imshow_1D_spatiotemp(
     if title is not None:
         plt.title(title)
     plt.colorbar(pad=0.01, label=r"$u$")
-    plt.show()
 
 
 # TODO: add plot_attrator function to visualize 2D/3D attractors in state space
