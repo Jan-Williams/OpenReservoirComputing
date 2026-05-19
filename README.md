@@ -58,6 +58,7 @@ orc.utils.visualization.plot_time_series(
     line_formats=["-", "r--"],
     x_label= r"$t$",
 )
+plt.show()
 ```
 
 <div align="center">
