@@ -17,7 +17,8 @@ from orc import (
 
 if not jax.config.jax_enable_x64:
     warnings.warn(
-        "orc requires float64 precision. Enable it before importing orc with: "
+        "For good performance, orc often requires float64 precision. Enable it " \
+        "before importing orc with: "
         "jax.config.update('jax_enable_x64', True)",
         UserWarning,
         stacklevel=2,
