@@ -13,7 +13,6 @@ from jaxtyping import Array, Float
 from orc.utils import max_eig_arnoldi
 
 
-
 class DriverBase(eqx.Module, ABC):
     """
     Base class dictating API for all implemented reservoir drivers.

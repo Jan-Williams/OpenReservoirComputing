@@ -8,7 +8,6 @@ import jax.numpy as jnp
 from jaxtyping import Array, Float
 
 
-
 # TODO: typing
 ######################## Basic Chaotic ODEs ########################
 @jax.jit

@@ -9,7 +9,6 @@ from orc.embeddings import LinearEmbedding
 from orc.readouts import LinearReadout, QuadraticReadout
 
 
-
 class ESNController(RCControllerBase):
     """
     Basic implementation of ESN for control tasks.

@@ -8,7 +8,6 @@ import jax.numpy as jnp
 from jaxtyping import Array, Float
 
 
-
 class EmbedBase(eqx.Module, ABC):
     """
     Base class dictating API for all implemented embedding layers.

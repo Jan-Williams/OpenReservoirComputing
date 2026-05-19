@@ -9,7 +9,6 @@ from orc.embeddings import LinearEmbedding
 from orc.readouts import LinearReadout, QuadraticReadout
 
 
-
 class ESNClassifier(RCClassifierBase):
     """
     Basic implementation of ESN for classification tasks.
