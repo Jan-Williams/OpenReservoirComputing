@@ -4,6 +4,8 @@ import jax.numpy as jnp
 import pytest
 from jax.experimental import sparse
 
+jax.config.update("jax_enable_x64", True)
+
 import orc
 
 ##################### ESN TESTS #####################

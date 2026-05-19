@@ -3,6 +3,8 @@ import jax.experimental.sparse
 import jax.numpy as jnp
 import pytest
 
+jax.config.update("jax_enable_x64", True)
+
 from orc.utils import max_eig_arnoldi
 
 # Tolerance for numerical comparisons
