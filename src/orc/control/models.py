@@ -8,7 +8,6 @@ from orc.drivers import ESNDriver
 from orc.embeddings import LinearEmbedding
 from orc.readouts import LinearReadout, QuadraticReadout
 
-jax.config.update("jax_enable_x64", True)
 
 
 class ESNController(RCControllerBase):
