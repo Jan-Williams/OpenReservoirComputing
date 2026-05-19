@@ -13,30 +13,20 @@ ORC is the one-stop-shop for performant reservoir computing in jax. Key high-lev
 
 ## Installation
 
-To install ORC, first clone the repository onto your local machine
+The easiest way to get started with ORC is to install from PyPI:
 ```bash
-git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
+pip install OpenReservoirComputing
 ```
 
-Then navigate to the cloned directory and use `pip` to install:
-```bash
-pip install .
-```
-
-If you would like to use ORC on GPU(s), install the optional GPU dependencies:
-```bash
-pip install ".[gpu]"
-```
-
-To run the example notebooks, install the optional notebook dependencies:
-```bash
-pip install ".[notebooks]"
-```
+If you're interested in the latest, unreleased version or in contributing, you can install from source. Please see the Contribution guidelines below for more details. 
 
 ## Quick start example
 Below is a minimal quick-start example to train your first RC with ORC. It leverages the built-in data library to integrate the Lorenz63 ODE before training and forecasting with ORC.
 
 ```python
+import jax
+# ORC models often perform much better with float64 enabled
+jax.config.update("jax_enable_x64", True)
 import orc
 
 # integrate the Lorenz system 
