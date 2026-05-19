@@ -13,8 +13,6 @@ from orc.readouts import (
     ParallelQuadraticReadout,
 )
 
-jax.config.update("jax_enable_x64", True)
-
 
 class ESNForecaster(RCForecasterBase):
     """

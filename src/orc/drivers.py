@@ -12,8 +12,6 @@ from jaxtyping import Array, Float
 
 from orc.utils import max_eig_arnoldi
 
-jax.config.update("jax_enable_x64", True)
-
 
 class DriverBase(eqx.Module, ABC):
     """

@@ -7,8 +7,6 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float
 
-jax.config.update("jax_enable_x64", True)
-
 
 # TODO: typing
 ######################## Basic Chaotic ODEs ########################
