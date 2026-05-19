@@ -14,7 +14,6 @@ from orc.readouts import (
 )
 
 
-
 class ESNForecaster(RCForecasterBase):
     """
     Basic implementation of ESN for forecasting.

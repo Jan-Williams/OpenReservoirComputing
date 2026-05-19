@@ -58,7 +58,7 @@ select = ["E", "W", "F", "D", "UP", "B", "A", "C4", "N", "SIM", "I"]
 ignore = ["N806", "N802", "N803"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D"]
+"tests/*" = ["D", "E402"]
 "docs/*.py" = ["D", "A"]
 "setup.py" = ["D"]
 "*.ipynb" = ["E", "W", "F", "D", "UP", "B", "A", "C4", "N", "SIM", "I"]
