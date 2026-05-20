@@ -39,10 +39,10 @@ class ReadoutBase(eqx.Module, ABC):
         Return a new readout with updated output weights.
     """
 
-    out_dim: int
-    res_dim: int
-    chunks: int = 0
-    dtype: type = jnp.float64
+    out_dim: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
+    chunks: int = eqx.field(default=0, static=True)
+    dtype: type = eqx.field(default=jnp.float64, static=True)
 
     def __init__(self, out_dim, res_dim, dtype=jnp.float64):
         """Ensure in dim, res dim, and dtype are correct type."""
@@ -200,11 +200,11 @@ class ParallelLinearReadout(ReadoutBase):
         Map from reservoir state to output state.
     """
 
-    out_dim: int
-    res_dim: int
+    out_dim: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
     wout: Array
-    chunks: int
-    dtype: type
+    chunks: int = eqx.field(static=True)
+    dtype: type = eqx.field(static=True)
 
     def __init__(
         self,
@@ -415,12 +415,12 @@ class ParallelNonlinearReadout(ReadoutBase):
         Map from reservoir state to output state, handles batch and single outputs.
     """
 
-    out_dim: int
-    res_dim: int
+    out_dim: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
     wout: Array
-    chunks: int
+    chunks: int = eqx.field(static=True)
     nonlin_list: list
-    dtype: type
+    dtype: type = eqx.field(static=True)
 
     def __init__(
         self,
@@ -734,11 +734,11 @@ class ParallelQuadraticReadout(ParallelNonlinearReadout):
         handles batch and single outputs.
     """
 
-    out_dim: int
-    res_dim: int
+    out_dim: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
     wout: Array
-    chunks: int
-    dtype: type
+    chunks: int = eqx.field(static=True)
+    dtype: type = eqx.field(static=True)
 
     def __init__(
         self,
@@ -851,11 +851,11 @@ class EnsembleLinearReadout(ReadoutBase):
         Map from reservoir state to output state.
     """
 
-    out_dim: int
-    res_dim: int
+    out_dim: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
     wout: Array
-    chunks: int
-    dtype: type
+    chunks: int = eqx.field(static=True)
+    dtype: type = eqx.field(static=True)
 
     def __init__(
         self,

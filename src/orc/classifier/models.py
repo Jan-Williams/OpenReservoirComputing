@@ -1,5 +1,6 @@
 """Discrete ESN classifier implementation."""
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 
@@ -40,8 +41,8 @@ class ESNClassifier(RCClassifierBase):
         Replace embedding layer.
     """
 
-    res_dim: int
-    data_dim: int
+    res_dim: int = eqx.field(static=True)
+    data_dim: int = eqx.field(static=True)
 
     def __init__(
         self,

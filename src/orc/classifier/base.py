@@ -59,13 +59,13 @@ class RCClassifierBase(eqx.Module, ABC):
     driver: DriverBase
     readout: ReadoutBase
     embedding: EmbedBase
-    in_dim: int
-    out_dim: int
-    res_dim: int
-    n_classes: int
-    state_repr: str = "final"
-    dtype: type = jnp.float64
-    seed: int = 0
+    in_dim: int = eqx.field(static=True)
+    out_dim: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
+    n_classes: int = eqx.field(static=True)
+    state_repr: str = eqx.field(default="final", static=True)
+    dtype: type = eqx.field(default=jnp.float64, static=True)
+    seed: int = eqx.field(default=0, static=True)
 
     def __init__(
         self,
