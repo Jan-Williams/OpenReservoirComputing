@@ -72,7 +72,7 @@ class RCControllerBase(eqx.Module, ABC):
     control_dim: int
     out_dim: int
     res_dim: int
-    dtype: Float = jnp.float64
+    dtype: type = jnp.float64
     alpha_1: float = 100
     alpha_2: float = 1
     alpha_3: float = 5
@@ -85,7 +85,7 @@ class RCControllerBase(eqx.Module, ABC):
         embedding: EmbedBase,
         in_dim: int,
         control_dim: int,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         alpha_1: float = 100,
         alpha_2: float = 1,
         alpha_3: float = 5,
@@ -258,7 +258,7 @@ class RCControllerBase(eqx.Module, ABC):
         control_seq: Array,
         res_state: Array,
         ref_traj: Array,
-    ) -> Float:
+    ) -> Float[Array, ""]:
         """Compute the control penalty for a given control sequence.
 
         The penalty consists of three terms:

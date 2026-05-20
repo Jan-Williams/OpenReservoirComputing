@@ -8,7 +8,7 @@ import jax
 import jax.numpy as jnp
 import jax.random
 from jax.experimental import sparse
-from jaxtyping import Array, Float
+from jaxtyping import Array
 
 from orc.utils import max_eig_arnoldi
 
@@ -23,7 +23,7 @@ class DriverBase(eqx.Module, ABC):
         Reservoir dimension.
     chunks : int
         Number of parallel reservoirs. Default is 0 (no chunks dimension).
-    dtype : Float
+    dtype : type
         Dtype for model, jnp.float64 or jnp.float32.
 
     Methods
@@ -37,8 +37,8 @@ class DriverBase(eqx.Module, ABC):
     """
 
     res_dim: int
+    dtype: type
     chunks: int = 0
-    dtype: Float
 
     def __init__(self, res_dim, dtype=jnp.float64):
         """Ensure reservoir dim and dtype are correct type."""
@@ -154,7 +154,7 @@ class ParallelESNDriver(DriverBase):
         Mode of reservoir update, either "discrete" or "continuous".
     time_const : float
         Time constant for continuous mode.
-    dtype : Float
+    dtype : type
         Dtype, default jnp.float64.
 
     Methods
@@ -170,8 +170,8 @@ class ParallelESNDriver(DriverBase):
     spectral_radius: float
     density: float
     bias: float
-    dtype: Float
-    wr: Array
+    dtype: type
+    wr: sparse.BCOO
     chunks: int
     mode: str
     time_const: float
@@ -183,14 +183,14 @@ class ParallelESNDriver(DriverBase):
         spectral_radius: float = 0.8,
         density: float = 0.02,
         bias: float = 1.6,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         chunks: int = 1,
         mode: str = "discrete",
         time_const: float = 50.0,
         *,
         seed: int,
         use_sparse_eigs: bool = True,
-        eigenval_batch_size: int = None,
+        eigenval_batch_size: int | None = None,
     ) -> None:
         """Initialize weight matrices.
 
@@ -212,7 +212,7 @@ class ParallelESNDriver(DriverBase):
             Mode of reservoir update, either "discrete" or "continuous".
         time_const : float
             Time constant for continuous mode. Ignored in discrete mode.
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
@@ -220,7 +220,7 @@ class ParallelESNDriver(DriverBase):
             Whether to use sparse eigensolver for setting the spectral radius of wr.
             Default is True, which is recommended to save memory and compute time. If
             False, will use dense eigensolver which may be more accurate.
-        eigenval_batch_size : int
+        eigenval_batch_size : int | None
             Size of batches when batch_eigenvals. Default is None, which means no
             batch eigenvalue computation.
         """
@@ -331,7 +331,7 @@ class ESNDriver(ParallelESNDriver):
         Mode of reservoir update, either "discrete" or "continuous".
     time_const : float
         Time constant for continuous mode.
-    dtype : Float
+    dtype : type
         Dtype, default jnp.float64.
 
     Methods
@@ -349,13 +349,13 @@ class ESNDriver(ParallelESNDriver):
         spectral_radius: float = 0.8,
         density: float = 0.02,
         bias: float = 1.6,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         mode: str = "discrete",
         time_const: float = 50.0,
         *,
         seed: int,
         use_sparse_eigs: bool = True,
-        eigenval_batch_size: int = None,
+        eigenval_batch_size: int | None = None,
     ) -> None:
         """Initialize weight matrices.
 
@@ -375,7 +375,7 @@ class ESNDriver(ParallelESNDriver):
             Mode of reservoir update, either "discrete" or "continuous".
         time_const : float
             Time constant for continuous mode. Ignored in discrete mode.
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
@@ -383,7 +383,7 @@ class ESNDriver(ParallelESNDriver):
             Whether to use sparse eigensolver for setting the spectral radius of wr.
             Default is True, which is recommended to save memory and compute time. If
             False, will use dense eigensolver which may be more accurate.
-        eigenval_batch_size : int
+        eigenval_batch_size : int | None
             Size of batches when batch_eigenvals. Default is None, which means no
             batch eigenvalue computation.
         """
@@ -478,7 +478,7 @@ class ParallelTaylorDriver(DriverBase):
         Additive bias in tanh nonlinearity.
     chunks: int
         Number of parallel reservoirs.
-    dtype : Float
+    dtype : type
         Dtype, default jnp.float64.
 
     Methods
@@ -496,8 +496,8 @@ class ParallelTaylorDriver(DriverBase):
     spectral_radius: float
     density: float
     bias: float
-    dtype: Float
-    wr: Array
+    dtype: type
+    wr: sparse.BCOO
     chunks: int
 
     def __init__(
@@ -507,12 +507,12 @@ class ParallelTaylorDriver(DriverBase):
         spectral_radius: float = 0.8,
         density: float = 0.02,
         bias: float = 1.6,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         chunks: int = 1,
         *,
         seed: int,
         use_sparse_eigs: bool = True,
-        eigenval_batch_size: int = None,
+        eigenval_batch_size: int | None = None,
     ) -> None:
         """Initialize weight matrices.
 
@@ -530,7 +530,7 @@ class ParallelTaylorDriver(DriverBase):
             Additive bias in tanh nonlinearity.
         chunks: int
             Number of parallel reservoirs.
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
@@ -538,7 +538,7 @@ class ParallelTaylorDriver(DriverBase):
             Whether to use sparse eigensolver for setting the spectral radius of wr.
             Default is True, which is recommended to save memory and compute time. If
             False, will use dense eigensolver which may be more accurate.
-        eigenval_batch_size : int
+        eigenval_batch_size : int | None
             Size of batches when batch_eigenvals. Default is None, which means no
             batch eigenvalue computation.
         """
@@ -673,7 +673,7 @@ class TaylorDriver(ParallelTaylorDriver):
         Density of wr.
     bias : float
         Additive bias in tanh nonlinearity.
-    dtype : Float
+    dtype : type
         Dtype, default jnp.float64.
 
     Methods
@@ -691,11 +691,11 @@ class TaylorDriver(ParallelTaylorDriver):
         spectral_radius: float = 0.8,
         density: float = 0.02,
         bias: float = 1.6,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         *,
         seed: int,
         use_sparse_eigs: bool = True,
-        eigenval_batch_size: int = None,
+        eigenval_batch_size: int | None = None,
     ) -> None:
         """Initialize weight matrices.
 
@@ -711,7 +711,7 @@ class TaylorDriver(ParallelTaylorDriver):
             Density of wr.
         bias : float
             Additive bias in tanh nonlinearity.
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
@@ -719,7 +719,7 @@ class TaylorDriver(ParallelTaylorDriver):
             Whether to use sparse eigensolver for setting the spectral radius of wr.
             Default is True, which is recommended to save memory and compute time. If
             False, will use dense eigensolver which may be more accurate.
-        eigenval_batch_size : int
+        eigenval_batch_size : int | None
             Size of batches when batch_eigenvals. Default is None, which means no
             batch eigenvalue computation.
         """
@@ -797,7 +797,7 @@ def _sparse_ops(wr: Array, res_state: Array, proj_vars: Array, bias: Array):
 
 
 def _spec_rad_normalization(
-    sp_mat: Array,
+    sp_mat: sparse.BCOO,
     spectral_radius: float,
     eigenval_batch_size: int | None = None,
     use_sparse_eigs: bool = True,
@@ -829,7 +829,7 @@ def _spec_rad_normalization(
         else:
             dense_mat = sparse.bcoo_todense(sp_mat)
             eigs = jnp.max(jnp.abs(jnp.linalg.eigvals(dense_mat)), axis=1)
-    sp_mat = spectral_radius * (sp_mat / eigs[:, None, None])
+    sp_mat = sp_mat * (spectral_radius / eigs[:, None, None])
     return sp_mat
 
 
@@ -844,7 +844,7 @@ class GRUDriver(DriverBase):
         Reservoir dimension.
     gru : eqx.Module
         Equinox GRUCell module for reservoir updates.
-    dtype : Float
+    dtype : type
         Dtype for model, jnp.float64 or jnp.float32.
 
     Methods
@@ -853,7 +853,7 @@ class GRUDriver(DriverBase):
         Advance reservoir state using GRU dynamics.
     """
 
-    gru: eqx.Module
+    gru: eqx.nn.GRUCell
     chunks: int = 0
 
     def __init__(self, res_dim, input_rescaling=15.0, *, seed):
