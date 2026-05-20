@@ -8,7 +8,12 @@
 
 ## Installation Options
 
-### Basic CPU Installation
+The easiest way to get started with ORC is to install from PyPI:
+```bash
+pip install OpenReservoirComputing
+```
+
+If you're interested in the latest, unreleased version or in contributing, you can install from source. Please see the Contribution guidelines below for more details. 
 
 For CPU-only usage, clone the repository and install:
 
@@ -17,8 +22,6 @@ git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 cd OpenReservoirComputing
 pip install .
 ```
-
-### GPU Installation
 
 For GPU acceleration with CUDA support:
 
