@@ -1,5 +1,7 @@
 """Training functions for reservoir computer classifiers."""
 
+from typing import TypeVar
+
 import equinox as eqx
 import jax
 import jax.numpy as jnp
@@ -13,16 +15,17 @@ from orc.utils.regressions import (
     ridge_regression,
 )
 
+VariableRCClassifier = TypeVar(name="VariableRCClassifier", bound=RCClassifierBase)
 
 def train_RCClassifier(
-    model: RCClassifierBase,
+    model: VariableRCClassifier,
     train_seqs: Array,
     labels: Array,
     spinup: int = 0,
     beta: float = 8e-8,
-    batch_size: int = None,
+    batch_size: int | None = None,
     **force_kwargs,
-) -> RCClassifierBase:
+) -> VariableRCClassifier:
     """Unified training function for reservoir computer classifiers.
 
     Works with any model inheriting from RCClassifierBase, including

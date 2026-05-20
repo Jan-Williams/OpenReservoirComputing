@@ -1,5 +1,7 @@
 """Training functions for reservoir computer controllers."""
 
+from typing import TypeVar
+
 import equinox as eqx
 import jax.numpy as jnp
 from jaxtyping import Array
@@ -12,18 +14,20 @@ from orc.utils.regressions import (
     ridge_regression,
 )
 
+VariableRCController = TypeVar(name="VariableRCController", bound=RCControllerBase)
+
 
 def train_RCController(
-    model: RCControllerBase,
+    model: VariableRCController,
     train_seq: Array,
     control_seq: Array,
-    target_seq: Array = None,
+    target_seq: Array | None = None,
     spinup: int = 0,
-    initial_res_state: Array = None,
+    initial_res_state: Array | None = None,
     beta: float = 8e-8,
-    batch_size: int = None,
+    batch_size: int | None = None,
     **force_kwargs,
-) -> tuple[RCControllerBase, Array]:
+) -> tuple[VariableRCController, Array]:
     """Unified training function for reservoir computer controllers.
 
     Works with any model inheriting from RCControllerBase, including
@@ -120,9 +124,9 @@ def train_ESNController(
     model: ESNController,
     train_seq: Array,
     control_seq: Array,
-    target_seq: Array = None,
+    target_seq: Array | None = None,
     spinup: int = 0,
-    initial_res_state: Array = None,
+    initial_res_state: Array | None = None,
     beta: float = 8e-8,
 ) -> tuple[ESNController, Array]:
     """Training function for ESNController.
