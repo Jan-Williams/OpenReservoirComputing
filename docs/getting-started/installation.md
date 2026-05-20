@@ -13,7 +13,7 @@ The easiest way to get started with ORC is to install from PyPI:
 pip install OpenReservoirComputing
 ```
 
-If you're interested in the latest, unreleased version or in contributing, you can install from source. Please see the Contribution guidelines below for more details. 
+If you're interested in the latest, unreleased version or in contributing, you can install from source.
 
 For CPU-only usage, clone the repository and install:
 
@@ -23,7 +23,7 @@ cd OpenReservoirComputing
 pip install .
 ```
 
-For GPU acceleration with CUDA support:
+For GPU acceleration with CUDA:
 
 ```bash
 git clone https://github.com/Jan-Williams/OpenReservoirComputing.git

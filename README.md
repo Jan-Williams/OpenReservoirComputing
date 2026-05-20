@@ -93,5 +93,9 @@ Followed by a formatting check
 ```bash
 ruff check
 ```
+and a type annotation check
+```bash
+ty check
+```
 
 Finally, submit your changes as a pull request! When you submit the PR, please request reviews from both @dtretiak and @Jan-Williams, we will try to get back to you as soon as possible. When you submit the PR, the above tests will automatically be run on your proposed changes through Github Actions, so it is best to get everything tested first before submitting!
