@@ -1,6 +1,7 @@
 """Discrete and continuous ESN implementations with standard driver."""
 
 import diffrax
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 
@@ -45,8 +46,8 @@ class ESNForecaster(RCForecasterBase):
         Replace embedding layer.
     """
 
-    res_dim: int
-    data_dim: int
+    res_dim: int = eqx.field(static=True)
+    data_dim: int = eqx.field(static=True)
 
     def __init__(
         self,
@@ -180,8 +181,8 @@ class CESNForecaster(CRCForecasterBase):
         Replace embedding layer.
     """
 
-    res_dim: int
-    data_dim: int
+    res_dim: int = eqx.field(static=True)
+    data_dim: int = eqx.field(static=True)
 
     def __init__(
         self,
@@ -330,8 +331,8 @@ class EnsembleESNForecaster(RCForecasterBase):
         Replace embedding layer.
     """
 
-    res_dim: int
-    data_dim: int
+    res_dim: int = eqx.field(static=True)
+    data_dim: int = eqx.field(static=True)
 
     def __init__(
         self,

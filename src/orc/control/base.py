@@ -68,15 +68,15 @@ class RCControllerBase(eqx.Module, ABC):
     driver: DriverBase
     readout: ReadoutBase
     embedding: EmbedBase
-    in_dim: int
-    control_dim: int
-    out_dim: int
-    res_dim: int
-    dtype: type = jnp.float64
+    in_dim: int = eqx.field(static=True)
+    control_dim: int = eqx.field(static=True)
+    out_dim: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
+    dtype: type = eqx.field(default=jnp.float64, static=True)
     alpha_1: float = 100
     alpha_2: float = 1
     alpha_3: float = 5
-    seed: int = 0
+    seed: int = eqx.field(default=0, static=True)
 
     def __init__(
         self,

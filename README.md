@@ -65,6 +65,9 @@ plt.show()
   <img src="imgs/readme_example_forecast.png" alt="ORC Logo"/>
 </div>
 
+## jit, vmap, grad...
+
+ORC models are built on top of [Equinox](https://docs.kidger.site/equinox/), and as a result we strongly recommend the use of Equinox transforms `eqx.filter_{jit, vmap, grad}` over `jax.{jit, vmap, grad}`. For more details, please check out the [JAX JIT Compatibility](https://Jan-Williams.github.io/OpenReservoirComputing/examples/jit_compatibility/) example notebook.
 
 ## Contribution guidelines
 First off, thanks for helping out! We appreciate your willingness to contribute! To get started, clone the repo and install the developer dependencies of ORC.

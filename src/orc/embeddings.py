@@ -31,10 +31,10 @@ class EmbedBase(eqx.Module, ABC):
         Embed multiple inputs into reservoir dimension.
     """
 
-    in_dim: int
-    res_dim: int
-    dtype: type
-    chunks: int = 0
+    in_dim: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
+    dtype: type = eqx.field(static=True)
+    chunks: int = eqx.field(default=0, static=True)
 
     def __init__(self, in_dim, res_dim, dtype=jnp.float64):
         """Ensure in dim, res dim,  and dtype are correct type."""
@@ -148,15 +148,15 @@ class ParallelLinearEmbedding(EmbedBase):
         Embed single input state to reservoir dimension.
     """
 
-    in_dim: int
-    res_dim: int
+    in_dim: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
     scaling: float
     win: Array
-    dtype: type
-    chunks: int
-    locality: int
-    chunk_size: int
-    periodic: bool
+    dtype: type = eqx.field(static=True)
+    chunks: int = eqx.field(static=True)
+    locality: int = eqx.field(static=True)
+    chunk_size: int = eqx.field(static=True)
+    periodic: bool = eqx.field(static=True)
 
     def __init__(
         self,
@@ -387,12 +387,12 @@ class EnsembleLinearEmbedding(EmbedBase):
         Embed single input state to reservoir dimension.
     """
 
-    in_dim: int
-    res_dim: int
+    in_dim: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
     scaling: float
     win: Array
-    dtype: type
-    chunks: int
+    dtype: type = eqx.field(static=True)
+    chunks: int = eqx.field(static=True)
 
     def __init__(
         self,
