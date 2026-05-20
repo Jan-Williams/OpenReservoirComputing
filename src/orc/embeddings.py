@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from jaxtyping import Array, Float
+from jaxtyping import Array
 
 
 class EmbedBase(eqx.Module, ABC):
@@ -20,7 +20,7 @@ class EmbedBase(eqx.Module, ABC):
         Reservoir dimension.
     chunks : int
         Number of parallel reservoirs. Default is 0 (no chunks dimension).
-    dtype : Float
+    dtype : type
         Dtype of JAX arrays, jnp.float32 or jnp.float64.
 
     Methods
@@ -33,8 +33,8 @@ class EmbedBase(eqx.Module, ABC):
 
     in_dim: int
     res_dim: int
+    dtype: type
     chunks: int = 0
-    dtype: Float
 
     def __init__(self, in_dim, res_dim, dtype=jnp.float64):
         """Ensure in dim, res dim,  and dtype are correct type."""
@@ -152,7 +152,7 @@ class ParallelLinearEmbedding(EmbedBase):
     res_dim: int
     scaling: float
     win: Array
-    dtype: Float
+    dtype: type
     chunks: int
     locality: int
     chunk_size: int
@@ -163,7 +163,7 @@ class ParallelLinearEmbedding(EmbedBase):
         in_dim: int,
         res_dim: int,
         scaling: float,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         chunks: int = 1,
         locality: int = 0,
         periodic: bool = True,
@@ -182,7 +182,7 @@ class ParallelLinearEmbedding(EmbedBase):
             Min/max values of input matrix.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
-        dtype : Float
+        dtype : type
             Dtype of model, jnp.float64 or jnp.float32.
         periodic : bool
             Assume periodic BCs when decomposing the input state to parallel network
@@ -300,7 +300,7 @@ class LinearEmbedding(ParallelLinearEmbedding):
         in_dim: int,
         res_dim: int,
         scaling: float,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         *,
         seed: int,
     ) -> None:
@@ -316,15 +316,8 @@ class LinearEmbedding(ParallelLinearEmbedding):
             Min/max values of input matrix.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
-        dtype : Float
+        dtype : type
             Dtype of model, jnp.float64 or jnp.float32.
-        periodic : bool
-            Assume periodic BCs when decomposing the input state to parallel network
-            inputs. If False, the input is padded with boundary values at the edges
-            (i.e., edge values are extended to the locality region), which may not
-            match the true spatial dynamics. If True, the input is padded by connecting
-            smoothly the end and beginning of the signal ensuring continuity. Default is
-            True.
         """
         super().__init__(
             in_dim=in_dim,
@@ -398,7 +391,7 @@ class EnsembleLinearEmbedding(EmbedBase):
     res_dim: int
     scaling: float
     win: Array
-    dtype: Float
+    dtype: type
     chunks: int
 
     def __init__(
@@ -407,7 +400,7 @@ class EnsembleLinearEmbedding(EmbedBase):
         res_dim: int,
         scaling: float,
         chunks: int = 5,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         *,
         seed: int,
     ) -> None:
@@ -423,7 +416,7 @@ class EnsembleLinearEmbedding(EmbedBase):
             Min/max values of input matrix.
         seed : int
             Random seed for generating the PRNG key for the reservoir computer.
-        dtype : Float
+        dtype : type
             Dtype of model, jnp.float64 or jnp.float32.
         """
         super().__init__(in_dim=in_dim, res_dim=res_dim, dtype=dtype)

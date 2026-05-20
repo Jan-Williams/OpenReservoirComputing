@@ -5,7 +5,7 @@ from abc import ABC
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from jaxtyping import Array, Float
+from jaxtyping import Array
 
 from orc.drivers import DriverBase
 from orc.embeddings import EmbedBase
@@ -64,7 +64,7 @@ class RCClassifierBase(eqx.Module, ABC):
     res_dim: int
     n_classes: int
     state_repr: str = "final"
-    dtype: Float = jnp.float64
+    dtype: type = jnp.float64
     seed: int = 0
 
     def __init__(
@@ -74,7 +74,7 @@ class RCClassifierBase(eqx.Module, ABC):
         embedding: EmbedBase,
         n_classes: int,
         state_repr: str = "final",
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         seed: int = 0,
     ) -> None:
         """Initialize RCClassifier Base.

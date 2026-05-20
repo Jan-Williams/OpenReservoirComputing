@@ -199,10 +199,10 @@ class CESNForecaster(CRCForecasterBase):
         quadratic: bool = False,
         periodic: bool = True,
         use_sparse_eigs: bool = True,
-        solver: diffrax.AbstractSolver = None,
-        stepsize_controller: diffrax.AbstractAdaptiveStepSizeController = None,
-        adjoint: diffrax.AbstractAdjoint = None,
-        max_steps: int = None,
+        solver: diffrax.AbstractSolver | None = None,
+        stepsize_controller: diffrax.AbstractAdaptiveStepSizeController | None = None,
+        adjoint: diffrax.AbstractAdjoint | None = None,
+        max_steps: int | None = None,
     ) -> None:
         """
         Initialize the CESN model.

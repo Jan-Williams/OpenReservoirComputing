@@ -6,7 +6,7 @@ import diffrax
 import equinox as eqx
 import jax
 import jax.numpy as jnp
-from jaxtyping import Array, Float
+from jaxtyping import Array
 
 from orc.drivers import DriverBase
 from orc.embeddings import EmbedBase
@@ -62,7 +62,7 @@ class RCForecasterBase(eqx.Module, ABC):
     out_dim: int
     res_dim: int
     chunks: int = 0
-    dtype: Float = jnp.float64
+    dtype: type = jnp.float64
     seed: int = 0
 
     def __init__(
@@ -71,7 +71,7 @@ class RCForecasterBase(eqx.Module, ABC):
         readout: ReadoutBase,
         embedding: EmbedBase,
         chunks: int = 0,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         seed: int = 0,
     ) -> None:
         """Initialize RCForecaster Base.
@@ -278,7 +278,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
     solver: diffrax.AbstractSolver
     stepsize_controller: diffrax.AbstractAdaptiveStepSizeController
     adjoint: diffrax.AbstractAdjoint
-    max_steps: int = eqx.field(static=True)
+    max_steps: int | None = eqx.field(static=True)
 
     def __init__(
         self,
@@ -286,12 +286,12 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         readout: ReadoutBase,
         embedding: EmbedBase,
         chunks: int = 0,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         seed: int = 0,
-        solver: diffrax.AbstractSolver = None,
-        stepsize_controller: diffrax.AbstractAdaptiveStepSizeController = None,
-        adjoint: diffrax.AbstractAdjoint = None,
-        max_steps: int = None,
+        solver: diffrax.AbstractSolver | None = None,
+        stepsize_controller: diffrax.AbstractAdaptiveStepSizeController | None = None,
+        adjoint: diffrax.AbstractAdjoint | None = None,
+        max_steps: int | None = None,
     ):
         """Initialize the continuous reservoir computer.
 
@@ -391,7 +391,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         res_seq = sol.ys
         return res_seq
 
-    def __call__(self, in_seq: Array, res_state: Array, ts: Array) -> Array:
+    def __call__(self, in_seq: Array, res_state: Array, ts: Array) -> Array: # ty: ignore[invalid-method-override]
         """
         Teacher forces the reservoir, wrapper for `force` method.
 
@@ -457,7 +457,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
 
     @eqx.filter_jit
     def forecast_from_IC(
-        self, ts: Array, spinup_data: Array, spinup_ts: Array = None
+        self, ts: Array, spinup_data: Array, spinup_ts: Array | None = None
     ) -> Array:
         """Forecast from a sequence of spinup data.
 

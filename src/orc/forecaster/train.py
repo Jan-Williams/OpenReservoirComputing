@@ -1,5 +1,7 @@
 """Training functions for reservoir computer forecasters."""
 
+from typing import TypeVar
+
 import equinox as eqx
 import jax.numpy as jnp
 from jaxtyping import Array
@@ -12,17 +14,19 @@ from orc.utils.regressions import (
     ridge_regression,
 )
 
+VariableRCForecaster = TypeVar(name="VariableRCForecaster", bound=RCForecasterBase)
+
 
 def train_RCForecaster(
-    model: RCForecasterBase,
+    model: VariableRCForecaster,
     train_seq: Array,
-    target_seq: Array = None,
+    target_seq: Array | None = None,
     spinup: int = 0,
-    initial_res_state: Array = None,
+    initial_res_state: Array | None = None,
     beta: float = 8e-8,
-    batch_size: int = None,
+    batch_size: int | None = None,
     **force_kwargs,
-) -> tuple[RCForecasterBase, Array]:
+) -> tuple[VariableRCForecaster, Array]:
     """Unified training function for reservoir computer forecasters.
 
     Works with any model inheriting from RCForecasterBase, including
@@ -114,11 +118,11 @@ def train_RCForecaster(
 def train_ESNForecaster(
     model: ESNForecaster,
     train_seq: Array,
-    target_seq: Array = None,
+    target_seq: Array | None = None,
     spinup: int = 0,
-    initial_res_state: Array = None,
+    initial_res_state: Array | None = None,
     beta: float = 8e-8,
-    batch_size: int = None,
+    batch_size: int | None = None,
 ) -> tuple[ESNForecaster, Array]:
     """Training function for ESNForecaster.
 
@@ -160,11 +164,11 @@ def train_CESNForecaster(
     model: CESNForecaster,
     train_seq: Array,
     t_train: Array,
-    target_seq: Array = None,
+    target_seq: Array | None = None,
     spinup: int = 0,
-    initial_res_state: Array = None,
+    initial_res_state: Array | None = None,
     beta: float = 8e-8,
-    batch_size: int = None,
+    batch_size: int | None = None,
 ) -> tuple[CESNForecaster, Array]:
     """Training function for CESNForecaster.
 
