@@ -70,3 +70,9 @@ p .MathJax {
 .md-content a:hover {
   color: #9bb56c !important;
 }
+
+/* Fix active navigation item text in dark mode */
+[data-md-color-scheme="slate"] .md-nav__item--active > .md-nav__link,
+[data-md-color-scheme="slate"] .md-nav__link--active {
+  color: #82a457 !important;
+}
