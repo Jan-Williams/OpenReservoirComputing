@@ -51,7 +51,6 @@ plugins:
       execute: true
       allow_errors: false
       include_source: true
-      timeout: 600
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -94,6 +93,8 @@ extra:
 # Include additional directories
 docs_dir: docs
 site_dir: site
+exclude_docs: |
+  examples/benchmark_combined.py
 
 nav:
   - Home: index.md
