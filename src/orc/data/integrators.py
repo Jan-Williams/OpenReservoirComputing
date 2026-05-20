@@ -5,6 +5,7 @@ import functools
 import diffrax
 import jax
 import jax.numpy as jnp
+from jax.typing import ArrayLike
 from jaxtyping import Array, Float
 
 
@@ -23,14 +24,14 @@ def _lorenz63_f(t, u, args):
 
 
 def lorenz63(
-    tN: Float,
-    dt: Float,
-    u0: Float[Array, "3"] = (-10.0, 1.0, 10.0),
-    rho: Float = 28.0,
-    sigma: Float = 10.0,
-    beta: Float = 8.0 / 3.0,
+    tN: float,
+    dt: float,
+    u0: Float[ArrayLike, "3"] = (-10.0, 1.0, 10.0),  # ty: ignore[invalid-parameter-default]
+    rho: float = 28.0,
+    sigma: float = 10.0,
+    beta: float = 8.0 / 3.0,
     **diffeqsolve_kwargs,
-) -> tuple[Float, Float]:
+) -> tuple[Array, Array]:
     """Solve the Lorenz 63 system of ODEs.
 
     Parameters
@@ -93,14 +94,14 @@ def _rossler_f(t, u, args):
 
 
 def rossler(
-    tN: Float,
-    dt: Float,
-    u0: Float[Array, "3"] = (1.0, 1.0, 1.0),
-    a: Float = 0.1,
-    b: Float = 0.1,
-    c: Float = 14.0,
+    tN: float,
+    dt: float,
+    u0: Float[ArrayLike, "3"] = (1.0, 1.0, 1.0),  # ty: ignore[invalid-parameter-default]
+    a: float = 0.1,
+    b: float = 0.1,
+    c: float = 14.0,
     **diffeqsolve_kwargs,
-) -> tuple[Float, Float]:
+) -> tuple[Array, Array]:
     """Solve the Rossler system of ODEs.
 
     Parameters
@@ -163,14 +164,14 @@ def _sakaraya_f(t, u, args):
 
 
 def sakaraya(
-    tN: Float,
-    dt: Float,
-    u0: Float[Array, "3"] = (-2.8976045, 3.8877978, 3.07465),
-    a: Float = 1.0,
-    b: Float = 1.0,
-    m: Float = 1.0,
+    tN: float,
+    dt: float,
+    u0: Float[ArrayLike, "3"] = (-2.8976045, 3.8877978, 3.07465),  # ty: ignore[invalid-parameter-default]
+    a: float = 1.0,
+    b: float = 1.0,
+    m: float = 1.0,
     **diffeqsolve_kwargs,
-) -> tuple[Float, Float]:
+) -> tuple[Array, Array]:
     """Solve the Sakaraya system of ODEs.
 
     Parameters
@@ -233,15 +234,15 @@ def _colpitts_f(t, u, args):
 
 
 def colpitts(
-    tN: Float,
-    dt: Float,
-    u0: Float[Array, "3"] = (1.0, -1.0, 1.0),
-    alpha: Float = 5.0,
-    gamma: Float = 0.0797,
-    q: Float = 0.6898,
-    eta: Float = 6.2723,
+    tN: float,
+    dt: float,
+    u0: Float[ArrayLike, "3"] = (1.0, -1.0, 1.0),  # ty: ignore[invalid-parameter-default]
+    alpha: float = 5.0,
+    gamma: float = 0.0797,
+    q: float = 0.6898,
+    eta: float = 6.2723,
     **diffeqsolve_kwargs,
-) -> tuple[Float, Float]:
+) -> tuple[Array, Array]:
     """Solve the Colpitts oscillator system of ODEs.
 
     Parameters
@@ -311,15 +312,15 @@ def _hyper_lorenz63_f(t, u, args):
 
 
 def hyper_lorenz63(
-    tN: Float,
-    dt: Float,
-    u0: Float[Array, "4"] = (-10.0, 6.0, 0.0, 10.0),
-    a: Float = 10.0,
-    b: Float = 28.0,
-    c: Float = 8.0 / 3.0,
-    d: Float = -1.0,
+    tN: float,
+    dt: float,
+    u0: Float[ArrayLike, "4"] = (-10.0, 6.0, 0.0, 10.0),  # ty: ignore[invalid-parameter-default]
+    a: float = 10.0,
+    b: float = 28.0,
+    c: float = 8.0 / 3.0,
+    d: float = -1.0,
     **diffeqsolve_kwargs,
-) -> tuple[Float, Float]:
+) -> tuple[Array, Array]:
     """Solve the Hyper-Lorenz 63 system of ODEs.
 
     Parameters
@@ -384,16 +385,16 @@ def _hyper_xu_f(t, u, args):
 
 
 def hyper_xu(
-    tN: Float,
-    dt: Float,
-    u0: Float[Array, "4"] = (-2.0, -1.0, -2.0, -10.0),
-    a: Float = 10.0,
-    b: Float = 40.0,
-    c: Float = 2.5,
-    d: Float = 2.0,
-    e: Float = 16.0,
+    tN: float,
+    dt: float,
+    u0: Float[ArrayLike, "4"] = (-2.0, -1.0, -2.0, -10.0),  # ty: ignore[invalid-parameter-default]
+    a: float = 10.0,
+    b: float = 40.0,
+    c: float = 2.5,
+    d: float = 2.0,
+    e: float = 16.0,
     **diffeqsolve_kwargs,
-) -> tuple[Float, Float]:
+) -> tuple[Array, Array]:
     """Solve the Hyper-Xu system of ODEs.
 
     Parameters
@@ -479,17 +480,17 @@ def _double_pendulum_f(t, u, args):
 
 
 def double_pendulum(
-    tN: Float,
-    dt: Float,
-    u0: Float[Array, "4"] = (jnp.pi / 4, -1.0, jnp.pi / 2, 1.0),
-    m1: Float = 1.0,
-    m2: Float = 1.0,
-    L1: Float = 1.0,
-    L2: Float = 1.0,
-    g: Float = 9.81,
-    damping: Float = 0.0,
+    tN: float,
+    dt: float,
+    u0: Float[ArrayLike, "4"] = (jnp.pi / 4, -1.0, jnp.pi / 2, 1.0),  # ty: ignore[invalid-parameter-default]
+    m1: float = 1.0,
+    m2: float = 1.0,
+    L1: float = 1.0,
+    L2: float = 1.0,
+    g: float = 9.81,
+    damping: float = 0.0,
     **diffeqsolve_kwargs,
-) -> tuple[Float, Float]:
+) -> tuple[Array, Array]:
     """Solve the equations of motion for a damped double pendulum.
 
     The state u is represented as a 4-tuple (theta1, omega1, theta2, omega2) where:
@@ -575,13 +576,13 @@ def _lorenz96_f(t, u, args):
 
 
 def lorenz96(
-    tN: Float,
-    dt: Float,
-    u0: Array = None,
-    N: Float = 10,
-    F: Float = 8.0,
+    tN: float,
+    dt: float,
+    u0: Array | None = None,
+    N: int = 10,
+    F: float = 8.0,
     **diffeqsolve_kwargs,
-) -> tuple[Float, Float]:
+) -> tuple[Array, Array]:
     """Solve the Lorenz 96 system of ODEs.
 
     Parameters
@@ -635,12 +636,12 @@ def lorenz96(
 ########################### Chaotic PDEs ###########################
 @functools.partial(jax.jit, static_argnames=["tN", "dt", "Nx"])
 def KS_1D(
-    tN: Float,
-    u0: Array = None,
-    dt: Float = 0.25,
-    domain: tuple[Float, Float] = (0, 22),
+    tN: float,
+    u0: Array | None = None,
+    dt: float = 0.25,
+    domain: tuple[float, float] = (0, 22),
     Nx: int = 64,
-) -> tuple[Float, Float]:
+) -> tuple[Array, Array]:
     """Solve the Kuramoto-Sivashinsky equation in 1D with periodic boundary conditions.
 
     The KS PDE solved is:

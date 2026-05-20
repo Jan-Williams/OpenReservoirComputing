@@ -172,5 +172,11 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+# ty (local environment configuration)
+ty.toml
+
+# VS Code (local environment configuration)
+.vscode/
+
 # PyPI configuration file
 .pypirc

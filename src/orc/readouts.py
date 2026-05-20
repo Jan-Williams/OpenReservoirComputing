@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 import equinox as eqx
 import jax.numpy as jnp
-from jaxtyping import Array, Float
+from jaxtyping import Array
 
 
 class ReadoutBase(eqx.Module, ABC):
@@ -22,7 +22,7 @@ class ReadoutBase(eqx.Module, ABC):
         Reservoir dimension.
     chunks : int
         Number of parallel reservoirs. Default is 0 (no chunks dimension).
-    dtype : Float
+    dtype : type
         Dtype of JAX arrays, jnp.float32 or jnp.float64.
 
     Methods
@@ -42,7 +42,7 @@ class ReadoutBase(eqx.Module, ABC):
     out_dim: int
     res_dim: int
     chunks: int = 0
-    dtype: Float = jnp.float64
+    dtype: type = jnp.float64
 
     def __init__(self, out_dim, res_dim, dtype=jnp.float64):
         """Ensure in dim, res dim, and dtype are correct type."""
@@ -191,7 +191,7 @@ class ParallelLinearReadout(ReadoutBase):
         Number of parallel reservoirs.
     wout : Array
         Output matrix.
-    dtype : Float
+    dtype : type
             Dtype, default jnp.float64.
 
     Methods
@@ -204,14 +204,14 @@ class ParallelLinearReadout(ReadoutBase):
     res_dim: int
     wout: Array
     chunks: int
-    dtype: Float
+    dtype: type
 
     def __init__(
         self,
         out_dim: int,
         res_dim: int,
         chunks: int = 1,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         *,
         seed: int = 0,
     ) -> None:
@@ -225,7 +225,7 @@ class ParallelLinearReadout(ReadoutBase):
             Reservoir dimension.
         chunks : int
             Number of parallel resrevoirs.
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Not used for ParallelLinearReadout, here to maintain consistent
@@ -285,7 +285,7 @@ class LinearReadout(ParallelLinearReadout):
         Reservoir dimension.
     wout : Array
         Output matrix.
-    dtype : Float
+    dtype : type
             Dtype, default jnp.float64.
 
     Methods
@@ -298,7 +298,7 @@ class LinearReadout(ParallelLinearReadout):
         self,
         out_dim: int,
         res_dim: int,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         *,
         seed: int = 0,
     ) -> None:
@@ -310,9 +310,7 @@ class LinearReadout(ParallelLinearReadout):
             Dimension of reservoir output.
         res_dim : int
             Reservoir dimension.
-        chunks : int
-            Number of parallel resrevoirs.
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Not used for ParallelLinearReadout, here to maintain consistent
@@ -404,7 +402,7 @@ class ParallelNonlinearReadout(ReadoutBase):
         Output matrix.
     nonlin_list : list
         List containing user specified nonlinearities.
-    dtype : Float
+    dtype : type
             Dtype, default jnp.float64.
 
     Methods
@@ -422,7 +420,7 @@ class ParallelNonlinearReadout(ReadoutBase):
     wout: Array
     chunks: int
     nonlin_list: list
-    dtype: Float
+    dtype: type
 
     def __init__(
         self,
@@ -430,7 +428,7 @@ class ParallelNonlinearReadout(ReadoutBase):
         res_dim: int,
         nonlin_list: list[Callable],
         chunks: int = 1,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         *,
         seed: int = 0,
     ) -> None:
@@ -448,7 +446,7 @@ class ParallelNonlinearReadout(ReadoutBase):
             lambda x : x ** 2 or lambda x : jnp.sin(x).
         chunks : int
             Number of parallel reservoirs.
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Not used for ParallelNonlinearReadout, here to maintain consistent
@@ -563,7 +561,7 @@ class NonlinearReadout(ParallelNonlinearReadout):
         Output matrix.
     nonlin_list : list
         List containing user specified nonlinearities.
-    dtype : Float
+    dtype : type
             Dtype, default jnp.float64.
 
     Methods
@@ -581,7 +579,7 @@ class NonlinearReadout(ParallelNonlinearReadout):
         out_dim: int,
         res_dim: int,
         nonlin_list: list[Callable],
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         *,
         seed: int = 0,
     ) -> None:
@@ -597,7 +595,7 @@ class NonlinearReadout(ParallelNonlinearReadout):
             List containing user specified entrywise nonlinearities. Each entry should
             be a function mapping a scalar value to another scalar value, e.g.
             lambda x : x ** 2 or lambda x : jnp.sin(x).
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Not used for ParallelNonlinearReadout, here to maintain consistent
@@ -722,7 +720,7 @@ class ParallelQuadraticReadout(ParallelNonlinearReadout):
         Number of parallel reservoirs.
     wout : Array
         Output matrix.
-    dtype : Float
+    dtype : type
             Dtype, default jnp.float64.
 
     Methods
@@ -740,14 +738,14 @@ class ParallelQuadraticReadout(ParallelNonlinearReadout):
     res_dim: int
     wout: Array
     chunks: int
-    dtype: Float
+    dtype: type
 
     def __init__(
         self,
         out_dim: int,
         res_dim: int,
         chunks: int = 1,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         *,
         seed: int = 0,
     ) -> None:
@@ -761,7 +759,7 @@ class ParallelQuadraticReadout(ParallelNonlinearReadout):
             Reservoir dimension.
         chunks : int
             Number of parallel resrevoirs.
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Not used for ParallelQuadraticReadout, here to maintain consistent
@@ -787,7 +785,7 @@ class QuadraticReadout(NonlinearReadout):
         Reservoir dimension.
     wout : Array
         Output matrix.
-    dtype : Float
+    dtype : type
             Dtype, default jnp.float64.
 
     Methods
@@ -805,7 +803,7 @@ class QuadraticReadout(NonlinearReadout):
         self,
         out_dim: int,
         res_dim: int,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         *,
         seed: int = 0,
     ) -> None:
@@ -817,7 +815,7 @@ class QuadraticReadout(NonlinearReadout):
             Dimension of reservoir output.
         res_dim : int
             Reservoir dimension.
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Not used for ParallelQuadraticReadout, here to maintain consistent
@@ -844,7 +842,7 @@ class EnsembleLinearReadout(ReadoutBase):
         Number of parallel reservoirs.
     wout : Array
         Output matrix.
-    dtype : Float
+    dtype : type
             Dtype, default jnp.float64.
 
     Methods
@@ -857,14 +855,14 @@ class EnsembleLinearReadout(ReadoutBase):
     res_dim: int
     wout: Array
     chunks: int
-    dtype: Float
+    dtype: type
 
     def __init__(
         self,
         out_dim: int,
         res_dim: int,
         chunks: int = 5,
-        dtype: Float = jnp.float64,
+        dtype: type = jnp.float64,
         *,
         seed: int = 0,
     ) -> None:
@@ -878,7 +876,7 @@ class EnsembleLinearReadout(ReadoutBase):
             Reservoir dimension.
         chunks : int
             Number of parallel resrevoirs.
-        dtype : Float
+        dtype : type
             Dtype, default jnp.float64.
         seed : int
             Not used for ParallelLinearReadout, here to maintain consistent

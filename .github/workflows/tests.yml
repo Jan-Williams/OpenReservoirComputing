@@ -33,6 +33,10 @@ jobs:
       run: |
         ruff check --output-format=github
 
+    - name: Type check with ty
+      run: |
+        ty check src/
+
     - name: Test with pytest
       run: |
         pytest --junitxml=junit/test-results-${{ matrix.os }}-py${{ matrix.python-version }}.xml --cov=orc
