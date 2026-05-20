@@ -48,7 +48,7 @@ plugins:
             show_signature_annotations: true
             signature_crossrefs: true
   - mkdocs-jupyter:
-      execute: false
+      execute: true
       allow_errors: false
       include_source: true
 
@@ -93,6 +93,8 @@ extra:
 # Include additional directories
 docs_dir: docs
 site_dir: site
+exclude_docs: |
+  examples/benchmark_combined.py
 
 nav:
   - Home: index.md
