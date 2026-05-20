@@ -27,12 +27,14 @@ We use the following tools for code quality:
 
 - **Ruff**: Linting and formatting
 - **pytest**: Testing
+- **ty**: Type checcking
 
 Run these before submitting:
 ```bash
 ruff format src/ tests/
 ruff check src/ tests/
 pytest tests/
+ty check src/
 ```
 
 ## Testing
@@ -44,6 +46,7 @@ pytest tests/
 
 - Update docstrings for new functions/classes
 - Follow numpy docstring style
+- Ensure type annotations are correct with `ty`
 
 ## Pull Request Process
 
