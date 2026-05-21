@@ -112,4 +112,4 @@ ORC enables easy reimplementation of architectures that integrate RC with larger
 Claude (Anthropic) was used for code assistance during code debugging, proofreading this paper, and the generation of the architecture visualization SVG. ChatGPT (OpenAI) was used to generate the ORC logo. All generated code was reviewed, tested, and validated by the authors.
 
 # Acknowledgements
-The authors acknowledge support from the National Science Foundation AI Institute in Dynamic Systems (grant number 2112085). The authors also thank Anastasia Bizyaeva, Noa Kaplan, and Ling-Wei Kong for insightful conversations.
+The authors acknowledge support from the NSF AI Institute in Dynamic Systems (grant number 2112085). The authors also thank Anastasia Bizyaeva, Noa Kaplan, and Ling-Wei Kong for insightful conversations.
