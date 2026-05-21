@@ -36,9 +36,9 @@ class DriverBase(eqx.Module, ABC):
         Create a zero initial reservoir state with appropriate shape.
     """
 
-    res_dim: int
-    dtype: type
-    chunks: int = 0
+    res_dim: int = eqx.field(static=True)
+    dtype: type = eqx.field(static=True)
+    chunks: int = eqx.field(default=0, static=True)
 
     def __init__(self, res_dim, dtype=jnp.float64):
         """Ensure reservoir dim and dtype are correct type."""
@@ -165,15 +165,15 @@ class ParallelESNDriver(DriverBase):
         Batched or single update to reservoir state.
     """
 
-    res_dim: int
+    res_dim: int = eqx.field(static=True)
     leak: float
     spectral_radius: float
     density: float
     bias: float
-    dtype: type
+    dtype: type = eqx.field(static=True)
     wr: sparse.BCOO
-    chunks: int
-    mode: str
+    chunks: int = eqx.field(static=True)
+    mode: str = eqx.field(static=True)
     time_const: float
 
     def __init__(
@@ -491,14 +491,14 @@ class ParallelTaylorDriver(DriverBase):
         Batched or single update to reservoir state.
     """
 
-    n_terms: int
-    res_dim: int
+    n_terms: int = eqx.field(static=True)
+    res_dim: int = eqx.field(static=True)
     spectral_radius: float
     density: float
     bias: float
-    dtype: type
+    dtype: type = eqx.field(static=True)
     wr: sparse.BCOO
-    chunks: int
+    chunks: int = eqx.field(static=True)
 
     def __init__(
         self,
@@ -854,7 +854,7 @@ class GRUDriver(DriverBase):
     """
 
     gru: eqx.nn.GRUCell
-    chunks: int = 0
+    chunks: int = eqx.field(default=0, static=True)
 
     def __init__(self, res_dim, input_rescaling=15.0, *, seed):
         """Initialize GRU-based reservoir driver.

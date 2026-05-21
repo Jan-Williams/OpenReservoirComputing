@@ -116,6 +116,7 @@ nav:
       - Control: examples/control.ipynb
       - Data Library: examples/data_library.ipynb
       - Kuramoto-Sivashinsky: examples/ks.ipynb
+      - JAX JIT Compatibility: examples/jit_compatibility.ipynb
   - API Reference:
       - Forecaster: api/forecaster.md
       - Classifier: api/classifier.md
