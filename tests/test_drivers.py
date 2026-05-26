@@ -1100,7 +1100,7 @@ def test_driver_transform_stability(driver_fixture, request):
     # jax.vmap'ed advance should match the built-in batch_advance
     assert jnp.allclose(
         vmap_advance(batch_proj, batch_state),
-        driver.batch_advance(batch_proj, batch_state)
+        driver.batch_advance(batch_proj, batch_state),
     )
 
     jit_advance = eqx.filter_jit(driver.advance)

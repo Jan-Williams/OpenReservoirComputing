@@ -391,7 +391,7 @@ class CRCForecasterBase(RCForecasterBase, ABC):
         res_seq = sol.ys
         return res_seq
 
-    def __call__(self, in_seq: Array, res_state: Array, ts: Array) -> Array: # ty: ignore[invalid-method-override]
+    def __call__(self, in_seq: Array, res_state: Array, ts: Array) -> Array:  # ty: ignore[invalid-method-override]
         """
         Teacher forces the reservoir, wrapper for `force` method.
 

@@ -152,5 +152,5 @@ class ESNController(RCControllerBase):
             seed=seed,
             alpha_1=alpha_1,
             alpha_2=alpha_2,
-            alpha_3=alpha_3
+            alpha_3=alpha_3,
         )

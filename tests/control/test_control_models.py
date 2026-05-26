@@ -375,9 +375,7 @@ def test_train_rccontroller_quadratic(dummy_control_problem_params):
 
 @pytest.fixture
 def esn_controller():
-    return orc.control.ESNController(
-        data_dim=3, control_dim=2, res_dim=200, seed=0
-    )
+    return orc.control.ESNController(data_dim=3, control_dim=2, res_dim=200, seed=0)
 
 
 def test_controller_transform_stability(esn_controller):
