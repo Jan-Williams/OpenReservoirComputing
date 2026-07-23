@@ -291,9 +291,7 @@ def test_train_rcclassifier_quadratic(dummy_classification_data):
 
 @pytest.fixture
 def esn_classifier():
-    return orc.classifier.ESNClassifier(
-        data_dim=4, n_classes=3, res_dim=200, seed=0
-    )
+    return orc.classifier.ESNClassifier(data_dim=4, n_classes=3, res_dim=200, seed=0)
 
 
 def test_classifier_transform_stability(esn_classifier):
@@ -304,11 +302,11 @@ def test_classifier_transform_stability(esn_classifier):
     batch_size = 3
 
     res_state = model.driver.default_state()
-    batch_seq = jax.random.normal(
-        key, shape=(batch_size, seq_len, model.data_dim)
-    )
+    batch_seq = jax.random.normal(key, shape=(batch_size, seq_len, model.data_dim))
+
     def fwd(in_seq):
         return model.classify(in_seq, res_state)
+
     vmap_fwd = eqx.filter_vmap(fwd)
     assert jnp.allclose(
         vmap_fwd(batch_seq),

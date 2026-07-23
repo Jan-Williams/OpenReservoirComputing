@@ -17,6 +17,7 @@ from orc.utils.regressions import (
 
 VariableRCClassifier = TypeVar(name="VariableRCClassifier", bound=RCClassifierBase)
 
+
 def train_RCClassifier(
     model: VariableRCClassifier,
     train_seqs: Array,
@@ -66,9 +67,7 @@ def train_RCClassifier(
         raise ValueError("Number of training sequences must match number of labels.")
 
     n_samples = train_seqs.shape[0]
-    initial_res_states = jnp.tile(
-        model.driver.default_state(), (n_samples, 1)
-    )
+    initial_res_states = jnp.tile(model.driver.default_state(), (n_samples, 1))
 
     # Force all sequences through the reservoir in parallel via vmap
     all_res_seqs = jax.vmap(model.force)(train_seqs, initial_res_states)

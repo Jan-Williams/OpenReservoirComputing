@@ -549,9 +549,7 @@ def test_train_rcforecaster_cesn():
     U_train = U[:2000, :]
     ts_train = ts[:2000]
 
-    cesn = orc.forecaster.CESNForecaster(
-        data_dim=3, res_dim=res_dim, seed=0
-    )
+    cesn = orc.forecaster.CESNForecaster(data_dim=3, res_dim=res_dim, seed=0)
 
     cesn_old, R_old = orc.forecaster.train_CESNForecaster(cesn, U_train, ts_train)
     cesn_new, R_new = orc.forecaster.train_RCForecaster(cesn, U_train, ts=ts_train)
@@ -625,6 +623,26 @@ def test_train_rcforecaster_custom_readout():
 
 
 ##################### JAX TRANSFORM & AD TESTS #####################
+
+
+def test_train_rcforecaster_jax_jit_defaults():
+    """jax.jit(train_RCForecaster)(model, U_train) works with only positional args.
+
+    Default arguments (beta, spinup, multi_sequence, etc.) are Python literals,
+    so they are never traced by JAX and remain safe to use without static_argnums.
+    """
+    tN, dt = 20, 0.01
+    u0 = np.array([0.05, 1.0, 1.05])
+    U, _ = orc.data.lorenz63(tN=tN, dt=dt, u0=u0)
+    U_train = U[:1000]
+
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0)
+
+    esn_jit, R_jit = jax.jit(orc.forecaster.train_RCForecaster)(esn, U_train)
+    esn_ref, R_ref = orc.forecaster.train_RCForecaster(esn, U_train)
+
+    assert jnp.allclose(esn_jit.readout.wout, esn_ref.readout.wout)
+    assert jnp.allclose(R_jit, R_ref)
 
 
 @pytest.fixture
@@ -744,15 +762,287 @@ def test_cesn_forecast_differentiability(cesn_forecaster):
     def check_finite(g):
         if eqx.is_array(g) and jnp.issubdtype(g.dtype, jnp.inexact):
             assert jnp.all(jnp.isfinite(g))
+
     jax.tree_util.tree_map(check_finite, grads)
+
+
+##################### MULTI-SEQUENCE TRAINING TESTS #####################
+
+
+@pytest.fixture
+def lorenz_segments():
+    """Three Lorenz63 trajectories of equal length for multi-sequence tests."""
+    u0s = [
+        np.array([0.05, 1.0, 1.05]),
+        np.array([1.0, 0.5, 2.0]),
+        np.array([-1.0, 2.0, 0.5]),
+    ]
+    segs = [orc.data.lorenz63(tN=5, dt=0.01, u0=u0)[0][:300] for u0 in u0s]
+    return jnp.stack(segs)  # (3, 300, 3)
+
+
+def test_multi_seq_n1_matches_single_seq(lorenz_segments):
+    """n_traj=1 multi_sequence training matches single-sequence training."""
+    U = lorenz_segments[0]  # (300, 3)
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0)
+
+    esn_single, _ = orc.forecaster.train_RCForecaster(esn, U, spinup=20)
+    esn_multi, _ = orc.forecaster.train_RCForecaster(
+        esn, U[None], spinup=20, multi_sequence=True
+    )
+
+    assert jnp.allclose(esn_single.readout.wout, esn_multi.readout.wout)
+
+
+def test_multi_seq_n1_explicit_target(lorenz_segments):
+    """n_traj=1 multi_sequence with explicit target_seq matches single-sequence."""
+    U = lorenz_segments[0]
+    train, target = U[:250], U[1:251]
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0)
+
+    esn_single, _ = orc.forecaster.train_RCForecaster(
+        esn, train, target_seq=target, spinup=20
+    )
+    esn_multi, _ = orc.forecaster.train_RCForecaster(
+        esn, train[None], target_seq=target[None], spinup=20, multi_sequence=True
+    )
+
+    assert jnp.allclose(esn_single.readout.wout, esn_multi.readout.wout)
+
+
+def test_multi_seq_equiv_manual_concat(lorenz_segments):
+    """Multi-sequence ESN training matches per-trajectory training."""
+    from orc.utils.regressions import _solve_all_ridge_reg
+
+    segs = lorenz_segments  # (3, 300, 3)
+    spinup = 20
+    beta = 1e-6
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0)
+
+    esn_multi, _ = orc.forecaster.train_RCForecaster(
+        esn, segs, spinup=spinup, beta=beta, multi_sequence=True
+    )
+
+    default_state = esn.driver.default_state()
+    res_parts, target_parts = [], []
+    for i in range(segs.shape[0]):
+        U = segs[i]
+        tot_res = esn.force(U, default_state)
+        res = tot_res[:-1]
+        target = U[1:]
+        res_parts.append(esn.readout.prepare_train(res)[spinup:])
+        target_parts.append(esn.readout.prepare_target(target)[spinup:])
+
+    cmat = _solve_all_ridge_reg(
+        jnp.concatenate(res_parts, axis=0),
+        jnp.concatenate(target_parts, axis=0),
+        beta,
+    )
+
+    assert jnp.allclose(esn_multi.readout.wout, cmat)
+
+
+def test_multi_seq_tot_res_seq_shape(lorenz_segments):
+    """tot_res_seq has leading (n_traj, seq_len) axes when multi_sequence=True."""
+    segs = lorenz_segments  # (3, 300, 3)
+    n_traj, seq_len, _ = segs.shape
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0)
+
+    _, tot_res_seq = orc.forecaster.train_RCForecaster(esn, segs, multi_sequence=True)
+
+    assert tot_res_seq.shape[0] == n_traj
+    assert tot_res_seq.shape[1] == seq_len
+
+
+def test_multi_seq_spinup_validation(lorenz_segments):
+    """spinup >= seq_len raises ValueError when multi_sequence=True."""
+    segs = lorenz_segments  # (3, 300, 3)
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0)
+
+    with pytest.raises(ValueError, match="spinup"):
+        orc.forecaster.train_RCForecaster(esn, segs, spinup=300, multi_sequence=True)
+
+
+def test_multi_seq_par_esn_n1_matches_single(lorenz_segments):
+    """n_traj=1 multi_sequence with parallel ESN matches single-sequence."""
+    U = lorenz_segments[0]
+    chunks = 3
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0, chunks=chunks)
+
+    esn_single, _ = orc.forecaster.train_RCForecaster(esn, U, spinup=20)
+    esn_multi, _ = orc.forecaster.train_RCForecaster(
+        esn, U[None], spinup=20, multi_sequence=True
+    )
+
+    assert jnp.allclose(esn_single.readout.wout, esn_multi.readout.wout)
+
+
+def test_multi_seq_par_esn_equiv_manual_concat(lorenz_segments):
+    """Multi-sequence parallel ESN training matches per-trajectory training."""
+    from orc.utils.regressions import _solve_all_ridge_reg
+
+    segs = lorenz_segments
+    chunks = 3
+    spinup = 20
+    beta = 1e-6
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0, chunks=chunks)
+
+    esn_multi, _ = orc.forecaster.train_RCForecaster(
+        esn, segs, spinup=spinup, beta=beta, multi_sequence=True
+    )
+
+    default_state = esn.driver.default_state()
+    res_parts, target_parts = [], []
+    for i in range(segs.shape[0]):
+        U = segs[i]
+        tot_res = esn.force(U, default_state)
+        res = tot_res[:-1]
+        target = U[1:]
+        res_parts.append(esn.readout.prepare_train(res)[spinup:])
+        target_parts.append(esn.readout.prepare_target(target)[spinup:])
+
+    cmat = _solve_all_ridge_reg(
+        jnp.concatenate(res_parts, axis=0),
+        jnp.concatenate(target_parts, axis=0),
+        beta,
+    )
+
+    assert jnp.allclose(esn_multi.readout.wout, cmat)
+
+
+def test_multi_seq_cesn_n1_matches_single(lorenz_segments):
+    """n_traj=1 multi_sequence CESN training matches single-sequence."""
+    U = lorenz_segments[0]  # (300, 3)
+    dt = 0.01
+    ts = jnp.arange(300, dtype=jnp.float64) * dt
+
+    cesn = orc.forecaster.CESNForecaster(
+        data_dim=3,
+        res_dim=100,
+        seed=0,
+        solver=diffrax.Euler(),
+        stepsize_controller=diffrax.ConstantStepSize(),
+    )
+
+    cesn_single, _ = orc.forecaster.train_RCForecaster(cesn, U, spinup=10, ts=ts)
+    cesn_multi, _ = orc.forecaster.train_RCForecaster(
+        cesn, U[None], spinup=10, ts=ts[None], multi_sequence=True
+    )
+
+    assert jnp.allclose(cesn_single.readout.wout, cesn_multi.readout.wout)
+
+
+def test_train_cesn_multi_seq_ts_shape_error(lorenz_segments):
+    """train_CESNForecaster raises ValueError with t_train/train_seq mismatch."""
+    segs = lorenz_segments  # (3, 300, 3)
+    wrong_ts = jnp.arange(300, dtype=jnp.float64) * 0.01  # (300,) instead of (3, 300)
+
+    cesn = orc.forecaster.CESNForecaster(
+        data_dim=3,
+        res_dim=100,
+        seed=0,
+        solver=diffrax.Euler(),
+        stepsize_controller=diffrax.ConstantStepSize(),
+    )
+
+    with pytest.raises(ValueError):
+        orc.forecaster.train_CESNForecaster(cesn, segs, wrong_ts, multi_sequence=True)
+
+
+def test_multi_seq_jax_jit_compatible(lorenz_segments):
+    """train_RCForecaster with multi_sequence=True is compatible with jax.jit."""
+    segs = lorenz_segments
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0)
+
+    def train_fn(model, train_seq):
+        return orc.forecaster.train_RCForecaster(
+            model, train_seq, spinup=20, beta=1e-6, multi_sequence=True
+        )
+
+    esn_jit, _ = jax.jit(train_fn)(esn, segs)
+    esn_ref, _ = train_fn(esn, segs)
+
+    assert jnp.allclose(esn_jit.readout.wout, esn_ref.readout.wout)
+
+
+def test_multi_seq_filter_jit_compatible(lorenz_segments):
+    """train_RCForecaster with multi_sequence=True is compatible with eqx.filter_jit."""
+    segs = lorenz_segments
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0)
+
+    @eqx.filter_jit
+    def train_fn(model, train_seq):
+        return orc.forecaster.train_RCForecaster(
+            model, train_seq, spinup=20, beta=1e-6, multi_sequence=True
+        )
+
+    esn_jit, _ = train_fn(esn, segs)
+    esn_ref, _ = orc.forecaster.train_RCForecaster(
+        esn, segs, spinup=20, beta=1e-6, multi_sequence=True
+    )
+
+    assert jnp.allclose(esn_jit.readout.wout, esn_ref.readout.wout)
+
+
+def test_multi_seq_jax_jit_static_argnums(lorenz_segments):
+    """multi_sequence can be declared as static_argnums for jax.jit directly."""
+    segs = lorenz_segments
+    esn = orc.forecaster.ESNForecaster(data_dim=3, res_dim=200, seed=0)
+
+    # positional order: model, train_seq, target_seq, spinup, initial_res_state,
+    #                   beta, batch_size, multi_sequence
+    # beta (pos 5) must be static: _solve_all_ridge_reg uses eqx.if_array(1) which
+    # attempts to vmap over any array argument, including a traced scalar beta.
+    jit_train = jax.jit(
+        orc.forecaster.train_RCForecaster,
+        static_argnums=(3, 5, 6, 7),  # spinup, beta, batch_size, multi_sequence
+    )
+
+    esn_jit, _ = jit_train(esn, segs, None, 20, None, 1e-6, None, True)
+    esn_ref, _ = orc.forecaster.train_RCForecaster(
+        esn, segs, spinup=20, beta=1e-6, multi_sequence=True
+    )
+
+    assert jnp.allclose(esn_jit.readout.wout, esn_ref.readout.wout)
+
+
+def test_multi_seq_cesn_jit_compatible(lorenz_segments):
+    """Multi-sequence CESN training is compatible with jax.jit and eqx.filter_jit."""
+    segs = lorenz_segments  # (3, 300, 3)
+    dt = 0.01
+    ts_batch = jnp.stack([jnp.arange(300, dtype=jnp.float64) * dt] * 3)  # (3, 300)
+
+    cesn = orc.forecaster.CESNForecaster(
+        data_dim=3,
+        res_dim=100,
+        seed=0,
+        solver=diffrax.Euler(),
+        stepsize_controller=diffrax.ConstantStepSize(),
+    )
+
+    def train_fn(model, train_seq, ts):
+        return orc.forecaster.train_RCForecaster(
+            model, train_seq, spinup=10, beta=1e-6, multi_sequence=True, ts=ts
+        )
+
+    cesn_ref, _ = train_fn(cesn, segs, ts_batch)
+
+    # XLA may reorder floating-point ops under JIT, causing small numerical
+    # differences vs eager mode even with a deterministic solver.
+    tol = 1e-4
+
+    cesn_jit, _ = jax.jit(train_fn)(cesn, segs, ts_batch)
+    assert jnp.allclose(cesn_jit.readout.wout, cesn_ref.readout.wout, atol=tol)
+
+    cesn_fjit, _ = eqx.filter_jit(train_fn)(cesn, segs, ts_batch)
+    assert jnp.allclose(cesn_fjit.readout.wout, cesn_ref.readout.wout, atol=tol)
 
 
 ##################### GRU FORECAST SMOKE TEST #####################
 
 
 def test_gru_forecaster_smoke():
-    """Built-in GRUDriver forecasts Rossler.
-    """
+    """Built-in GRUDriver forecasts Rossler."""
 
     class GRUForecaster(orc.forecaster.RCForecasterBase):
         pass
@@ -776,9 +1066,7 @@ def test_gru_forecaster_smoke():
     model, _ = orc.forecaster.train_RCForecaster(
         model, train_seq=U_train, spinup=spinup, beta=1e-7
     )
-    U_pred = model.forecast_from_IC(
-        fcast_len=fcast_len, spinup_data=U_train[-spinup:]
-    )
+    U_pred = model.forecast_from_IC(fcast_len=fcast_len, spinup_data=U_train[-spinup:])
 
     assert U_pred.shape == (fcast_len, data_dim)
     assert jnp.all(jnp.isfinite(U_pred))

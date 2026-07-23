@@ -127,8 +127,11 @@ def test_parallel_nonlinear_prepare_train(chunks):
     res_dim = 12
     out_dim = 12
     readout = orc.readouts.ParallelNonlinearReadout(
-        out_dim=out_dim, res_dim=res_dim, nonlin_list=[lambda x: x**2],
-        chunks=chunks, dtype=jnp.float64,
+        out_dim=out_dim,
+        res_dim=res_dim,
+        nonlin_list=[lambda x: x**2],
+        chunks=chunks,
+        dtype=jnp.float64,
     )
     res_seq = jax.random.normal(jax.random.key(0), shape=(50, chunks, res_dim))
     result = readout.prepare_train(res_seq)
@@ -142,8 +145,11 @@ def test_parallel_nonlinear_prepare_target(chunks):
     """Test that ParallelNonlinearReadout.prepare_target reshapes correctly."""
     out_dim = 12
     readout = orc.readouts.ParallelNonlinearReadout(
-        out_dim=out_dim, res_dim=12, nonlin_list=[lambda x: x**2],
-        chunks=chunks, dtype=jnp.float64,
+        out_dim=out_dim,
+        res_dim=12,
+        nonlin_list=[lambda x: x**2],
+        chunks=chunks,
+        dtype=jnp.float64,
     )
     target_seq = jnp.ones((50, out_dim))
     result = readout.prepare_target(target_seq)

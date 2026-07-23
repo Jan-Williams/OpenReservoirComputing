@@ -869,9 +869,7 @@ class GRUDriver(DriverBase):
         super().__init__(res_dim=res_dim)
         key = jax.random.key(seed)
         gru = eqx.nn.GRUCell(res_dim, res_dim, key=key)
-        gru = eqx.tree_at(
-            lambda c: c.weight_ih, gru, gru.weight_ih * input_rescaling
-        )
+        gru = eqx.tree_at(lambda c: c.weight_ih, gru, gru.weight_ih * input_rescaling)
         self.gru = gru
 
     def advance(self, proj_vars, res_state):

@@ -370,14 +370,162 @@ def test_train_rccontroller_quadratic(dummy_control_problem_params):
     assert jnp.all(jnp.isfinite(U_controlled))
 
 
+##################### MULTI-SEQUENCE TRAINING TESTS #####################
+
+
+@pytest.fixture
+def lorenz_controller_segments():
+    """Three Lorenz63 trajectories with control sequences for multi-sequence tests."""
+    seq_len = 200
+    u0s = [
+        np.array([0.05, 1.0, 1.05]),
+        np.array([1.0, 0.5, 2.0]),
+        np.array([-1.0, 2.0, 0.5]),
+    ]
+    state_segs = jnp.stack(
+        [orc.data.lorenz63(tN=5, dt=0.01, u0=u0)[0][:seq_len] for u0 in u0s]
+    )  # (3, 200, 3)
+    time = jnp.arange(seq_len, dtype=jnp.float64).reshape(-1, 1)
+    control_segs = jnp.stack(
+        [
+            0.1 * jnp.sin(2 * jnp.pi * (i + 1) * time / seq_len * jnp.array([1.0, 1.5]))
+            for i in range(3)
+        ]
+    )  # (3, 200, 2)
+    return state_segs, control_segs
+
+
+def test_multi_seq_controller_n1_matches_single_seq(lorenz_controller_segments):
+    """n_traj=1 multi_sequence controller training matches single-sequence."""
+    state_segs, control_segs = lorenz_controller_segments
+    U, C = state_segs[0], control_segs[0]  # (200, 3), (200, 2)
+
+    ctrl = orc.control.ESNController(data_dim=3, control_dim=2, res_dim=200, seed=0)
+
+    ctrl_single, _ = orc.control.train_RCController(ctrl, U, C, spinup=20)
+    ctrl_multi, _ = orc.control.train_RCController(
+        ctrl, U[None], C[None], spinup=20, multi_sequence=True
+    )
+
+    assert jnp.allclose(ctrl_single.readout.wout, ctrl_multi.readout.wout)
+
+
+def test_multi_seq_controller_n1_explicit_target(lorenz_controller_segments):
+    """n_traj=1 multi_sequence with explicit target_seq matches single-sequence."""
+    state_segs, control_segs = lorenz_controller_segments
+    U, C = state_segs[0], control_segs[0]
+    train, target, ctrl_in = U[:150], U[1:151], C[:150]
+
+    ctrl = orc.control.ESNController(data_dim=3, control_dim=2, res_dim=200, seed=0)
+
+    ctrl_single, _ = orc.control.train_RCController(
+        ctrl, train, ctrl_in, target_seq=target, spinup=20
+    )
+    ctrl_multi, _ = orc.control.train_RCController(
+        ctrl,
+        train[None],
+        ctrl_in[None],
+        target_seq=target[None],
+        spinup=20,
+        multi_sequence=True,
+    )
+
+    assert jnp.allclose(ctrl_single.readout.wout, ctrl_multi.readout.wout)
+
+
+def test_multi_seq_controller_equiv_manual_concat(lorenz_controller_segments):
+    """Multi-sequence controller training matches per-trajectory training."""
+    from orc.utils.regressions import _solve_all_ridge_reg
+
+    state_segs, control_segs = lorenz_controller_segments
+    spinup = 20
+    beta = 1e-6
+    ctrl = orc.control.ESNController(data_dim=3, control_dim=2, res_dim=200, seed=0)
+
+    ctrl_multi, _ = orc.control.train_RCController(
+        ctrl, state_segs, control_segs, spinup=spinup, beta=beta, multi_sequence=True
+    )
+
+    default_state = ctrl.driver.default_state()
+    res_parts, target_parts = [], []
+    for i in range(state_segs.shape[0]):
+        U, C = state_segs[i], control_segs[i]
+        tot_res = ctrl.force(U, C, default_state)
+        res = tot_res[:-1]
+        target = U[1:]
+        res_parts.append(ctrl.readout.prepare_train(res)[spinup:])
+        target_parts.append(ctrl.readout.prepare_target(target)[spinup:])
+
+    cmat = _solve_all_ridge_reg(
+        jnp.concatenate(res_parts, axis=0),
+        jnp.concatenate(target_parts, axis=0),
+        beta,
+    )
+
+    assert jnp.allclose(cmat, ctrl_multi.readout.wout, atol=1e-2)
+
+
+def test_multi_seq_controller_tot_res_seq_shape(lorenz_controller_segments):
+    """tot_res_seq has leading (n_traj, seq_len) axes when multi_sequence=True."""
+    state_segs, control_segs = lorenz_controller_segments
+    n_traj, seq_len, _ = state_segs.shape
+    ctrl = orc.control.ESNController(data_dim=3, control_dim=2, res_dim=200, seed=0)
+
+    _, tot_res_seq = orc.control.train_RCController(
+        ctrl, state_segs, control_segs, multi_sequence=True
+    )
+
+    assert tot_res_seq.shape[0] == n_traj
+    assert tot_res_seq.shape[1] == seq_len
+
+
+def test_multi_seq_controller_spinup_validation(lorenz_controller_segments):
+    """spinup >= seq_len raises ValueError when multi_sequence=True."""
+    state_segs, control_segs = lorenz_controller_segments
+    ctrl = orc.control.ESNController(data_dim=3, control_dim=2, res_dim=200, seed=0)
+
+    with pytest.raises(ValueError, match="spinup"):
+        orc.control.train_RCController(
+            ctrl, state_segs, control_segs, spinup=200, multi_sequence=True
+        )
+
+
+def test_multi_seq_controller_seq_length_mismatch(lorenz_controller_segments):
+    """Mismatched train_seq/control_seq seq_len raises ValueError."""
+    state_segs, control_segs = lorenz_controller_segments
+    ctrl = orc.control.ESNController(data_dim=3, control_dim=2, res_dim=200, seed=0)
+
+    with pytest.raises(ValueError):
+        orc.control.train_RCController(
+            ctrl, state_segs, control_segs[:, :-1, :], multi_sequence=True
+        )
+
+
+def test_multi_seq_controller_jax_jit_compatible(lorenz_controller_segments):
+    """train_RCController with multi_sequence=True is compatible with jits."""
+    state_segs, control_segs = lorenz_controller_segments
+    ctrl = orc.control.ESNController(data_dim=3, control_dim=2, res_dim=200, seed=0)
+
+    def train_fn(model, train_seq, ctrl_seq):
+        return orc.control.train_RCController(
+            model, train_seq, ctrl_seq, spinup=20, beta=1e-6, multi_sequence=True
+        )
+
+    ctrl_ref, _ = train_fn(ctrl, state_segs, control_segs)
+
+    ctrl_jit, _ = jax.jit(train_fn)(ctrl, state_segs, control_segs)
+    assert jnp.allclose(ctrl_jit.readout.wout, ctrl_ref.readout.wout)
+
+    ctrl_fjit, _ = eqx.filter_jit(train_fn)(ctrl, state_segs, control_segs)
+    assert jnp.allclose(ctrl_fjit.readout.wout, ctrl_ref.readout.wout)
+
+
 ##################### JAX TRANSFORM & AD TESTS #####################
 
 
 @pytest.fixture
 def esn_controller():
-    return orc.control.ESNController(
-        data_dim=3, control_dim=2, res_dim=200, seed=0
-    )
+    return orc.control.ESNController(data_dim=3, control_dim=2, res_dim=200, seed=0)
 
 
 def test_controller_transform_stability(esn_controller):

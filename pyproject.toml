@@ -52,6 +52,9 @@ testpaths = "tests"
 addopts = "--ignore=scripts --ignore=docs"
 env = ["MPLBACKEND=Agg"]
 
+[tool.ruff]
+exclude = ["examples"]
+
 [tool.ruff.lint]
 select = ["E", "W", "F", "D", "UP", "B", "A", "C4", "N", "SIM", "I"]
 
