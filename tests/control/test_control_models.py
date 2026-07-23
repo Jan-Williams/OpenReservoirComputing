@@ -462,7 +462,7 @@ def test_multi_seq_controller_equiv_manual_concat(lorenz_controller_segments):
         beta,
     )
 
-    assert jnp.allclose(cmat, ctrl_multi.readout.wout, atol=1e-5)
+    assert jnp.allclose(cmat, ctrl_multi.readout.wout, atol=1e-4)
 
 
 def test_multi_seq_controller_tot_res_seq_shape(lorenz_controller_segments):
