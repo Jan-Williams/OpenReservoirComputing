@@ -4,22 +4,51 @@ We welcome contributions to the OpenReservoirComputing project! This guide will 
 
 ## Development Setup
 
-1. **Clone the repository**:
+ORC uses [uv](https://docs.astral.sh/uv/) for dependency and environment management. uv
+downloads and manages the Python interpreter for you, so conda or pyenv are not required.
+
+1. **Install uv** (see the [uv installation docs](https://docs.astral.sh/uv/getting-started/installation/)):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. **Clone the repository**:
    ```bash
    git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
    cd OpenReservoirComputing
    ```
 
-2. **Create a development environment**:
+3. **Create the development environment**:
    ```bash
-   conda create -n orc-dev python=3.12
-   conda activate orc-dev
+   uv sync
+   ```
+   This creates `.venv` using the Python version pinned in `.python-version`, installs ORC
+   in editable mode, and installs the `dev` dependency group at the exact versions recorded
+   in `uv.lock`.
+
+   Optional additions:
+   ```bash
+   uv sync --all-groups        # + the `docs` group (mkdocs, notebook, ipykernel)
+   uv sync --extra gpu         # + CUDA-enabled JAX (Linux only)
+   uv sync --extra notebooks   # + Jupyter, for running the examples
    ```
 
-3. **Install in development mode**:
-   ```bash
-   pip install -e ".[dev,notebooks,gpu]"
-   ```
+!!! note "Running commands"
+    There is no need to activate the virtual environment. Prefix commands with `uv run` and
+    uv will use — and if necessary update — the project environment automatically.
+
+!!! warning "The dev extra has become a dependency group"
+    Development and documentation dependencies are now
+    [PEP 735](https://peps.python.org/pep-0735/) dependency *groups* rather than extras, so
+    `pip install -e ".[dev]"` no longer works. Use `uv sync` as above, or with pip 25.1 or
+    newer:
+
+    ```bash
+    pip install -e . --group dev
+    ```
+
+    Both the `-e .` and the `--group dev` are needed — `--group` installs the group's tools
+    but not ORC itself.
 
 ## Code Style
 
@@ -27,15 +56,30 @@ We use the following tools for code quality:
 
 - **Ruff**: Linting and formatting
 - **pytest**: Testing
-- **ty**: Type checcking
+- **ty**: Type checking
 
 Run these before submitting:
 ```bash
-ruff format src/ tests/
-ruff check src/ tests/
-pytest tests/
-ty check src/
+uv run ruff format src/ tests/
+uv run ruff check src/ tests/
+uv run pytest tests/
+uv run ty check src/
 ```
+
+## Dependencies and the lockfile
+
+`uv.lock` is committed to the repository and is the source of truth for CI. To add or change
+a dependency:
+
+```bash
+uv add <package>               # runtime dependency
+uv add --group dev <package>   # development tool
+uv add --group docs <package>  # documentation tool
+```
+
+`uv add` updates both `pyproject.toml` and `uv.lock`. **Commit `uv.lock` alongside your
+change** — CI runs `uv sync --locked`, which fails if the lockfile is out of date. To refresh
+pinned versions without changing any constraints, run `uv lock --upgrade`.
 
 ## Testing
 
@@ -47,6 +91,8 @@ ty check src/
 - Update docstrings for new functions/classes
 - Follow numpy docstring style
 - Ensure type annotations are correct with `ty`
+- Preview the site with `uv run mkdocs serve` (this **executes** every example notebook, so
+  the first build takes a few minutes)
 
 ## Pull Request Process
 

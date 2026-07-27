@@ -4,7 +4,8 @@
 
 - **Python**: 3.10, 3.11, 3.12, or 3.13
 - **Operating System**: Linux, macOS, or Windows
-- **Hardware**: CPU or NVIDIA GPU
+- **Hardware**: CPU everywhere; NVIDIA GPU acceleration on Linux only (JAX does not publish
+  CUDA builds for macOS or native Windows — Windows users can use WSL2)
 
 ## Installation Options
 
@@ -13,44 +14,73 @@ The easiest way to get started with ORC is to install from PyPI:
 pip install OpenReservoirComputing
 ```
 
-If you're interested in the latest, unreleased version or in contributing, you can install from source.
+To add ORC to a [uv](https://docs.astral.sh/uv/)-managed project:
+```bash
+uv add OpenReservoirComputing
+```
 
-For CPU-only usage, clone the repository and install:
+ORC has two optional extras. For GPU acceleration with CUDA:
+
+```bash
+pip install "OpenReservoirComputing[gpu]"
+```
+
+For Jupyter, to run the example notebooks:
+
+```bash
+pip install "OpenReservoirComputing[notebooks]"
+```
+
+Both can be combined: `pip install "OpenReservoirComputing[gpu,notebooks]"`.
+
+!!! warning "The `gpu` extra is Linux-only"
+    JAX publishes CUDA wheels for Linux (x86_64 and aarch64) only — there are no CUDA builds
+    for macOS or native Windows. The `gpu` extra therefore carries a
+    `sys_platform == "linux"` marker: on macOS and native Windows it installs **nothing extra
+    and raises no error**, leaving you with the CPU build.
+
+    If you are on Windows with an NVIDIA GPU, install under
+    [WSL2](https://docs.microsoft.com/en-us/windows/wsl/install), which reports as Linux and
+    does receive the CUDA build.
+
+### Installing from source
+
+If you're interested in the latest, unreleased version, clone the repository and install from
+the working tree. Extras use the same names, applied to the local path:
 
 ```bash
 git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 cd OpenReservoirComputing
-pip install .
+pip install .              # CPU only
+pip install ".[gpu]"       # with CUDA-enabled JAX (Linux only)
 ```
-
-For GPU acceleration with CUDA:
-
-```bash
-git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
-cd OpenReservoirComputing
-pip install ".[gpu]"
-```
-
 
 ### Development Installation
 
-For contributors or advanced users who want to modify the code:
+ORC's development workflow uses [uv](https://docs.astral.sh/uv/):
 
 ```bash
 git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 cd OpenReservoirComputing
-pip install -e ".[dev]"
+uv sync                             # editable install + `dev` group (ruff, ty, pytest, coverage)
+uv sync --all-groups                # additionally installs the `docs` group
+uv sync --all-groups --all-extras   # everything, incl. GPU on Linux and Jupyter
 ```
 
-This includes additional tools for testing, formatting, and documentation.
+!!! note "Using pip instead of uv"
+    The development and documentation dependencies are
+    [PEP 735](https://peps.python.org/pep-0735/) dependency *groups* rather than extras, so
+    they are not reachable through extras syntax. If you would rather use pip than uv, the
+    equivalent needs both the project and the group (pip 25.1 or newer):
 
-### Complete Installation
+    ```bash
+    pip install -e . --group dev
+    ```
 
-To install all optional dependencies (GPU, development, notebooks, documentation):
+    Note that `pip install --group dev` on its own installs the group's tools but **not** ORC
+    itself, so the editable `-e .` is required.
 
-```bash
-pip install -e ".[all]"
-```
+See [Contributing](../contributing.md) for the full development workflow.
 
 ## Verification
 

@@ -1,12 +1,6 @@
 [build-system]
-requires = [
-    "setuptools>=64",
-    "wheel",
-    "setuptools_scm>=8.1",
-    "numpy",
-    "cython>=3.0",
-]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.27", "hatch-vcs>=0.4"]
+build-backend = "hatchling.build"
 
 [project]
 name = "OpenReservoirComputing"
@@ -26,7 +20,6 @@ dependencies = [
     "jax",
     "equinox",
     "matplotlib",
-    "setuptools_scm>=8.1",
     "diffrax",
 ]
 
@@ -41,16 +34,80 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 
-
 [project.urls]
 Repository = "https://github.com/Jan-Williams/OpenReservoirComputing"
 
-[tool.setuptools_scm]
+[project.optional-dependencies]
+# JAX publishes CUDA wheels for Linux only (see JAX's installation docs). The marker
+# keeps this extra a no-op on macOS and native Windows instead of an install error.
+# Windows users with an NVIDIA GPU should install under WSL2, which reports
+# sys_platform == "linux" and therefore does get the CUDA build.
+gpu = ["jax[cuda12]; sys_platform == 'linux'"]
+notebooks = ["notebook", "ipykernel"]
+
+# Development and documentation dependencies live in PEP 735 dependency groups rather
+# than extras: they are never published in the package metadata, and `uv sync` installs
+# them automatically. They are therefore NOT reachable via `pip install -e ".[dev]"`.
+[dependency-groups]
+dev = [
+    "ruff",
+    "ty",
+    "pytest",
+    "pytest-cov",
+    "pytest-env",
+    "coverage",
+]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-autorefs",
+    "mkdocstrings[python]",
+    "mkdocs-jupyter",
+    # mkdocs.yml runs mkdocs-jupyter with execute: true / allow_errors: false, so the
+    # docs build executes every example notebook and needs a Jupyter kernel.
+    "notebook",
+    "ipykernel",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+required-version = ">=0.9.0"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.wheel]
+# Required explicitly: hatchling's autodetection looks for the normalized project name
+# ("openreservoircomputing"), which does not match the import package ("orc").
+packages = ["src/orc"]
+
+[tool.hatch.build.targets.sdist]
+# only-include (not include): docs/examples is a symlink to ../examples, and hatchling's
+# tree walk follows symlinks while de-duplicating on (st_dev, st_ino) -- so whichever of
+# examples/ or docs/examples/ is visited first wins and the other is dropped, making the
+# sdist non-deterministic across machines. only-include bypasses the tree walk entirely.
+only-include = [
+    "src/orc",
+    "tests",
+    "examples",
+    "pyproject.toml",
+    "README.md",
+    "LICENSE",
+]
 
 [tool.pytest.ini_options]
 testpaths = "tests"
 addopts = "--ignore=scripts --ignore=docs"
 env = ["MPLBACKEND=Agg"]
+
+[tool.coverage.run]
+source_pkgs = ["orc"]
+branch = true
+
+[tool.coverage.paths]
+# Canonicalize editable (src/orc) and non-editable (site-packages/orc) layouts so
+# reports are comparable regardless of how the project was installed.
+source = ["src/orc", "*/site-packages/orc"]
 
 [tool.ruff]
 exclude = ["examples"]
@@ -63,7 +120,6 @@ ignore = ["N806", "N802", "N803", "F722"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D", "E402"]
 "docs/*.py" = ["D", "A"]
-"setup.py" = ["D"]
 "*.ipynb" = ["E", "W", "F", "D", "UP", "B", "A", "C4", "N", "SIM", "I"]
 
 [tool.ruff.lint.pycodestyle]
@@ -74,43 +130,3 @@ convention = "numpy"
 
 [tool.ty.src]
 exclude = ["tests", "examples"]
-
-[project.optional-dependencies]
-all = [
-    "jax[cuda12]",
-    "ruff",
-    "ty",
-    "pytest",
-    "coverage",
-    "pytest-cov",
-    "notebook",
-    "ipykernel",
-    "pytest-env",
-    "mkdocs",
-    "mkdocs-material",
-    "mkdocs-autorefs",
-    "mkdocstrings[python]",
-    "mkdocs-jupyter",
-]
-dev = [
-    "ruff",
-    "ty",
-    "pytest",
-    "coverage",
-    "pytest-cov",
-    "pytest-env",
-    "mkdocs",
-    "mkdocs-material",
-    "mkdocs-autorefs",
-    "mkdocstrings[python]",
-]
-notebooks = ["notebook", "ipykernel"]
-gpu = ["jax[cuda12]"]
-docs = [
-    "mkdocs",
-    "mkdocs-material",
-    "mkdocs-autorefs",
-    "mkdocstrings[python]",
-    "mkdocs-jupyter",
-]
-
