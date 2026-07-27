@@ -37,10 +37,18 @@ downloads and manages the Python interpreter for you, so conda or pyenv are not 
     There is no need to activate the virtual environment. Prefix commands with `uv run` and
     uv will use — and if necessary update — the project environment automatically.
 
-!!! warning "`pip install -e \".[dev]\"` no longer works"
-    Development and documentation dependencies are [PEP 735](https://peps.python.org/pep-0735/)
-    dependency *groups*, not extras, so they are not installable as `.[dev]`. Use `uv sync`,
-    or `pip install --group dev` with pip 25.1 or newer.
+!!! warning "The dev extra has become a dependency group"
+    Development and documentation dependencies are now
+    [PEP 735](https://peps.python.org/pep-0735/) dependency *groups* rather than extras, so
+    `pip install -e ".[dev]"` no longer works. Use `uv sync` as above, or with pip 25.1 or
+    newer:
+
+    ```bash
+    pip install -e . --group dev
+    ```
+
+    Both the `-e .` and the `--group dev` are needed — `--group` installs the group's tools
+    but not ORC itself.
 
 ## Code Style
 

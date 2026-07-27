@@ -75,7 +75,7 @@ plt.show()
 ORC models are built on top of [Equinox](https://docs.kidger.site/equinox/), and as a result we strongly recommend the use of Equinox transforms `eqx.filter_{jit, vmap, grad}` over `jax.{jit, vmap, grad}`. For more details, please check out the [JAX JIT Compatibility](https://Jan-Williams.github.io/OpenReservoirComputing/examples/jit_compatibility/) example notebook.
 
 ## Contribution guidelines
-First off, thanks for helping out! We appreciate your willingness to contribute! ORC uses [uv](https://docs.astral.sh/uv/) to manage development environments, so getting set up takes two commands.
+First off, thanks for helping out! We appreciate your willingness to contribute! ORC uses [uv](https://docs.astral.sh/uv/) to manage development environments, which keeps setup to a single command.
 
 First, [install uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it. Then clone the repo and sync:
 

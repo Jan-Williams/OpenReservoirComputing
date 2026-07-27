@@ -19,21 +19,19 @@ To add ORC to a [uv](https://docs.astral.sh/uv/)-managed project:
 uv add OpenReservoirComputing
 ```
 
-If you're interested in the latest, unreleased version or in contributing, you can install from source.
-
-For CPU-only usage, clone the repository and install:
-
-```bash
-git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
-cd OpenReservoirComputing
-pip install .
-```
-
-For GPU acceleration with CUDA:
+ORC has two optional extras. For GPU acceleration with CUDA:
 
 ```bash
 pip install "OpenReservoirComputing[gpu]"
 ```
+
+For Jupyter, to run the example notebooks:
+
+```bash
+pip install "OpenReservoirComputing[notebooks]"
+```
+
+Both can be combined: `pip install "OpenReservoirComputing[gpu,notebooks]"`.
 
 !!! warning "The `gpu` extra is Linux-only"
     JAX publishes CUDA wheels for Linux (x86_64 and aarch64) only — there are no CUDA builds
@@ -45,17 +43,21 @@ pip install "OpenReservoirComputing[gpu]"
     [WSL2](https://docs.microsoft.com/en-us/windows/wsl/install), which reports as Linux and
     does receive the CUDA build.
 
-To install Jupyter for running the example notebooks:
+### Installing from source
+
+If you're interested in the latest, unreleased version, clone the repository and install from
+the working tree. Extras use the same names, applied to the local path:
 
 ```bash
-pip install "OpenReservoirComputing[notebooks]"
+git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
+cd OpenReservoirComputing
+pip install .              # CPU only
+pip install ".[gpu]"       # with CUDA-enabled JAX (Linux only)
 ```
 
 ### Development Installation
 
-ORC's development workflow uses [uv](https://docs.astral.sh/uv/). Development and
-documentation dependencies live in [PEP 735](https://peps.python.org/pep-0735/) dependency
-groups, which are **not** reachable via `pip install -e ".[dev]"` — use `uv sync`:
+ORC's development workflow uses [uv](https://docs.astral.sh/uv/):
 
 ```bash
 git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
@@ -64,6 +66,19 @@ uv sync                             # editable install + `dev` group (ruff, ty, 
 uv sync --all-groups                # additionally installs the `docs` group
 uv sync --all-groups --all-extras   # everything, incl. GPU on Linux and Jupyter
 ```
+
+!!! note "Using pip instead of uv"
+    The development and documentation dependencies are
+    [PEP 735](https://peps.python.org/pep-0735/) dependency *groups* rather than extras, so
+    they are not reachable through extras syntax. If you would rather use pip than uv, the
+    equivalent needs both the project and the group (pip 25.1 or newer):
+
+    ```bash
+    pip install -e . --group dev
+    ```
+
+    Note that `pip install --group dev` on its own installs the group's tools but **not** ORC
+    itself, so the editable `-e .` is required.
 
 See [Contributing](../contributing.md) for the full development workflow.
 

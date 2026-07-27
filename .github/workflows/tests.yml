@@ -42,6 +42,58 @@ jobs:
     - name: Type check with ty
       run: uv run ty check src/
 
+  # publish.yml only runs on release, so without this a packaging regression would
+  # first surface during an actual PyPI upload. Cheap enough to run on every PR.
+  build-package:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # hatch-vcs reads git tags to derive the version
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v9.0.0
+      with:
+        version: "0.11.30"
+        python-version: "3.12"
+        enable-cache: true
+
+    - name: Build sdist and wheel
+      run: uv build --no-create-gitignore
+
+    - name: Validate metadata
+      run: uvx twine check dist/*
+
+    - name: Assert wheel and sdist contents
+      run: |
+        unzip -Z1 dist/*.whl > /tmp/wheel.txt
+        tar tzf dist/*.tar.gz > /tmp/sdist.txt
+
+        # The wheel must ship the import package...
+        grep -q '^orc/__init__\.py$' /tmp/wheel.txt \
+          || { echo "::error::wheel is missing orc/__init__.py"; cat /tmp/wheel.txt; exit 1; }
+
+        # ...and must not leak the repository layout into site-packages.
+        if grep -qE '^(src|tests|examples)/' /tmp/wheel.txt; then
+          echo "::error::wheel contains repository paths (src/, tests/ or examples/)"
+          cat /tmp/wheel.txt
+          exit 1
+        fi
+
+        # The sdist must ship the example notebooks...
+        grep -q 'examples/lorenz\.ipynb' /tmp/sdist.txt \
+          || { echo "::error::sdist is missing examples/lorenz.ipynb"; cat /tmp/sdist.txt; exit 1; }
+
+        # ...but never via the docs/examples symlink, which hatchling would
+        # otherwise follow and de-duplicate non-deterministically.
+        if grep -q 'docs/examples' /tmp/sdist.txt; then
+          echo "::error::sdist contains the docs/examples symlink"
+          cat /tmp/sdist.txt
+          exit 1
+        fi
+
+        echo "wheel and sdist contents OK"
+
   run-tests:
     strategy:
       fail-fast: false
