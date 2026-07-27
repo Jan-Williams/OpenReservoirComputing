@@ -4,13 +4,19 @@
 
 - **Python**: 3.10, 3.11, 3.12, or 3.13
 - **Operating System**: Linux, macOS, or Windows
-- **Hardware**: CPU or NVIDIA GPU
+- **Hardware**: CPU everywhere; NVIDIA GPU acceleration on Linux only (JAX does not publish
+  CUDA builds for macOS or native Windows — Windows users can use WSL2)
 
 ## Installation Options
 
 The easiest way to get started with ORC is to install from PyPI:
 ```bash
 pip install OpenReservoirComputing
+```
+
+To add ORC to a [uv](https://docs.astral.sh/uv/)-managed project:
+```bash
+uv add OpenReservoirComputing
 ```
 
 If you're interested in the latest, unreleased version or in contributing, you can install from source.
@@ -26,31 +32,40 @@ pip install .
 For GPU acceleration with CUDA:
 
 ```bash
-git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
-cd OpenReservoirComputing
-pip install ".[gpu]"
+pip install "OpenReservoirComputing[gpu]"
 ```
 
+!!! warning "The `gpu` extra is Linux-only"
+    JAX publishes CUDA wheels for Linux (x86_64 and aarch64) only — there are no CUDA builds
+    for macOS or native Windows. The `gpu` extra therefore carries a
+    `sys_platform == "linux"` marker: on macOS and native Windows it installs **nothing extra
+    and raises no error**, leaving you with the CPU build.
+
+    If you are on Windows with an NVIDIA GPU, install under
+    [WSL2](https://docs.microsoft.com/en-us/windows/wsl/install), which reports as Linux and
+    does receive the CUDA build.
+
+To install Jupyter for running the example notebooks:
+
+```bash
+pip install "OpenReservoirComputing[notebooks]"
+```
 
 ### Development Installation
 
-For contributors or advanced users who want to modify the code:
+ORC's development workflow uses [uv](https://docs.astral.sh/uv/). Development and
+documentation dependencies live in [PEP 735](https://peps.python.org/pep-0735/) dependency
+groups, which are **not** reachable via `pip install -e ".[dev]"` — use `uv sync`:
 
 ```bash
 git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
 cd OpenReservoirComputing
-pip install -e ".[dev]"
+uv sync                             # editable install + `dev` group (ruff, ty, pytest, coverage)
+uv sync --all-groups                # additionally installs the `docs` group
+uv sync --all-groups --all-extras   # everything, incl. GPU on Linux and Jupyter
 ```
 
-This includes additional tools for testing, formatting, and documentation.
-
-### Complete Installation
-
-To install all optional dependencies (GPU, development, notebooks, documentation):
-
-```bash
-pip install -e ".[all]"
-```
+See [Contributing](../contributing.md) for the full development workflow.
 
 ## Verification
 

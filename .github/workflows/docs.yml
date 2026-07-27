@@ -7,6 +7,11 @@ on:
 permissions:
   contents: write
 
+# gh-deploy --force force-pushes gh-pages; overlapping runs would race.
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -15,12 +20,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v9.0.0
         with:
+          version: "0.11.30"
           python-version: "3.12"
+          enable-cache: true
 
+      # --no-default-groups drops the dev tools; --group docs still installs the
+      # project itself and its runtime deps, which the notebook execution needs
+      # (mkdocs.yml sets mkdocs-jupyter execute: true).
       - name: Install dependencies
-        run: pip install -e .[docs]
+        run: uv sync --locked --no-default-groups --group docs
 
       - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force --no-history
+        run: uv run mkdocs gh-deploy --force --no-history

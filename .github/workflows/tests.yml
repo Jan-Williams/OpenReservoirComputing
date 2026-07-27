@@ -7,44 +7,69 @@ on:
     pull_request:
       branches:
         - main
-        
+
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # hatch-vcs reads git tags to derive the version
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v9.0.0
+      with:
+        version: "0.11.30"
+        python-version: "3.12"
+        enable-cache: true
+
+    # --locked fails if uv.lock is out of date with pyproject.toml, so a forgotten
+    # `uv lock` is caught here rather than silently resolving something different.
+    - name: Install dependencies
+      run: uv sync --locked --no-default-groups --group dev
+
+    - name: Format check with ruff
+      run: uv run ruff check --output-format=github
+
+    - name: Type check with ty
+      run: uv run ty check src/
+
   run-tests:
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12","3.13"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
       with:
+        fetch-depth: 0  # hatch-vcs reads git tags to derive the version
+
+    - name: Set up uv and Python ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v9.0.0
+      with:
+        version: "0.11.30"
         python-version: ${{ matrix.python-version }}
-        cache: 'pip'
-        cache-dependency-path: pyproject.toml
+        enable-cache: true
+        cache-suffix: py${{ matrix.python-version }}
 
+    # Deliberately NOT --locked: --upgrade discards the pins in uv.lock and resolves
+    # fresh against PyPI, so a breaking release of jax/equinox/diffrax surfaces here
+    # instead of in a user's install. The rewritten lockfile is never committed.
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install .[dev]
-
-    - name: Format check with ruff
-      run: |
-        ruff check --output-format=github
-
-    - name: Type check with ty
-      run: |
-        ty check src/
+      run: uv sync --no-default-groups --group dev --upgrade
 
     - name: Test with pytest
-      run: |
-        pytest --junitxml=junit/test-results-${{ matrix.os }}-py${{ matrix.python-version }}.xml --cov=orc
+      run: >
+        uv run pytest
+        --junitxml=junit/test-results-${{ matrix.os }}-py${{ matrix.python-version }}.xml
+        --cov=orc
 
     - name: Show coverage report
       run: |
-        coverage report
-        coverage xml
+        uv run coverage report
+        uv run coverage xml
 
     - name: Upload coverage to Codecov
       if: matrix.python-version == '3.12'

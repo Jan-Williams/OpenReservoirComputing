@@ -18,6 +18,11 @@ The easiest way to get started with ORC is to install from PyPI:
 pip install OpenReservoirComputing
 ```
 
+or, if you use [uv](https://docs.astral.sh/uv/):
+```bash
+uv add OpenReservoirComputing
+```
+
 If you're interested in the latest, unreleased version or in contributing, you can install from source. Please see the Contribution guidelines below for more details. 
 
 ## Quick start example
@@ -70,35 +75,41 @@ plt.show()
 ORC models are built on top of [Equinox](https://docs.kidger.site/equinox/), and as a result we strongly recommend the use of Equinox transforms `eqx.filter_{jit, vmap, grad}` over `jax.{jit, vmap, grad}`. For more details, please check out the [JAX JIT Compatibility](https://Jan-Williams.github.io/OpenReservoirComputing/examples/jit_compatibility/) example notebook.
 
 ## Contribution guidelines
-First off, thanks for helping out! We appreciate your willingness to contribute! To get started, clone the repo and install the developer dependencies of ORC.
+First off, thanks for helping out! We appreciate your willingness to contribute! ORC uses [uv](https://docs.astral.sh/uv/) to manage development environments, so getting set up takes two commands.
+
+First, [install uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it. Then clone the repo and sync:
 
 ```bash
 git clone https://github.com/Jan-Williams/OpenReservoirComputing.git
+cd OpenReservoirComputing
+uv sync
 ```
 
-From the root directory of the repository, create an editable install for your given hardware.
+`uv sync` creates a `.venv`, installs ORC in editable mode, and installs the development dependencies at the exact versions recorded in `uv.lock`. There is no need to activate the environment — just prefix commands with `uv run`.
 
-CPU:
+For NVIDIA GPU support (Linux only — see the [installation docs](https://Jan-Williams.github.io/OpenReservoirComputing/getting-started/installation/) for why):
 ```bash
-pip install -e ".[dev]"
+uv sync --extra gpu
 ```
 
-GPU:
+To also install the documentation toolchain:
 ```bash
-pip install -e ".[dev, gpu]"
+uv sync --all-groups
 ```
 
 The main branch is protected from direct changes. If you would like to make a change please create a new branch and work on your new feature. After you are satisfied with your changes, please run our testing suite to ensure all is working well. We also expect new tests to be written for all changes if additions are made. The tests can be simply run from the root directory of the repository with
 ```bash
-pytest
+uv run pytest
 ```
 Followed by a formatting check 
 ```bash
-ruff check
+uv run ruff check
 ```
 and a type annotation check
 ```bash
-ty check
+uv run ty check src/
 ```
+
+If you add or change a dependency, use `uv add <package>` (or `uv add --group dev <package>` for a development tool) and **commit the updated `uv.lock`** — CI runs `uv sync --locked` and will fail if the lockfile is out of date.
 
 Finally, submit your changes as a pull request! When you submit the PR, please request reviews from both @dtretiak and @Jan-Williams, we will try to get back to you as soon as possible. When you submit the PR, the above tests will automatically be run on your proposed changes through Github Actions, so it is best to get everything tested first before submitting!
