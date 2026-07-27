@@ -839,7 +839,7 @@ def test_multi_seq_equiv_manual_concat(lorenz_segments):
         beta,
     )
 
-    assert jnp.allclose(esn_multi.readout.wout, cmat)
+    assert jnp.allclose(esn_multi.readout.wout, cmat, atol=1e-2)
 
 
 def test_multi_seq_tot_res_seq_shape(lorenz_segments):

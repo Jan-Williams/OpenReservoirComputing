@@ -115,7 +115,7 @@ def train_RCForecaster(
             ts = force_kwargs["ts"]
 
             def _force(seq, state, t):
-                return model.force(seq, state, ts=t)
+                return model.force(seq, state, ts=t)  # ty: ignore[unknown-argument]
 
             tot_res_seq = eqx.filter_vmap(_force)(tot_seq, initial_res_state, ts)
         else:

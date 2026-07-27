@@ -179,9 +179,7 @@ class RCControllerBase(eqx.Module, ABC):
         return self.force(in_seq, control_seq, res_state)
 
     @eqx.filter_jit
-    def apply_control(
-        self, control_seq: Array, res_state: Array
-    ) -> tuple[Array, Array]:
+    def apply_control(self, control_seq: Array, res_state: Array) -> Array:
         """Apply a predefined control sequence in closed-loop.
 
         The readout feeds back as the next input: u(t+1) = readout(x(t)).
