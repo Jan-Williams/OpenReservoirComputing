@@ -7,6 +7,11 @@ on:
 # Only the publish job needs an OIDC token; keep it out of the build job.
 permissions: {}
 
+# Build against a uv-downloaded interpreter rather than the runner's system
+# Python, so released artifacts do not depend on the runner image.
+env:
+  UV_PYTHON_PREFERENCE: only-managed
+
 jobs:
   build:
     runs-on: ubuntu-latest

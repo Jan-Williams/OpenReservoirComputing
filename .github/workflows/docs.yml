@@ -7,6 +7,11 @@ on:
 permissions:
   contents: write
 
+# Use a uv-downloaded interpreter rather than the runner's system Python, so the
+# docs build matches the test matrix and local development.
+env:
+  UV_PYTHON_PREFERENCE: only-managed
+
 # gh-deploy --force force-pushes gh-pages; overlapping runs would race.
 concurrency:
   group: docs-${{ github.ref }}

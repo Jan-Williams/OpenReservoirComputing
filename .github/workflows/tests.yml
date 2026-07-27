@@ -8,6 +8,14 @@ on:
       branches:
         - main
 
+# ubuntu-latest ships Python 3.12 as its system interpreter, so uv's default
+# "managed" preference would silently use /usr/lib/python3.12 for the 3.12 leg
+# while downloading managed builds for 3.10/3.11/3.13. That inconsistency made
+# the 3.12 job segfault importing jax under coverage. only-managed pins every
+# job to a uv-downloaded interpreter, matching local development.
+env:
+  UV_PYTHON_PREFERENCE: only-managed
+
 jobs:
   lint:
     runs-on: ubuntu-latest
