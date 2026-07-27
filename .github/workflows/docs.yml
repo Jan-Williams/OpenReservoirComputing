@@ -23,4 +23,4 @@ jobs:
         run: pip install -e .[docs]
 
       - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force
+        run: mkdocs gh-deploy --force --no-history
